@@ -1,0 +1,1867 @@
+<!-- public/instructor.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Instructor Timer Control</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  :root {
+    --bg: #1a1a2e; --card: #16213e; --card2: #1c2a4a;
+    --accent: #0f3460; --text: #e0e0e0; --dim: #888;
+    --green: #4ecca3; --yellow: #f0c24b; --red: #e74c3c; --blue: #3498db;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 20px;
+    overflow-y: scroll;
+  }
+
+  .page-wrap { max-width: 1100px; margin: 0 auto; }
+
+  h1 { font-size: 1.5rem; color: var(--green); text-align: center; }
+  .subtitle { font-size: 0.8rem; color: var(--dim); text-align: center; margin-bottom: 20px; }
+
+  /* Clock header — sits above tabs in left column */
+  .clock-header {
+    margin-bottom: 4px;
+  }
+  .timer-digits-box {
+    background: var(--card); border-radius: 12px; padding: 10px 24px;
+    border: 2px solid var(--accent);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .box-buttons {
+    display: flex; gap: 6px; justify-content: center; align-items: center;
+    margin-top: 4px;
+  }
+  .timer-digits {
+    font-size: 5rem; font-weight: 700; font-variant-numeric: tabular-nums;
+    letter-spacing: 2px; line-height: 1; color: var(--text);
+  }
+  .end-time { color: var(--blue); }
+  .status-running { color: var(--green); }
+  .status-paused { color: var(--yellow); }
+  .status-stopped { color: var(--dim); }
+  .status-done { color: var(--red); }
+
+  @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.3 } }
+
+  /* Two-column layout below header */
+  .main-layout { display: flex; gap: 20px; align-items: flex-start; }
+  .col-left { flex: 1; min-width: 0; }
+  .col-right {
+    width: 224px; flex-shrink: 0;
+    position: sticky; top: 20px; align-self: flex-start;
+  }
+
+  /* Phone preview */
+  .phone-preview-wrapper { position: relative; }
+  .phone-preview-frame {
+    width: 100%; aspect-ratio: 9/16;
+    border-radius: 18px; border: 2px solid #333;
+    overflow: hidden; background: #1a1a2e;
+    transition: border-color 0.3s;
+  }
+  .phone-preview-frame iframe {
+    /* Render at natural phone size, scale down to fit */
+    width: 390px; height: 692px;
+    border: none; pointer-events: none;
+    transform-origin: top left;
+    /* scale computed by JS on load to fit container */
+  }
+  .phone-preview-frame.pv-draft {
+    border-style: dashed; border-color: var(--yellow);
+  }
+  .pp-mode-label {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px;
+    font-weight: 700; text-align: center; margin-top: 6px;
+  }
+  .pp-mode-label.mode-live { color: var(--green); }
+  .pp-mode-label.mode-preview { color: var(--yellow); }
+
+  /* Tabs */
+  .tab-bar {
+    display: flex; border-bottom: 2px solid var(--accent);
+    margin-bottom: 0;
+  }
+  .tab-btn {
+    flex: 1; padding: 10px 6px; border: none; background: transparent;
+    color: var(--dim); font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; border-bottom: 3px solid transparent;
+    margin-bottom: -2px; transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+  .tab-content {
+    display: none; background: var(--card); border-radius: 0 0 12px 12px; overflow-x: auto;
+    padding: 18px;
+  }
+  .tab-content.active { display: block; }
+
+  /* Sections (used inside tabs) */
+  .section {
+    background: var(--card); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--dim); margin-bottom: 18px;
+  }
+
+  /* Fieldset-style grouping with legend line */
+  .field-group {
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 14px 14px 10px;
+    margin-bottom: 12px;
+  }
+  .field-group-label {
+    position: absolute;
+    top: -0.55em;
+    left: 14px;
+    background: var(--card);
+    padding: 0 8px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #666;
+    line-height: 1;
+  }
+
+  /* Form fields */
+  .field-with-check {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  }
+  .field-with-check:has(+ .field-actions) { margin-bottom: 0; }
+  .field-with-check:has(+ .checkbox-row) { margin-bottom: 0; }
+  input[type=checkbox].custom-cb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border: 1px solid #666; border-radius: 3px;
+    background: var(--bg); cursor: pointer; position: relative; flex-shrink: 0;
+  }
+  input[type=checkbox].custom-cb:checked::after {
+    content: '✓'; position: absolute; top: -1px; left: 2px;
+    font-size: 13px; color: #fff; font-weight: 700;
+  }
+  .field-with-check > .field-check {
+    flex-shrink: 0; cursor: pointer;
+  }
+  .field-with-check > .row { gap: 10px; }
+  .field-with-check .field { margin-bottom: 0; }
+
+  label.field { display: block; margin-bottom: 10px; }
+  label.field .lbl { font-size: 0.8rem; color: #aaa; margin-bottom: 3px; }
+  input[type=text], textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid #666; border-radius: 8px;
+    background: var(--bg); color: var(--text); font-size: 0.95rem;
+    height: 40px; box-sizing: border-box;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--blue); }
+  textarea { resize: vertical; min-height: 54px; font-family: inherit; height: auto; }
+
+  /* Spinner controls */
+  .spinner-group { display: flex; align-items: center; gap: 2px; }
+  .spinner-group .spin-separator {
+    font-size: 1.1rem; color: var(--dim); padding: 0 2px; margin-top: 14px;
+  }
+  .spinner-group .spin-label {
+    font-size: 0.7rem; color: #666; text-align: center; margin-bottom: 2px;
+  }
+  .spinner {
+    display: flex; flex-direction: column; align-items: center; width: 48px;
+  }
+  .spinner button {
+    width: 100%; height: 22px; border: 1px solid #333; background: var(--card2);
+    color: var(--dim); font-size: 0.7rem; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; transition: background 0.15s;
+    user-select: none; -webkit-user-select: none;
+  }
+  .spinner button:hover { background: var(--accent); color: var(--text); }
+  .spinner button:first-child { border-radius: 6px 6px 0 0; }
+  .spinner button:last-child { border-radius: 0 0 6px 6px; }
+  .spinner .spin-value {
+    width: 100%; height: 34px; border-left: 1px solid #333; border-right: 1px solid #333;
+    background: var(--bg); color: var(--text); font-size: 1.1rem;
+    font-variant-numeric: tabular-nums; display: flex; align-items: center;
+    justify-content: center; cursor: text;
+  }
+  .spinner .spin-input {
+    width: 100%; height: 34px; border: 1px solid var(--blue);
+    background: var(--bg); color: var(--text); font-size: 1.1rem;
+    font-variant-numeric: tabular-nums; text-align: center;
+    outline: none; box-sizing: border-box; padding: 0;
+    -moz-appearance: textfield;
+  }
+  .spinner .spin-input::-webkit-outer-spin-button,
+  .spinner .spin-input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .sync-arrows {
+    display: flex; align-items: center;
+    flex: 0 0 auto !important; margin: 0 10px;
+    padding-top: 64px;
+  }
+  .spinner-field { display: flex; flex-direction: column; flex: 0 0 auto !important; }
+  .spinner-field > .lbl { font-size: 0.8rem; color: #aaa; margin-bottom: 3px; }
+  .spinner-field .ampm-btn {
+    width: 48px; height: 78px; border: 1px solid #333; border-radius: 6px;
+    background: var(--bg); color: var(--text); font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; margin-top: 14px; transition: background 0.15s;
+  }
+  .spinner-field .ampm-btn:hover { background: var(--accent); }
+
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+
+  .checkbox-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.9rem; margin-top: 4px; margin-bottom: 6px; color: #aaa;
+  }
+  .checkbox-row input[type=checkbox] { /* uses .custom-cb class */ }
+
+  /* Inline field action buttons */
+  .field-actions {
+    display: flex; gap: 6px; margin-top: 4px; margin-bottom: 18px; margin-left: 24px;
+  }
+  .field-actions button {
+    padding: 4px 12px; border: 1px solid #444; border-radius: 6px;
+    background: transparent; font-size: 0.75rem; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .field-actions .btn-field-load { color: var(--blue); border-color: var(--blue); }
+  .field-actions .btn-field-load:hover { background: rgba(52,152,219,0.15); }
+  .field-actions .btn-field-clear { color: var(--dim); }
+  .field-actions .btn-field-clear:hover { color: var(--text); border-color: #666; }
+  .field-actions:last-child { margin-bottom: 0; }
+
+  /* Transport buttons */
+  .transport-btn svg { pointer-events: none; }
+  .transport-btn {
+    width: 34px; height: 30px; border: 2px solid transparent; border-radius: 6px;
+    background: transparent; color: #777; font-size: 1.2rem;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .transport-btn.enabled { color: #fff; }
+  .transport-btn.enabled svg { stroke: #fff; }
+  .transport-btn:not(.enabled) svg { stroke: #777; }
+  .transport-btn.enabled:hover { border-color: #fff; }
+  .transport-btn:not(.enabled) { cursor: default; opacity: 0.7; }
+  .transport-btn.tb-start { font-size: 1.0rem; }
+  .transport-btn.tb-pause { font-size: 1.4rem; padding-bottom: 2px; }
+  .transport-btn.tb-reset { font-size: 1.5rem; padding-top: 2px; }
+  .transport-btn.tb-stop { }
+
+  /* Quick-time preset buttons */
+  .quick-times {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px;
+  }
+  .quick-times button {
+    border-radius: 5px; border: 1px solid #444;
+    background: var(--card2); color: var(--dim); font-size: 0.65rem;
+    font-weight: 600; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1px 3px; min-width: 24px; height: 22px;
+  }
+  .quick-times button:hover {
+    border-color: var(--green); color: var(--green);
+    background: rgba(78,204,163,0.08);
+  }
+  .btn-field-add { color: var(--green) !important; border-color: var(--green) !important; }
+  .btn-field-add:hover { background: rgba(78,204,163,0.15) !important; }
+
+  /* Library grid */
+  .lib-grid { width: 100%; border-collapse: collapse; }
+  .lib-grid-header {
+    display: grid; grid-template-columns: 46px 2fr 36px 2fr 3fr 22px 22px 22px;
+    gap: 6px; padding: 4px 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+  }
+  .lib-grid-header span {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;
+    color: #555; font-weight: 600;
+  }
+  .lib-grid-header span.sortable {
+    cursor: pointer; user-select: none; transition: color 0.15s;
+  }
+  .lib-grid-header span.sortable:hover { color: var(--blue); }
+  .lib-grid-header span.sort-active { color: var(--green); }
+  .lib-grid-header span.sort-active::after { margin-left: 2px; }
+  .btn-clear-sort {
+    position: absolute; right: -2px; top: 50%; transform: translateY(-50%);
+    border: 1px solid #444; border-radius: 4px; background: transparent;
+    color: #555; font-size: 0.6rem; padding: 1px 5px; cursor: pointer;
+    display: none; transition: all 0.15s;
+  }
+  .btn-clear-sort:hover { color: var(--red); border-color: var(--red); }
+  .btn-clear-sort.visible { display: inline-block; }
+  .lib-row {
+    display: grid; grid-template-columns: 46px 2fr 36px 2fr 3fr 22px 22px 22px;
+    gap: 6px; align-items: center;
+    padding: 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+  .lib-row:last-child { border-bottom: none; }
+  .lib-row:hover { background: rgba(255,255,255,0.03); }
+  .lib-row.active { background: rgba(78,204,163,0.06); }
+  .lib-row[draggable="true"] { cursor: grab; }
+  .lib-row.dragging { opacity: 0.4; }
+  .lib-row.drag-over { border-top: 2px solid var(--green); }
+  .lib-row-name {
+    font-weight: 600; font-size: 0.82rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    min-width: 0;
+  }
+  .lib-row-mins {
+    font-size: 0.78rem; color: var(--blue); text-align: right;
+    padding-right: 4px;
+  }
+  .lib-row-title, .lib-row-msg {
+    font-size: 0.78rem; color: var(--dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    min-width: 0;
+  }
+  .lib-row-title { color: #bbb; }
+  .lib-row-btn {
+    padding: 3px 6px; border: 1px solid var(--blue); border-radius: 5px;
+    background: transparent; color: var(--blue); font-size: 0.65rem; white-space: nowrap;
+    cursor: pointer; transition: all 0.15s;
+    text-align: center;
+  }
+  .lib-row-btn:hover { background: rgba(52,152,219,0.15); }
+  .lib-row-btn.btn-loaded {
+    border-color: var(--green); color: var(--green); font-size: 0.58rem;
+  }
+  .lib-row-btn.btn-loaded:hover { background: rgba(78,204,163,0.15); }
+  .lib-icon-btn {
+    width: 22px; height: 22px; border: 1px solid #444; border-radius: 4px;
+    background: transparent; font-size: 0.75rem;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .lib-icon-btn.btn-save {
+    color: #555; border-color: #333;
+  }
+  .lib-icon-btn.btn-save.btn-active {
+    color: var(--green); border-color: var(--green);
+  }
+  .lib-icon-btn.btn-save.btn-active:hover { background: rgba(78,204,163,0.15); }
+  .lib-icon-btn.btn-dup {
+    color: #555; border-color: #333; font-size: 0.7rem;
+  }
+  .lib-icon-btn.btn-dup:hover { color: var(--blue); border-color: var(--blue); }
+  .lib-icon-btn.btn-del {
+    color: #555; border-color: #333;
+  }
+  .lib-icon-btn.btn-del:hover { color: var(--red); border-color: var(--red); }
+
+  .btn-new-timer {
+    width: 100%; padding: 8px; border: 2px dashed #444; border-radius: 8px;
+    background: transparent; color: var(--dim); font-size: 0.85rem; cursor: pointer;
+    margin-top: 6px;
+  }
+  .btn-new-timer:hover { border-color: var(--green); color: var(--green); }
+
+  /* QR section */
+  .qr-section { text-align: center; }
+  .qr-section img { border-radius: 8px; background: #fff; padding: 6px; margin: 8px 0; }
+  .student-url {
+    display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--bg);
+    padding: 8px 12px; border-radius: 8px; margin-top: 6px;
+  }
+  .student-url code { flex: 1; font-size: 0.85rem; color: var(--blue); word-break: break-all; }
+  .student-url button {
+    padding: 5px 12px; border: none; border-radius: 6px;
+    background: var(--blue); color: #fff; font-size: 0.78rem; cursor: pointer;
+  }
+  .connected-count { font-size: 0.8rem; color: var(--dim); margin-top: 8px; }
+  .connected-count span { color: var(--green); font-weight: 600; }
+
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+
+<!-- Main content: clock + tabs + preview side by side -->
+<div class="main-layout">
+
+  <!-- Left column: clock + tabs + controls -->
+  <div class="col-left">
+
+    <!-- Clock Display -->
+    <div class="clock-header">
+      <div class="timer-digits-box">
+        <div class="timer-digits" id="timerDigits">00:00</div>
+        <div class="box-buttons">
+          <button class="transport-btn tb-start" onclick="doStart()" title="Start">&#9654;&#xFE0E;</button>
+          <button class="transport-btn tb-pause" onclick="doPause()" title="Pause">&#9208;&#xFE0E;</button>
+          <button class="transport-btn tb-stop" onclick="doStop()" title="Stop">&#9209;&#xFE0E;</button>
+          <button class="transport-btn tb-reset" onclick="doReset()" title="Reset">&#8634;</button>
+          <button class="transport-btn tb-restore tb-reset" onclick="doRestore()" title="Restore last timer" style="position:relative;">&#8634;<svg style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);margin-top:1px;" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1.5" x2="5" y2="5"/><line x1="5" y1="5" x2="7" y2="6.5"/></svg></button>
+          <button class="transport-btn tb-clear" onclick="doClearAll()" title="Clear all fields"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 8-8 3 3-8 8-5 5z"/><line x1="8" y1="12" x2="11" y2="15"/><line x1="3" y1="20" x2="21" y2="20"/></svg></button>
+        </div>
+        <div class="connected-count" style="text-align:center; margin-top:6px;">Phones connected: <span id="connectedCount">0</span></div>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('library')">Library</button>
+      <button class="tab-btn" onclick="switchTab('text')">Text</button>
+      <button class="tab-btn" onclick="switchTab('timer')">Timer</button>
+      <button class="tab-btn" onclick="switchTab('options')">Options</button>
+      <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+    </div>
+
+    <!-- Tab: Library -->
+    <div class="tab-content active" id="tab-library">
+      <div id="libraryList" style="max-height:300px; overflow-y:auto;"></div>
+      <button class="btn-new-timer" onclick="newTimerToFields()">+ New Timer</button>
+    </div>
+
+    <!-- Tab: Text -->
+    <div class="tab-content" id="tab-text">
+
+      <!-- Course Title (persistent — not part of library) -->
+      <label class="field">
+        <div class="lbl">Course Title <span style="font-weight:400;color:#555;">(always visible to students)</span></div>
+        <input type="text" id="fieldCourseTitle" placeholder="e.g. Introduction to Python" autocomplete="off">
+      </label>
+      <div class="field-actions" style="margin-left:0; margin-top:-6px; justify-content:flex-end;">
+        <button class="btn-field-load" id="btnPushCourseTitle" onclick="pushCourseTitle()">Push</button>
+        <div class="checkbox-row" style="margin:0; margin-left:8px;">
+          <input type="checkbox" id="includeCourseTitle" class="custom-cb" checked>
+          <label for="includeCourseTitle">Select for pushing</label>
+        </div>
+        <button class="btn-field-clear" onclick="clearCourseTitle()">Clear</button>
+      </div>
+
+      <!-- Name (library only) -->
+      <label class="field">
+        <div class="lbl">Name <span style="font-weight:400;color:#555;">(library only)</span></div>
+        <input type="text" id="fieldName" placeholder="e.g. Break 15" autocomplete="off">
+      </label>
+      <div class="field-actions" style="margin-left:0; margin-top:-6px; justify-content:flex-end;">
+        <button class="btn-field-clear" onclick="document.getElementById('fieldName').value='';checkDirty();">Clear</button>
+      </div>
+
+      <!-- Title -->
+      <label class="field">
+        <div class="lbl">Title <span style="font-weight:400;color:#555;">(shown to students)</span></div>
+        <input type="text" id="fieldLabel" placeholder="e.g. Lunch Break" autocomplete="off">
+      </label>
+      <div class="field-actions" style="margin-left:0; margin-top:-6px; justify-content:flex-end;">
+        <button class="btn-field-load" onclick="loadTitle()">Push</button>
+        <div class="checkbox-row" style="margin:0; margin-left:8px;">
+          <input type="checkbox" id="includeTitle" class="custom-cb" checked>
+          <label for="includeTitle">Select for pushing</label>
+        </div>
+        <button class="btn-field-clear" onclick="clearTitle()">Clear</button>
+      </div>
+
+      <!-- End Time Label -->
+      <label class="field">
+        <div class="lbl">End Time Label <span style="font-weight:400;color:#555;">(shown before end time)</span></div>
+        <input type="text" id="fieldEndTimeLabel" placeholder="e.g. Class resumes at" value="Class resumes at" autocomplete="off">
+      </label>
+      <div class="field-actions" style="margin-left:0; margin-top:-6px; justify-content:flex-end;">
+        <button class="btn-field-load" onclick="loadEndTimeLabel()">Push</button>
+        <div class="checkbox-row" style="margin:0; margin-left:8px;">
+          <input type="checkbox" id="includeEndTimeLabel" class="custom-cb" checked>
+          <label for="includeEndTimeLabel">Select for pushing</label>
+        </div>
+        <button class="btn-field-clear" onclick="clearEndTimeLabel()">Clear</button>
+      </div>
+
+      <!-- Message -->
+      <label class="field" style="margin-bottom:0;">
+        <div class="lbl">Message <span style="font-weight:400;color:#555;">(shown to students)</span></div>
+        <textarea id="fieldMessage" rows="6" placeholder="e.g. Enjoy your break! Class resumes shortly." style="min-height:120px;" autocomplete="off"></textarea>
+      </label>
+      <div class="field-actions" style="margin-left:0; justify-content:flex-end;">
+        <button class="btn-field-load" onclick="loadMessage()">Push</button>
+        <div class="checkbox-row" style="margin:0; margin-left:8px;">
+          <input type="checkbox" id="includeMessage" class="custom-cb" checked>
+          <label for="includeMessage">Select for pushing</label>
+        </div>
+        <button class="btn-field-clear" onclick="clearMessage()">Clear</button>
+      </div>
+
+    </div>
+
+    <!-- Tab: Timer -->
+    <div class="tab-content" id="tab-timer">
+      <div style="display:flex; gap:16px; align-items:flex-start; justify-content:center; flex-wrap:wrap; max-width:100%; overflow-x:auto;">
+        <div class="spinner-field">
+          <div class="lbl">Duration</div>
+          <div class="spinner-group">
+            <div>
+              <div class="spin-label">hr</div>
+              <div class="spinner">
+                <button data-spin="durH" data-dir="up">&#9650;</button>
+                <div class="spin-value" id="durH">0</div>
+                <button data-spin="durH" data-dir="down">&#9660;</button>
+              </div>
+            </div>
+            <div class="spin-separator">:</div>
+            <div>
+              <div class="spin-label">min</div>
+              <div class="spinner">
+                <button data-spin="durM" data-dir="up">&#9650;</button>
+                <div class="spin-value" id="durM">15</div>
+                <button data-spin="durM" data-dir="down">&#9660;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sync-arrows">
+          <svg width="40" height="24" viewBox="0 0 40 24">
+            <line x1="2" y1="10" x2="38" y2="10" stroke="#888" stroke-width="1.5"/>
+            <line x1="38" y1="10" x2="31" y2="3" stroke="#888" stroke-width="1.5"/>
+            <line x1="2" y1="14" x2="38" y2="14" stroke="#888" stroke-width="1.5"/>
+            <line x1="2" y1="14" x2="9" y2="21" stroke="#888" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="spinner-field">
+          <div class="lbl">Target Time</div>
+          <div class="spinner-group">
+            <div>
+              <div class="spin-label">hr</div>
+              <div class="spinner">
+                <button data-spin="tarH" data-dir="up">&#9650;</button>
+                <div class="spin-value" id="tarH">12</div>
+                <button data-spin="tarH" data-dir="down">&#9660;</button>
+              </div>
+            </div>
+            <div class="spin-separator">:</div>
+            <div>
+              <div class="spin-label">min</div>
+              <div class="spinner">
+                <button data-spin="tarM" data-dir="up">&#9650;</button>
+                <div class="spin-value" id="tarM">00</div>
+                <button data-spin="tarM" data-dir="down">&#9660;</button>
+              </div>
+            </div>
+            <button class="ampm-btn" id="tarAmPm" onclick="toggleAmPm()">PM</button>
+          </div>
+        </div>
+        <div class="spinner-field" style="margin-left:24px;">
+          <div class="lbl">Quick Set</div>
+          <div class="quick-times">
+            <button onclick="setQuickTime(5)">5</button>
+            <button onclick="setQuickTime(45)">45</button>
+            <button onclick="setQuickTime(10)">10</button>
+            <button onclick="setQuickTime(60)">60</button>
+            <button onclick="setQuickTime(15)">15</button>
+            <button onclick="setQuickTime(75)">75</button>
+            <button onclick="setQuickTime(20)">20</button>
+            <button onclick="setQuickTime(90)">90</button>
+            <button onclick="setQuickTime(30)">30</button>
+            <button onclick="setQuickTime(120)">120</button>
+          </div>
+        </div>
+      </div>
+      <div class="field-actions" style="margin-top: 12px; margin-left: 0;">
+        <button class="btn-field-load" onclick="loadTime()">Push</button>
+        <button class="btn-field-add" onclick="addTimerTime()">+Add</button>
+        <button class="btn-field-clear" onclick="clearTime()">Clear</button>
+        <div class="checkbox-row" style="margin:0; margin-left:8px;">
+          <input type="checkbox" id="includeTime" class="custom-cb" checked>
+          <label for="includeTime">Select for pushing</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Options (per-timer, saved with library items) -->
+    <div class="tab-content" id="tab-options">
+      <div class="section-title" style="margin-bottom:18px;">Timer Options</div>
+      <div style="font-size:0.75rem; color:#555; margin-bottom:18px;">These options are saved with each library item.</div>
+
+      <div class="checkbox-row" style="margin-bottom:10px;">
+        <input type="checkbox" id="fieldShowEnd" class="custom-cb" checked>
+        <label for="fieldShowEnd">Show end time to students</label>
+      </div>
+
+      <div class="checkbox-row" style="margin-bottom:10px;">
+        <input type="checkbox" id="fieldTransparent" class="custom-cb">
+        <label for="fieldTransparent">Transparent background (OBS/display only)</label>
+      </div>
+
+      <div class="checkbox-row" style="margin-bottom:10px;">
+        <input type="checkbox" id="fieldClockOnly" class="custom-cb">
+        <label for="fieldClockOnly">Clock only — hide text and ring (OBS/display only)</label>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:8px; margin-top:18px;">
+        <label for="optGoToTab" style="font-size:0.85rem; color:#aaa;">After loading, go to tab:</label>
+        <select id="optGoToTab" style="padding:6px 10px; border:1px solid #666; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem;">
+          <option value="library">Library</option>
+          <option value="text">Text</option>
+          <option value="timer">Timer</option>
+          <option value="options">Options</option>
+          <option value="settings">Settings</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tab: Settings -->
+    <div class="tab-content" id="tab-settings">
+      <div style="display:flex; gap:24px;">
+
+        <!-- Global Settings (app-level preferences) -->
+        <div style="flex:1; min-width:0;">
+          <div class="section-title" style="margin-bottom:32px;">Global Settings</div>
+
+          <div style="margin-bottom:20px;">
+            <label style="font-size:0.85rem; color:#aaa;">Class Code</label>
+            <div style="margin-top:8px; margin-left:103px;">
+              <button onclick="generateNewCode()" style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Disconnect All Students</button>
+              <div style="font-size:0.75rem; color:#555; margin-top:4px;">Generates a new code and disconnects all current students.</div>
+              <div style="margin-top:8px;">
+                <span style="font-size:0.8rem; color:#888;">Current code:</span>
+                <span id="classCodeDisplay" style="font-size:1.4rem; font-weight:800; letter-spacing:4px; color:var(--green); font-family:monospace; margin-left:6px;"></span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px;">
+            <label for="optStartTab" style="font-size:0.85rem; color:#aaa;">After starting, go to tab:</label>
+            <select id="optStartTab" style="padding:6px 10px; border:1px solid #666; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem;">
+              <option value="library">Library</option>
+              <option value="text">Text</option>
+              <option value="timer">Timer</option>
+              <option value="options">Options</option>
+              <option value="settings">Settings</option>
+            </select>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <label for="alarmSound" style="font-size:0.85rem; color:#aaa; white-space:nowrap; min-width:95px;">Alarm sound:</label>
+            <select id="alarmSound" style="flex:1; padding:6px 10px; border:1px solid #333; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem;">
+              <option value="beep">Beep (default)</option>
+              <option value="bell">Gentle Bell</option>
+              <option value="gong">Gong</option>
+              <option value="chime">Chime</option>
+            </select>
+            <button onclick="previewSound('alarmSound')" style="padding:5px 10px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">&#9654; Test</button>
+          </div>
+          <div style="margin-left:103px;">
+            <div class="checkbox-row" style="margin-bottom:8px;">
+              <input type="checkbox" id="alarmLoop" class="custom-cb">
+              <label for="alarmLoop">Loop alarm until stopped</label>
+            </div>
+            <div id="customSoundsList" style="margin-bottom:8px;"></div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+              <label style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">
+                + Add Custom Sound (.mp3)
+                <input type="file" id="customSoundUpload" accept=".mp3,audio/mpeg" style="display:none;" onchange="addCustomSound(this)">
+              </label>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; margin-top:20px;">
+            <label for="warningSound" style="font-size:0.85rem; color:#aaa; white-space:nowrap; min-width:95px;">Warning alert:</label>
+            <select id="warningSound" style="flex:1; padding:6px 10px; border:1px solid #333; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem;">
+              <option value="beep">Beep</option>
+              <option value="bell" selected>Gentle Bell</option>
+              <option value="gong">Gong</option>
+              <option value="chime">Chime</option>
+            </select>
+            <button onclick="previewSound('warningSound')" style="padding:5px 10px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">&#9654; Test</button>
+          </div>
+          <div style="margin-left:103px; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="warningEnabled" class="custom-cb">
+            <label for="warningEnabled" style="font-size:0.85rem; color:#aaa;">Play warning</label>
+            <input type="number" id="warningMinutes" value="5" min="1" max="60" style="width:50px; padding:5px 8px; border:1px solid #333; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem; text-align:center;">
+            <span style="font-size:0.85rem; color:#aaa;">min before end</span>
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <div class="checkbox-row">
+              <input type="checkbox" id="muteStudents" class="custom-cb">
+              <label for="muteStudents" style="font-size:0.85rem; color:#aaa;">Mute student updates</label>
+            </div>
+            <div style="font-size:0.75rem; color:#555; margin-top:4px;">When muted, timer changes only appear in the preview — not on student screens.</div>
+          </div>
+
+          <div style="margin-top:20px;">
+            <label style="font-size:0.85rem; color:#aaa;">Library Backup</label>
+            <div style="display:flex; gap:8px; margin-top:8px; margin-left:103px;">
+              <button onclick="exportLibrary()" style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Export</button>
+              <label style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">
+                Import
+                <input type="file" id="importLibFile" accept=".json" style="display:none;" onchange="importLibrary(this)">
+              </label>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;">
+            <label style="font-size:0.85rem; color:#aaa;">Student URL</label>
+            <div class="qr-section" style="text-align:left; margin-top:8px;">
+              <div id="qrContainer">Loading QR code...</div>
+              <div class="student-url" id="urlContainer" style="display:none">
+                <code id="studentUrl"></code>
+                <button onclick="copyUrl()">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </div><!-- /col-left -->
+
+  <!-- Right column: phone preview -->
+  <div class="col-right">
+    <div class="phone-preview-wrapper">
+      <div class="phone-preview-frame" id="previewFrame">
+        <iframe id="previewIframe" src="/student.html?preview=true"></iframe>
+      </div>
+      <div class="pp-mode-label mode-live" id="ppModeLabel">Live</div>
+    </div>
+  </div><!-- /col-right -->
+
+</div><!-- /main-layout -->
+
+</div><!-- /page-wrap -->
+
+<script>
+const socket = io();
+let library = [];
+let activeLibId = null;
+let timerIsRunning = false;
+let timerTotal = 0;
+let timerOriginalTotal = 0;
+let timerRemaining = 0;
+let lastTimerData = null;
+
+// ── Tab switching ──
+const TAB_NAMES = ['library', 'text', 'timer', 'options', 'settings'];
+function switchTab(name) {
+  const scrollY = window.scrollY;
+  // Set a min-height on the tab container to prevent page height from shrinking
+  const tabContainer = document.querySelector('.tab-content.active');
+  const colLeft = document.querySelector('.col-left');
+  if (colLeft) colLeft.style.minHeight = colLeft.offsetHeight + 'px';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const btns = document.querySelectorAll('.tab-btn');
+  btns[TAB_NAMES.indexOf(name)].classList.add('active');
+  window.scrollTo(0, scrollY);
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollY);
+    // Release min-height after scroll is restored
+    if (colLeft) colLeft.style.minHeight = '';
+  });
+}
+
+// ── Formatting helpers ──
+function fmt(secs) {
+  const neg = secs < 0;
+  const abs = Math.abs(secs);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const s = abs % 60;
+  const time = h > 0
+    ? h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0')
+    : String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  return time;
+}
+
+// ── Identify as instructor on every connect/reconnect ──
+socket.on('connect', () => {
+  socket.emit('identify', 'instructor');
+});
+
+// ── Socket events ──
+socket.on('timer-update', (s) => {
+  timerIsRunning = s.running;
+  timerTotal = s.totalSeconds;
+  timerOriginalTotal = s.originalTotal || s.totalSeconds;
+  timerRemaining = s.remainingSeconds;
+  document.getElementById('timerDigits').textContent = fmt(s.remainingSeconds);
+
+  // Warning check
+  if (s.running && s.remainingSeconds > 0) checkWarning(s.remainingSeconds);
+
+  // Sync course title from server (in case another tab set it)
+  // Never overwrite the field if we recently pushed — wait for server to catch up
+  const ctField = document.getElementById('fieldCourseTitle');
+  if (Date.now() - ctPushTime < 2000) {
+    // Skip sync — push is still round-tripping
+  } else if (!ctField.matches(':focus')) {
+    const ctDisplay = (s.courseTitle || '').replace(/\n/g, '\\n');
+    if (ctDisplay !== ctField.value) {
+      ctField.value = ctDisplay;
+    }
+  }
+
+  // Track live server state for preview mode detection
+  liveLabel = s.label || '';
+  liveMessage = s.message || '';
+  updatePreviewMode();
+  updateButtonStates();
+});
+
+socket.on('last-timer', (data) => {
+  lastTimerData = data;
+  updateButtonStates();
+});
+
+socket.on('class-code', (code) => {
+  document.getElementById('classCodeDisplay').textContent = code;
+  // Refresh QR code since it includes the class code
+  loadQRCode();
+});
+
+socket.on('mute-state', (isMuted) => {
+  document.getElementById('muteStudents').checked = isMuted;
+});
+
+function generateNewCode() {
+  if (!confirm('Disconnect all students? A new class code will be generated and students will need to reconnect.')) return;
+  socket.emit('generate-code');
+}
+
+document.getElementById('muteStudents').addEventListener('change', () => {
+  socket.emit('set-mute', document.getElementById('muteStudents').checked);
+});
+
+// ── Preview vs Live mode ──
+let liveLabel = '';
+let liveMessage = '';
+let lastSentLabel = null;
+let lastSentMessage = null;
+
+function sendToPreview(data) {
+  const iframe = document.getElementById('previewIframe');
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage({ type: 'preview-update', ...data }, '*');
+  }
+}
+
+function updatePreviewMode() {
+  // Normalize literal \n to real newline so draft detection doesn't false-positive after pushing
+  const normBR = (s) => (s || '').replace(/\\n/g, '\n');
+  const draftLabel = normBR(document.getElementById('fieldLabel').value);
+  const draftMessage = normBR(document.getElementById('fieldMessage').value);
+  // Don't flag as draft when timer is idle — fields having content while stopped is just prep
+  const isIdle = !timerIsRunning && timerTotal === 0;
+  const isDraft = !isIdle && ((draftLabel !== liveLabel) || (draftMessage !== liveMessage));
+  const frame = document.getElementById('previewFrame');
+  const modeLabel = document.getElementById('ppModeLabel');
+  if (isDraft) {
+    frame.classList.add('pv-draft');
+    modeLabel.textContent = 'Preview';
+    modeLabel.className = 'pp-mode-label mode-preview';
+    // Only send to preview when draft values actually change
+    if (draftLabel !== lastSentLabel || draftMessage !== lastSentMessage) {
+      lastSentLabel = draftLabel;
+      lastSentMessage = draftMessage;
+      sendToPreview({ label: draftLabel, message: draftMessage });
+    }
+  } else {
+    frame.classList.remove('pv-draft');
+    modeLabel.textContent = 'Live';
+    modeLabel.className = 'pp-mode-label mode-live';
+    lastSentLabel = null;
+    lastSentMessage = null;
+  }
+}
+
+// Live-preview as user types
+document.getElementById('fieldName').addEventListener('input', () => checkDirty());
+document.getElementById('fieldLabel').addEventListener('input', () => { updatePreviewMode(); checkDirty(); });
+document.getElementById('fieldEndTimeLabel').addEventListener('input', () => checkDirty());
+document.getElementById('fieldMessage').addEventListener('input', () => { updatePreviewMode(); checkDirty(); });
+document.getElementById('fieldShowEnd').addEventListener('change', () => checkDirty());
+// Capture course title on mousedown — before focus leaves the field and before
+// a queued timer-update can overwrite the field with stale server state
+document.getElementById('btnPushCourseTitle').addEventListener('mousedown', () => {
+  ctCapturedVal = document.getElementById('fieldCourseTitle').value.trim().replace(/\\n/g, '\n');
+  ctPushTime = Date.now();
+});
+
+document.getElementById('fieldTransparent').addEventListener('change', () => {
+  checkDirty();
+  socket.emit('update-display-modes', {
+    transparent: document.getElementById('fieldTransparent').checked,
+    clockOnly: document.getElementById('fieldClockOnly').checked,
+  });
+});
+document.getElementById('fieldClockOnly').addEventListener('change', () => {
+  checkDirty();
+  socket.emit('update-display-modes', {
+    transparent: document.getElementById('fieldTransparent').checked,
+    clockOnly: document.getElementById('fieldClockOnly').checked,
+  });
+});
+document.getElementById('optGoToTab').addEventListener('change', () => checkDirty());
+
+// ── Sync mirrored push checkboxes ──
+socket.on('timer-done', () => { warningFired = false; playAlarm(); });
+socket.on('client-count', (n) => { document.getElementById('connectedCount').textContent = n; });
+
+// ── Spinner helpers ──
+const spinLimits = { durH: [0,23], durM: [0,59], tarH: [1,12], tarM: [0,59] };
+
+function getSpinVal(id) {
+  // If a click-to-type input is open for this spinner, read from it instead of the hidden div
+  const el = document.getElementById(id);
+  const input = el.parentNode && el.parentNode.querySelector('.spin-input');
+  if (input && el.style.display === 'none') return parseInt(input.value, 10) || 0;
+  return parseInt(el.textContent, 10);
+}
+function setSpinVal(id, val) {
+  const el = document.getElementById(id);
+  const [lo, hi] = spinLimits[id];
+  const range = hi - lo + 1;
+  let carry = 0;
+  if (val > hi) { val = lo + (val - hi - 1) % range; carry = 1; }
+  else if (val < lo) { val = hi - (lo - val - 1) % range; carry = -1; }
+  el.textContent = (id === 'durH') ? val : String(val).padStart(2, '0');
+  return carry;
+}
+
+function commitOpenInput(id) {
+  const el = document.getElementById(id);
+  if (!el || !el.parentNode) return;
+  const input = el.parentNode.querySelector('.spin-input');
+  if (input) input.blur();   // triggers commit(), restores the div
+}
+
+function spinUp(id) {
+  commitOpenInput(id);
+  const carry = setSpinVal(id, getSpinVal(id) + 1);
+  if (carry !== 0 && (id === 'durM' || id === 'tarM')) {
+    const hourId = id === 'durM' ? 'durH' : 'tarH';
+    setSpinVal(hourId, getSpinVal(hourId) + carry);
+  }
+  if (id.startsWith('dur')) syncTargetFromDuration();
+  else syncDurationFromTarget();
+  checkDirty();
+  updateButtonStates();
+}
+function spinDown(id) {
+  commitOpenInput(id);
+  const carry = setSpinVal(id, getSpinVal(id) - 1);
+  if (carry !== 0 && (id === 'durM' || id === 'tarM')) {
+    const hourId = id === 'durM' ? 'durH' : 'tarH';
+    setSpinVal(hourId, getSpinVal(hourId) + carry);
+  }
+  if (id.startsWith('dur')) syncTargetFromDuration();
+  else syncDurationFromTarget();
+  checkDirty();
+  updateButtonStates();
+}
+
+// ── Hold-to-repeat for spinner buttons ──
+let spinTimer = null;
+let spinDelay = null;
+
+function startSpin(id, dir) {
+  const fn = dir === 'up' ? spinUp : spinDown;
+  fn(id);
+  spinDelay = setTimeout(() => {
+    spinTimer = setInterval(() => fn(id), 120);
+  }, 400);
+}
+
+function stopSpin() {
+  clearTimeout(spinDelay);
+  clearInterval(spinTimer);
+  spinDelay = null;
+  spinTimer = null;
+}
+
+document.querySelectorAll('button[data-spin]').forEach(btn => {
+  const id = btn.dataset.spin;
+  const dir = btn.dataset.dir;
+  btn.addEventListener('mousedown', (e) => { e.preventDefault(); startSpin(id, dir); });
+  btn.addEventListener('touchstart', (e) => { e.preventDefault(); startSpin(id, dir); });
+});
+document.addEventListener('mouseup', stopSpin);
+document.addEventListener('mouseleave', stopSpin);
+document.addEventListener('touchend', stopSpin);
+document.addEventListener('touchcancel', stopSpin);
+
+// ── Click-to-type on spinner values ──
+document.querySelectorAll('.spin-value').forEach(el => {
+  el.addEventListener('click', () => {
+    const id = el.id;
+    const currentVal = el.textContent;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'spin-input';
+    input.value = parseInt(currentVal, 10);
+    input.min = spinLimits[id][0];
+    input.max = spinLimits[id][1];
+    el.style.display = 'none';
+    el.parentNode.insertBefore(input, el.nextSibling);
+    input.focus();
+    input.select();
+
+    let committed = false;
+    function commit() {
+      if (committed) return;
+      committed = true;
+      const val = parseInt(input.value, 10);
+      if (!isNaN(val)) {
+        const [lo, hi] = spinLimits[id];
+        setSpinVal(id, Math.max(lo, Math.min(hi, val)));
+      }
+      input.remove();
+      el.style.display = '';
+      if (id.startsWith('dur')) syncTargetFromDuration();
+      else syncDurationFromTarget();
+      checkDirty();
+      updateButtonStates();
+    }
+    input.addEventListener('input', () => {
+      const val = parseInt(input.value, 10);
+      if (!isNaN(val)) {
+        const [lo, hi] = spinLimits[id];
+        setSpinVal(id, Math.max(lo, Math.min(hi, val)));
+        if (id.startsWith('dur')) syncTargetFromDuration();
+        else syncDurationFromTarget();
+      }
+    });
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { input.value = currentVal; input.blur(); }
+    });
+  });
+});
+
+function toggleAmPm() {
+  const btn = document.getElementById('tarAmPm');
+  btn.textContent = btn.textContent === 'AM' ? 'PM' : 'AM';
+  syncDurationFromTarget();
+}
+
+function getDurationMinutes() {
+  return getSpinVal('durH') * 60 + getSpinVal('durM');
+}
+function setDurationFromMinutes(totalMins) {
+  totalMins = Math.max(0, Math.round(totalMins));
+  setSpinVal('durH', Math.floor(totalMins / 60));
+  setSpinVal('durM', totalMins % 60);
+}
+
+function getTarget24Hour() {
+  let h = getSpinVal('tarH');
+  const m = getSpinVal('tarM');
+  const ampm = document.getElementById('tarAmPm').textContent;
+  if (ampm === 'AM' && h === 12) h = 0;
+  else if (ampm === 'PM' && h !== 12) h += 12;
+  return { h, m };
+}
+function setTargetFrom24(h24, min) {
+  const ampm = h24 >= 12 ? 'PM' : 'AM';
+  let h12 = h24 % 12;
+  if (h12 === 0) h12 = 12;
+  setSpinVal('tarH', h12);
+  setSpinVal('tarM', min);
+  document.getElementById('tarAmPm').textContent = ampm;
+}
+
+function syncTargetFromDuration() {
+  const mins = getDurationMinutes();
+  if (mins > 0) {
+    const target = new Date(Date.now() + mins * 60000);
+    setTargetFrom24(target.getHours(), target.getMinutes());
+  }
+}
+function syncDurationFromTarget() {
+  const { h, m } = getTarget24Hour();
+  const now = new Date();
+  const target = new Date();
+  target.setHours(h, m, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  const mins = Math.ceil((target - now) / 60000);
+  setDurationFromMinutes(mins);
+}
+
+// ── Placeholder resolution (at push time) ──
+function resolveParams(label, message) {
+  // Strip literal \n before placeholder detection so it's not treated as a prompt
+  const stripNL = (s) => (s || '').replace(/\\n/g, '');
+  const combined = stripNL(label) + ' ' + stripNL(message);
+  if (!/\{[^}]+\}/.test(combined)) {
+    return { label: (label || '').replace(/\\n/g, '\n'), message: (message || '').replace(/\\n/g, '\n') };
+  }
+  const seen = new Set();
+  const placeholders = [];
+  combined.replace(/\{([^}]+)\}/g, (_, name) => {
+    if (!seen.has(name)) { seen.add(name); placeholders.push(name); }
+  });
+  const values = {};
+  for (const ph of placeholders) {
+    const val = prompt(ph + ':');
+    if (val === null) return null; // user cancelled
+    values[ph] = val;
+  }
+  const sub = (s) => (s || '').replace(/\{([^}]+)\}/g, (_, name) => values[name] !== undefined ? values[name] : '{' + name + '}');
+  return { label: sub(label).replace(/\\n/g, '\n'), message: sub(message).replace(/\\n/g, '\n') };
+}
+
+// ── Timer actions ──
+function getTimerMinutes() {
+  return getDurationMinutes();
+}
+
+function loadTime() {
+  const minutes = getTimerMinutes();
+  const showEndTime = document.getElementById('fieldShowEnd').checked;
+  if (minutes <= 0) return;
+  socket.emit('set-timer-only', { minutes, showEndTime });
+  socket.emit('update-display-modes', {
+    transparent: document.getElementById('fieldTransparent').checked,
+    clockOnly: document.getElementById('fieldClockOnly').checked,
+  });
+}
+
+let ctPushTime = 0;
+let ctCapturedVal = null;
+function pushCourseTitle() {
+  const val = ctCapturedVal !== null ? ctCapturedVal : document.getElementById('fieldCourseTitle').value.trim().replace(/\\n/g, '\n');
+  ctCapturedVal = null;
+  socket.emit('update-course-title', { courseTitle: val });
+}
+function clearCourseTitle() {
+  document.getElementById('fieldCourseTitle').value = '';
+}
+
+function loadTitle() {
+  const rawLabel = document.getElementById('fieldLabel').value.trim();
+  const resolved = resolveParams(rawLabel, '');
+  if (!resolved) return;
+  socket.emit('update-label', { label: resolved.label });
+}
+
+function clearTitle() {
+  document.getElementById('fieldLabel').value = '';
+  updatePreviewMode();
+}
+
+function clearTime() {
+  setSpinVal('durH', 0);
+  setSpinVal('durM', 0);
+  setSpinVal('tarH', 12);
+  setSpinVal('tarM', 0);
+  document.getElementById('tarAmPm').textContent = 'PM';
+}
+
+function loadMessage() {
+  const rawMessage = document.getElementById('fieldMessage').value.trim();
+  const resolved = resolveParams('', rawMessage);
+  if (!resolved) return;
+  socket.emit('update-message', { message: resolved.message });
+}
+
+function clearMessage() {
+  document.getElementById('fieldMessage').value = '';
+  updatePreviewMode();
+}
+
+function loadEndTimeLabel() {
+  const etl = document.getElementById('fieldEndTimeLabel').value.trim();
+  socket.emit('update-end-time-label', { endTimeLabel: etl });
+}
+
+function clearEndTimeLabel() {
+  document.getElementById('fieldEndTimeLabel').value = '';
+  checkDirty();
+}
+
+
+function doStart() {
+  if (!document.querySelector('.tb-start').classList.contains('enabled')) return;
+  stopAlarmLoop(); warningFired = false;
+
+  // If timer is paused (was running, now stopped with time remaining), just resume
+  if (timerTotal > 0 && !timerIsRunning && timerRemaining > 0 && timerRemaining < timerTotal) {
+    socket.emit('start');
+    return;
+  }
+
+  // Otherwise push all checked fields then start
+  const useCourseTitle  = document.getElementById('includeCourseTitle').checked;
+  const useTitle        = document.getElementById('includeTitle').checked;
+  const useTime         = document.getElementById('includeTime').checked;
+  const useMessage      = document.getElementById('includeMessage').checked;
+  const useEndTimeLabel = document.getElementById('includeEndTimeLabel').checked;
+
+  const rawLabel = useTitle ? document.getElementById('fieldLabel').value.trim() : '';
+  const rawMessage = useMessage ? document.getElementById('fieldMessage').value.trim() : '';
+  const resolved = resolveParams(rawLabel, rawMessage);
+  if (!resolved) return;
+
+  if (useTime) {
+    const minutes = getTimerMinutes();
+    if (minutes <= 0) return;
+    const showEndTime = document.getElementById('fieldShowEnd').checked;
+    socket.emit('set-timer-only', { minutes, showEndTime });
+  }
+  // Always push display modes
+  socket.emit('update-display-modes', {
+    transparent: document.getElementById('fieldTransparent').checked,
+    clockOnly: document.getElementById('fieldClockOnly').checked,
+  });
+  if (useTitle) socket.emit('update-label', { label: resolved.label });
+  if (useMessage) socket.emit('update-message', { message: resolved.message });
+  if (useEndTimeLabel) {
+    const etl = document.getElementById('fieldEndTimeLabel').value.trim();
+    socket.emit('update-end-time-label', { endTimeLabel: etl });
+  }
+  if (useCourseTitle) {
+    const ct = document.getElementById('fieldCourseTitle').value.trim().replace(/\\n/g, '\n');
+    socket.emit('update-course-title', { courseTitle: ct });
+  }
+
+  // Start after a brief delay to let the server process the pushes
+  setTimeout(() => socket.emit('start'), 100);
+}
+function doPause() {
+  if (!document.querySelector('.tb-pause').classList.contains('enabled')) return;
+  stopAlarmLoop(); socket.emit('pause');
+}
+function doReset() {
+  if (!document.querySelector('.tb-reset').classList.contains('enabled')) return;
+  stopAlarmLoop(); warningFired = false; socket.emit('reset');
+}
+function doStop() {
+  if (!document.querySelector('.tb-stop').classList.contains('enabled')) return;
+  stopAlarmLoop(); warningFired = false; socket.emit('stop');
+}
+function doRestore() {
+  if (!document.querySelector('.tb-restore').classList.contains('enabled')) return;
+  stopAlarmLoop(); warningFired = false;
+  socket.emit('restore-last-timer');
+}
+function doClearAll() {
+  if (!document.querySelector('.tb-clear').classList.contains('enabled')) return;
+  activeLibId = null;
+  document.getElementById('fieldName').value = '';
+  document.getElementById('fieldLabel').value = '';
+  setDurationFromMinutes(0);
+  blankTarget();
+  document.getElementById('fieldEndTimeLabel').value = '';
+  document.getElementById('fieldMessage').value = '';
+  document.getElementById('fieldShowEnd').checked = true;
+  document.getElementById('fieldTransparent').checked = false;
+  document.getElementById('fieldClockOnly').checked = false;
+  document.getElementById('optGoToTab').value = 'library';
+  renderLibrary();
+  updatePreviewMode();
+  updateButtonStates();
+}
+
+function blankTarget() {
+  document.getElementById('tarH').textContent = '--';
+  document.getElementById('tarM').textContent = '--';
+  document.getElementById('tarAmPm').textContent = '';
+}
+function addTime(m) { socket.emit('add-time', { minutes: m }); }
+
+// ── Library ──
+let libSortCol = null;   // null = manual order, 'name' | 'minutes' | 'label' | 'message'
+let libSortAsc = true;
+
+function saveLibraryLocal() {
+  try { localStorage.setItem('timerLibrary', JSON.stringify(library)); } catch(e) {}
+}
+
+async function restoreLibraryFromLocal() {
+  try {
+    const saved = localStorage.getItem('timerLibrary');
+    if (!saved) return;
+    const local = JSON.parse(saved);
+    if (!Array.isArray(local) || local.length === 0) return;
+    // Push local library to server (replaces whatever defaults the server has)
+    for (const item of local) {
+      await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
+    }
+    // Remove any server-side items not in localStorage (e.g. stale defaults)
+    const res = await fetch('/api/library');
+    const serverLib = await res.json();
+    const localIds = new Set(local.map(t => t.id));
+    for (const t of serverLib) {
+      if (!localIds.has(t.id)) {
+        await fetch('/api/library/' + t.id, { method: 'DELETE' });
+      }
+    }
+    // Restore order
+    const ids = local.map(t => t.id);
+    await fetch('/api/library/reorder', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ids }) });
+  } catch(e) {}
+}
+
+async function fetchLibrary() {
+  const res = await fetch('/api/library');
+  library = await res.json();
+  saveLibraryLocal();
+  renderLibrary();
+}
+
+function getSortedLibrary() {
+  if (!libSortCol) return library.slice();
+  const sorted = library.slice().sort((a, b) => {
+    let va = a[libSortCol] || '';
+    let vb = b[libSortCol] || '';
+    if (typeof va === 'number' && typeof vb === 'number') return libSortAsc ? va - vb : vb - va;
+    va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+    return libSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  return sorted;
+}
+
+function toggleSort(col) {
+  if (libSortCol === col) {
+    libSortAsc = !libSortAsc;
+  } else {
+    libSortCol = col;
+    libSortAsc = true;
+  }
+  renderLibrary();
+}
+
+function clearSort() {
+  libSortCol = null;
+  libSortAsc = true;
+  renderLibrary();
+}
+
+function renderLibrary() {
+  const el = document.getElementById('libraryList');
+  if (library.length === 0) {
+    el.innerHTML = '<p style="color:#666;font-size:0.85rem;text-align:center;padding:12px 0;">No saved timers yet</p>';
+    return;
+  }
+  const active = (id) => id === activeLibId;
+  const dirty = (id) => active(id) && isLibDirty(id);
+  const sorted = getSortedLibrary();
+  const arrow = (col) => libSortCol === col ? (libSortAsc ? ' ▲' : ' ▼') : '';
+  const sc = (col) => libSortCol === col ? 'sortable sort-active' : 'sortable';
+
+  el.innerHTML = '<div class="lib-grid">' +
+    '<div class="lib-grid-header"><span></span>' +
+    '<span class="' + sc('name') + '" onclick="toggleSort(\'name\')">Name' + arrow('name') + '</span>' +
+    '<span class="' + sc('minutes') + '" onclick="toggleSort(\'minutes\')" style="text-align:right">Dur' + arrow('minutes') + '</span>' +
+    '<span class="' + sc('label') + '" onclick="toggleSort(\'label\')">Title' + arrow('label') + '</span>' +
+    '<span class="' + sc('message') + '" onclick="toggleSort(\'message\')">Message' + arrow('message') + '</span>' +
+    '<span></span><span></span><span></span>' +
+    '<button class="btn-clear-sort ' + (libSortCol ? 'visible' : '') + '" onclick="clearSort()" title="Clear sort">✕ Sort</button>' +
+    '</div>' +
+    sorted.map(t => `
+    <div class="lib-row ${active(t.id) ? 'active' : ''}" draggable="true" data-id="${t.id}">
+      <button class="lib-row-btn ${active(t.id) ? 'btn-loaded' : ''}" onclick="event.stopPropagation();loadLibTimer('${t.id}')">${active(t.id) ? 'Loaded' : 'Load'}</button>
+      <span class="lib-row-name" title="${esc(t.name)}">${esc(t.name)}</span>
+      <span class="lib-row-mins">${t.minutes}m</span>
+      <span class="lib-row-title" title="${esc(t.label || '')}">${esc(t.label || '')}</span>
+      <span class="lib-row-msg" title="${esc(t.message || '')}">${esc(t.message || '')}</span>
+      <button class="lib-icon-btn btn-save ${dirty(t.id) ? 'btn-active' : ''}" onclick="event.stopPropagation();saveOverTimer('${t.id}')" title="Save changes">&#10003;</button>
+      <button class="lib-icon-btn btn-dup" onclick="event.stopPropagation();duplicateTimer('${t.id}')" title="Duplicate">&#10697;</button>
+      <button class="lib-icon-btn btn-del" onclick="event.stopPropagation();deleteTimer('${t.id}')" title="Delete">&#10005;</button>
+    </div>
+  `).join('') + '</div>';
+
+  // Wire up drag-and-drop
+  initLibDragDrop();
+}
+
+let draggedId = null;
+function initLibDragDrop() {
+  const rows = document.querySelectorAll('.lib-row[draggable]');
+  rows.forEach(row => {
+    row.addEventListener('dragstart', (e) => {
+      draggedId = row.dataset.id;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.lib-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+      draggedId = null;
+    });
+    row.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (row.dataset.id !== draggedId) {
+        document.querySelectorAll('.lib-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+        row.classList.add('drag-over');
+      }
+    });
+    row.addEventListener('dragleave', () => {
+      row.classList.remove('drag-over');
+    });
+    row.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const targetId = row.dataset.id;
+      if (!draggedId || draggedId === targetId) return;
+
+      // If sorted, apply sorted order as new manual order first
+      if (libSortCol) {
+        library = getSortedLibrary();
+        libSortCol = null;
+        libSortAsc = true;
+      }
+
+      // Move dragged item to target position
+      const fromIdx = library.findIndex(t => t.id === draggedId);
+      const toIdx = library.findIndex(t => t.id === targetId);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const [moved] = library.splice(fromIdx, 1);
+      library.splice(toIdx, 0, moved);
+
+      // Save new order to server
+      const ids = library.map(t => t.id);
+      await fetch('/api/library/reorder', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ ids })
+      });
+      saveLibraryLocal();
+      renderLibrary();
+    });
+  });
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function selectTimer(id) {
+  loadLibTimer(id);
+}
+
+function loadLibTimer(id) {
+  const t = library.find(x => x.id === id);
+  if (!t) return;
+
+  activeLibId = id;
+  document.getElementById('fieldName').value = t.name || '';
+  document.getElementById('fieldLabel').value = t.label || '';
+  setDurationFromMinutes(t.minutes);
+  syncTargetFromDuration();
+  document.getElementById('fieldEndTimeLabel').value = t.endTimeLabel || 'Class resumes at';
+  document.getElementById('fieldMessage').value = t.message || '';
+  document.getElementById('fieldShowEnd').checked = t.showEndTime !== false;
+  document.getElementById('fieldTransparent').checked = !!t.transparent;
+  document.getElementById('fieldClockOnly').checked = !!t.clockOnly;
+
+  // Per-item options — map legacy tab names
+  let goTo = t.goToTab || 'library';
+  if (goTo === 'identity' || goTo === 'setup') goTo = 'text';
+  if (goTo === 'time') goTo = 'timer';
+  if (goTo === 'message') goTo = 'text';
+  document.getElementById('optGoToTab').value = goTo;
+
+  renderLibrary();
+  updatePreviewMode();
+  updateButtonStates();
+
+  // Navigate to the configured tab
+  if (goTo !== 'library') switchTab(goTo);
+}
+
+// ── Dirty detection for library save ──
+function isLibDirty(id) {
+  const t = library.find(x => x.id === id);
+  if (!t) return false;
+  const name = document.getElementById('fieldName').value.trim();
+  const label = document.getElementById('fieldLabel').value.trim();
+  const mins = getDurationMinutes();
+  const endTimeLabel = document.getElementById('fieldEndTimeLabel').value.trim();
+  const message = document.getElementById('fieldMessage').value.trim();
+  const showEnd = document.getElementById('fieldShowEnd').checked;
+  const transparent = document.getElementById('fieldTransparent').checked;
+  const clockOnly = document.getElementById('fieldClockOnly').checked;
+  const goToTab = document.getElementById('optGoToTab').value;
+  return (name !== (t.name || '')) ||
+         (label !== (t.label || '')) ||
+         (mins !== t.minutes) ||
+         (endTimeLabel !== (t.endTimeLabel || 'Class resumes at')) ||
+         (message !== (t.message || '')) ||
+         (showEnd !== (t.showEndTime !== false)) ||
+         (transparent !== !!t.transparent) ||
+         (clockOnly !== !!t.clockOnly) ||
+         (goToTab !== (t.goToTab || 'library'));
+}
+
+function checkDirty() {
+  if (activeLibId) renderLibrary();
+}
+
+function setQuickTime(mins) {
+  setDurationFromMinutes(mins);
+  syncTargetFromDuration();
+  checkDirty();
+  updateButtonStates();
+}
+
+function addTimerTime() {
+  const mins = getDurationMinutes();
+  if (mins > 0) addTime(mins);
+}
+
+async function saveOverTimer(id) {
+  if (id !== activeLibId) return; // only save the currently loaded item
+  const t = library.find(x => x.id === id);
+  if (!t) return;
+  const newName = document.getElementById('fieldName').value.trim();
+  const newLabel = document.getElementById('fieldLabel').value.trim();
+  const newMins = getDurationMinutes();
+  const missing = [];
+  if (!newName) missing.push('Name');
+  if (!newMins) missing.push('Duration');
+  if (!newLabel) missing.push('Title');
+  if (missing.length) { alert(missing.join(', ') + ' required.'); return; }
+  t.name = newName;
+  t.label = newLabel;
+  t.minutes = newMins;
+  t.endTimeLabel = document.getElementById('fieldEndTimeLabel').value.trim() || 'Class resumes at';
+  t.message = document.getElementById('fieldMessage').value.trim();
+  t.showEndTime = document.getElementById('fieldShowEnd').checked;
+  t.transparent = document.getElementById('fieldTransparent').checked;
+  t.clockOnly = document.getElementById('fieldClockOnly').checked;
+  t.goToTab = document.getElementById('optGoToTab').value;
+  await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(t) });
+  await fetchLibrary();
+}
+
+async function deleteTimer(id) {
+  if (!confirm('Delete this timer from the library?')) return;
+  await fetch('/api/library/' + id, { method: 'DELETE' });
+  if (activeLibId === id) activeLibId = null;
+  await fetchLibrary();
+}
+
+async function duplicateTimer(id) {
+  const t = library.find(x => x.id === id);
+  if (!t) return;
+  const dup = { ...t, id: undefined, name: t.name + ' (copy)' };
+  const res = await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(dup) });
+  library = await res.json();
+  saveLibraryLocal();
+  const newest = library[library.length - 1];
+  activeLibId = newest.id;
+  document.getElementById('fieldName').value = newest.name;
+  document.getElementById('fieldLabel').value = newest.label || '';
+  setDurationFromMinutes(newest.minutes);
+  syncTargetFromDuration();
+  document.getElementById('fieldEndTimeLabel').value = newest.endTimeLabel || 'Class resumes at';
+  document.getElementById('fieldMessage').value = newest.message || '';
+  document.getElementById('fieldShowEnd').checked = newest.showEndTime !== false;
+  document.getElementById('fieldTransparent').checked = !!newest.transparent;
+  document.getElementById('fieldClockOnly').checked = !!newest.clockOnly;
+  let newGoTo = newest.goToTab || 'library';
+  if (newGoTo === 'identity' || newGoTo === 'setup') newGoTo = 'text';
+  if (newGoTo === 'time') newGoTo = 'timer';
+  if (newGoTo === 'message') newGoTo = 'text';
+  document.getElementById('optGoToTab').value = newGoTo;
+  renderLibrary();
+  updatePreviewMode();
+}
+
+async function newTimerToFields() {
+  activeLibId = null;
+  let name = document.getElementById('fieldName').value.trim();
+  if (!name) {
+    name = prompt('Timer name:');
+    if (!name) return;
+    document.getElementById('fieldName').value = name;
+  }
+  const label = document.getElementById('fieldLabel').value.trim();
+  const minutes = getDurationMinutes();
+  const missing = [];
+  if (!minutes) missing.push('Duration');
+  if (!label) missing.push('Title');
+  if (missing.length) { alert(missing.join(', ') + ' required.'); return; }
+  const endTimeLabel = document.getElementById('fieldEndTimeLabel').value.trim() || 'Class resumes at';
+  const message = document.getElementById('fieldMessage').value.trim();
+  const showEndTime = document.getElementById('fieldShowEnd').checked;
+  const goToTab = document.getElementById('optGoToTab').value;
+  const item = { name, label, minutes, endTimeLabel, message, showEndTime, goToTab };
+  const res = await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
+  library = await res.json();
+  saveLibraryLocal();
+  const newest = library[library.length - 1];
+  activeLibId = newest.id;
+  renderLibrary();
+}
+
+// ── Library export/import ──
+function exportLibrary() {
+  const blob = new Blob([JSON.stringify(library, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'timer-library.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function importLibrary(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const imported = JSON.parse(text);
+    if (!Array.isArray(imported)) { alert('Invalid library file.'); return; }
+    if (!confirm('Replace current library with imported data? (' + imported.length + ' timers)')) return;
+    const res = await fetch('/api/library/import', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(imported) });
+    library = await res.json();
+    saveLibraryLocal();
+    activeLibId = null;
+    renderLibrary();
+  } catch (e) {
+    alert('Error reading file: ' + e.message);
+  }
+  input.value = ''; // reset so same file can be re-imported
+}
+
+// ── Keep-alive ping (prevents Render free tier from sleeping) ──
+setInterval(() => { fetch('/api/library').catch(() => {}); }, 5 * 60 * 1000);
+
+// ── QR code ──
+function copyUrl() {
+  const url = document.getElementById('studentUrl').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.querySelector('.student-url button');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+function loadQRCode() {
+  fetch('/qr').then(r => r.json()).then(data => {
+    document.getElementById('qrContainer').innerHTML = `<img src="${data.qr}" alt="QR" width="180">`;
+    document.getElementById('studentUrl').textContent = data.url;
+    document.getElementById('urlContainer').style.display = 'flex';
+  }).catch(() => {
+    document.getElementById('qrContainer').textContent = 'QR code unavailable';
+  });
+}
+loadQRCode();
+
+// ── Audio: distinct synthesized sounds ──
+function playSound(soundName) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    switch (soundName) {
+      case 'bell': {
+        // Gentle bell: soft sine with harmonic overtone, slow decay
+        [1, 1.5].forEach((mult, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine'; o.frequency.value = 523.25 * mult;
+          g.gain.setValueAtTime(i === 0 ? 0.35 : 0.12, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+          o.connect(g).connect(ctx.destination);
+          o.start(t); o.stop(t + 2.1);
+        });
+        // second strike
+        setTimeout(() => {
+          const ctx2 = new (window.AudioContext || window.webkitAudioContext)();
+          const t2 = ctx2.currentTime;
+          [1, 1.5].forEach((mult, i) => {
+            const o = ctx2.createOscillator(), g = ctx2.createGain();
+            o.type = 'sine'; o.frequency.value = 659.25 * mult;
+            g.gain.setValueAtTime(i === 0 ? 0.30 : 0.10, t2);
+            g.gain.exponentialRampToValueAtTime(0.001, t2 + 2.0);
+            o.connect(g).connect(ctx2.destination);
+            o.start(t2); o.stop(t2 + 2.1);
+          });
+        }, 800);
+        break;
+      }
+      case 'gong': {
+        // Gong: low fundamental with inharmonic partials, long decay
+        const partials = [
+          { f: 110, gain: 0.4, decay: 3.0 },
+          { f: 156, gain: 0.25, decay: 2.5 },
+          { f: 220, gain: 0.15, decay: 2.0 },
+          { f: 311, gain: 0.10, decay: 1.5 },
+          { f: 466, gain: 0.06, decay: 1.2 },
+        ];
+        partials.forEach(p => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine'; o.frequency.value = p.f;
+          g.gain.setValueAtTime(p.gain, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + p.decay);
+          o.connect(g).connect(ctx.destination);
+          o.start(t); o.stop(t + p.decay + 0.1);
+        });
+        break;
+      }
+      case 'chime': {
+        // Chime: bright ascending arpeggio
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, i) => {
+          const start = t + i * 0.2;
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'triangle'; o.frequency.value = freq;
+          g.gain.setValueAtTime(0.25, start);
+          g.gain.exponentialRampToValueAtTime(0.001, start + 0.8);
+          o.connect(g).connect(ctx.destination);
+          o.start(start); o.stop(start + 0.9);
+        });
+        break;
+      }
+      default: { // 'beep'
+        [
+          {f:880,s:0,d:.15},{f:880,s:.25,d:.15},{f:880,s:.5,d:.15},{f:1100,s:.85,d:.3},
+          {f:880,s:1.35,d:.15},{f:880,s:1.6,d:.15},{f:880,s:1.85,d:.15},{f:1100,s:2.2,d:.3},
+        ].forEach(b => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type='sine'; o.frequency.value=b.f;
+          g.gain.setValueAtTime(0.3,t+b.s);
+          g.gain.exponentialRampToValueAtTime(0.001,t+b.s+b.d);
+          o.connect(g).connect(ctx.destination);
+          o.start(t+b.s); o.stop(t+b.s+b.d+.05);
+        });
+      }
+    }
+  } catch(e){}
+}
+
+// ── Alarm / warning playback ──
+let alarmLoopTimer = null;
+
+function playAlarm() {
+  const soundName = document.getElementById('alarmSound').value;
+  const shouldLoop = document.getElementById('alarmLoop').checked;
+  stopAlarmLoop();
+  playSound(soundName);
+  if (shouldLoop) {
+    const intervals = { beep: 3000, bell: 2500, gong: 3500, chime: 1500 };
+    const gap = intervals[soundName] || 3000;
+    alarmLoopTimer = setInterval(() => playSound(soundName), gap);
+  }
+}
+
+function stopAlarmLoop() {
+  if (alarmLoopTimer) { clearInterval(alarmLoopTimer); alarmLoopTimer = null; }
+}
+
+function previewSound(selectId) {
+  const soundName = document.getElementById(selectId).value;
+  playSound(soundName);
+}
+
+// ── Warning alert ──
+let warningFired = false;
+
+function checkWarning(remainingSeconds) {
+  if (!document.getElementById('warningEnabled').checked) return;
+  const warnMins = parseInt(document.getElementById('warningMinutes').value, 10) || 5;
+  const warnSecs = warnMins * 60;
+  if (remainingSeconds <= warnSecs && remainingSeconds > 0 && !warningFired) {
+    warningFired = true;
+    const soundName = document.getElementById('warningSound').value;
+    playSound(soundName);
+  }
+  if (remainingSeconds > warnSecs) {
+    warningFired = false;
+  }
+}
+
+// ── Custom sounds (placeholder) ──
+function addCustomSound(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  // TODO: upload to server, add to dropdown, render in custom sounds list
+  alert('Custom sound upload coming soon: ' + file.name);
+  input.value = '';
+}
+
+// ── Scale preview iframe to fit container ──
+function scalePreview() {
+  const frame = document.querySelector('.phone-preview-frame');
+  const iframe = document.getElementById('previewIframe');
+  if (!frame || !iframe) return;
+  const containerWidth = frame.clientWidth;
+  const scale = containerWidth / 390;
+  iframe.style.transform = 'scale(' + scale + ')';
+  iframe.style.height = (frame.clientHeight / scale) + 'px';
+}
+window.addEventListener('load', scalePreview);
+window.addEventListener('resize', scalePreview);
+
+// ── Button state management ──
+function updateButtonStates() {
+  const hasTimer = timerTotal > 0;
+  const running = timerIsRunning;
+  const paused = hasTimer && !running && timerRemaining > 0;
+  const done = hasTimer && timerRemaining <= 0;
+
+  // Start: enabled when paused OR when there's a duration to push+start
+  const startBtn = document.querySelector('.tb-start');
+  const hasDuration = getDurationMinutes() > 0;
+  startBtn.classList.toggle('enabled', (paused) || (!running && hasDuration));
+
+  // Pause: enabled when running
+  const pauseBtn = document.querySelector('.tb-pause');
+  pauseBtn.classList.toggle('enabled', running);
+
+  // Stop: enabled only when running or paused or done
+  const stopBtn = document.querySelector('.tb-stop');
+  stopBtn.classList.toggle('enabled', running || paused || done);
+
+  // Reset: enabled when timer is set and not at full time
+  const resetBtn = document.querySelector('.tb-reset');
+  resetBtn.classList.toggle('enabled', hasTimer && timerRemaining !== timerTotal);
+
+  // Restore: enabled when there's a last timer to restore
+  const restoreBtn = document.querySelector('.tb-restore');
+  restoreBtn.classList.toggle('enabled', !!lastTimerData);
+
+  // Clear-all: enabled when any field has content
+  const clearBtn = document.querySelector('.tb-clear');
+  const hasLabel = document.getElementById('fieldLabel').value.trim() !== '';
+  const hasMessage = document.getElementById('fieldMessage').value.trim() !== '';
+  const hasName = document.getElementById('fieldName').value.trim() !== '';
+  const hasEndTimeLabel = document.getElementById('fieldEndTimeLabel').value.trim() !== '' &&
+                          document.getElementById('fieldEndTimeLabel').value.trim() !== 'Class resumes at';
+  clearBtn.classList.toggle('enabled', hasLabel || hasMessage || hasDuration || hasName || hasEndTimeLabel);
+}
+
+// Update button states when fields change
+document.getElementById('fieldLabel').addEventListener('input', updateButtonStates);
+document.getElementById('fieldEndTimeLabel').addEventListener('input', updateButtonStates);
+document.getElementById('fieldMessage').addEventListener('input', updateButtonStates);
+document.getElementById('includeCourseTitle').addEventListener('change', updateButtonStates);
+document.getElementById('includeTitle').addEventListener('change', updateButtonStates);
+document.getElementById('includeEndTimeLabel').addEventListener('change', updateButtonStates);
+document.getElementById('includeTime').addEventListener('change', updateButtonStates);
+document.getElementById('includeMessage').addEventListener('change', updateButtonStates);
+
+// Init — restore library from localStorage if server lost it (Render redeploy)
+(async () => {
+  await restoreLibraryFromLocal();
+  await fetchLibrary();
+  updateButtonStates();
+})();
+
+// Switch to startup tab if configured
+const startTab = localStorage.getItem('startTab');
+if (startTab && TAB_NAMES.includes(startTab)) switchTab(startTab);
+
+// Persist startup tab setting
+document.getElementById('optStartTab').addEventListener('change', () => {
+  localStorage.setItem('startTab', document.getElementById('optStartTab').value);
+});
+
+// Load saved startup tab into dropdown
+if (startTab) document.getElementById('optStartTab').value = startTab;
+</script>
+</body>
+</html>

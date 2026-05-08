@@ -1,0 +1,411 @@
+<!-- public/student.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Class Timer</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  :root { --green:#4ecca3; --yellow:#f0c24b; --orange:#e67e22; --red:#e74c3c; --blue:#3498db; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh; min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px 20px;
+    transition: background 0.8s;
+  }
+
+  /* Background color states */
+  body.state-idle    { background: #1a1a2e; color: #e0e0e0; }
+  body.state-green   { background: #0d3b2e; color: #e0e0e0; }
+  body.state-yellow  { background: #3b3010; color: #e0e0e0; }
+  body.state-orange  { background: #3b2010; color: #e0e0e0; }
+  body.state-red     { background: #3b1010; color: #e0e0e0; }
+  body.state-done    { background: #4a0e0e; color: #e0e0e0; }
+
+  /* Transparent mode — for OBS/display only */
+  body.mode-transparent { background: transparent !important; }
+
+  /* Clock-only mode — hide everything except digits */
+  body.mode-clock-only .course-title,
+  body.mode-clock-only .progress-ring,
+  body.mode-clock-only .label,
+  body.mode-clock-only .end-time,
+  body.mode-clock-only .message,
+  body.mode-clock-only .done-banner,
+  body.mode-clock-only .status-badge,
+  body.mode-clock-only .qr-corner { display: none !important; }
+
+  .label {
+    font-size: min(1.8rem, 3.5vh); font-weight: 700; text-align: center;
+    min-height: 1.2em; margin-bottom: 10px; opacity: 0.95;
+    white-space: pre-line;
+  }
+
+  .digits {
+    font-size: min(28vw, 15vh, 8rem); font-weight: 800;
+    font-variant-numeric: tabular-nums; letter-spacing: 3px;
+    line-height: 1; margin: 10px 0;
+    transition: color 0.5s, font-size 0.3s;
+  }
+  .digits.has-hours {
+    font-size: min(22vw, 13vh, 7rem);
+  }
+  .state-green .digits  { color: var(--green); }
+  .state-yellow .digits { color: var(--yellow); }
+  .state-orange .digits { color: var(--orange); }
+  .state-done .digits   { color: var(--red); animation: pulse 1s infinite; }
+  .state-idle .digits   { color: #556; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .end-time {
+    font-size: min(1.6rem, 3vh); margin-top: 4px; min-height: 1.4em;
+  }
+  .state-green .end-time  { color: var(--green); }
+  .state-yellow .end-time { color: var(--yellow); }
+  .state-orange .end-time { color: var(--orange); }
+  .state-done .end-time   { color: var(--red); }
+  .state-idle .end-time   { color: #556; }
+
+  .message {
+    font-size: min(1.375rem, 2.75vh); color: #bbb; text-align: center;
+    max-width: 460px; line-height: 1.5; margin-top: 20px;
+    min-height: 1.5em; white-space: pre-line;
+  }
+
+  .status-badge {
+    margin-top: 24px; font-size: 0.8rem; text-transform: uppercase;
+    letter-spacing: 2px; opacity: 0.5;
+  }
+
+  /* Course title — big banner above the ring */
+  .course-title {
+    font-size: clamp(1.6rem, min(5vw, 5vh), 2.8rem); font-weight: 700;
+    text-align: center; color: rgba(255,255,255,0.85);
+    max-width: 90vw; line-height: 1.2; margin-bottom: 12px;
+    min-height: 0; white-space: pre-line;
+  }
+  .course-title:empty { display: none; }
+
+  /* Progress ring — scales with viewport height on large screens */
+  .progress-ring { margin-bottom: 6px; width: min(180px, 25vh); height: min(180px, 25vh); }
+  .progress-bg { stroke: rgba(255,255,255,0.08); }
+  .progress-fg { transition: stroke-dashoffset 0.3s linear, stroke 0.5s; stroke-linecap: round; }
+
+  .done-banner {
+    display: none; font-size: 1.3rem; font-weight: 700;
+    color: var(--red); margin-top: 16px; text-align: center;
+    animation: pulse 1s infinite;
+  }
+  body.state-done .done-banner { display: block; }
+
+  /* QR code — large screens only (Zoom share), hidden on phones */
+  .qr-corner {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    text-align: center;
+  }
+  @media (min-width: 800px) {
+    .qr-corner { display: block; }
+  }
+  .qr-corner .qr-scan-label {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 8px;
+    max-width: 220px;
+    line-height: 1.3;
+  }
+  .qr-corner img {
+    border-radius: 8px;
+    background: #fff;
+    padding: 4px;
+  }
+  .qr-corner .qr-class-code {
+    font-size: 1.6rem; font-weight: 800; letter-spacing: 4px;
+    color: rgba(255,255,255,0.7); font-family: monospace;
+    margin-top: 8px;
+  }
+  .qr-corner .qr-hint {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.4);
+    margin-top: 6px;
+    max-width: 220px;
+    line-height: 1.4;
+  }
+
+  /* Code entry gate */
+  .code-gate {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 16px;
+  }
+  .code-gate h2 { font-size: 1.6rem; font-weight: 600; color: #e0e0e0; }
+  .code-gate p { font-size: 1rem; color: #888; max-width: 300px; }
+  .code-gate input {
+    font-size: 2rem; font-weight: 700; text-align: center; letter-spacing: 6px;
+    width: 200px; padding: 10px; border: 2px solid #333; border-radius: 8px;
+    background: #16213e; color: #e0e0e0; text-transform: uppercase;
+    font-family: inherit;
+  }
+  .code-gate input:focus { outline: none; border-color: var(--blue); }
+  .code-gate .code-btn {
+    font-size: 1rem; padding: 10px 32px; border: none; border-radius: 6px;
+    background: var(--blue); color: #fff; cursor: pointer; font-weight: 600;
+  }
+  .code-gate .code-btn:hover { opacity: 0.9; }
+  .code-gate .code-error {
+    color: var(--red); font-size: 0.9rem; min-height: 1.2em;
+  }
+
+  /* Timer content — hidden on phones until code is validated */
+  .timer-content { display: none; }
+  .timer-content.visible {
+    display: flex; flex-direction: column; align-items: center;
+  }
+
+  /* Large screens: always show timer, hide code gate */
+  @media (min-width: 800px) {
+    .code-gate { display: none !important; }
+    .timer-content {
+      display: flex !important; flex-direction: column; align-items: center;
+    }
+  }
+</style>
+</head>
+<body class="state-idle">
+
+<!-- Code entry gate (shown until valid code is provided) -->
+<div class="code-gate" id="codeGate">
+  <h2>Enter Class Code</h2>
+  <p>Ask your instructor for the 4-character code, or scan the QR code from the main screen.</p>
+  <input type="text" id="codeInput" maxlength="4" placeholder="----" autocomplete="off">
+  <button class="code-btn" id="codeBtn" onclick="submitCode()">Join</button>
+  <div class="code-error" id="codeError"></div>
+</div>
+
+<!-- Timer content (hidden until code is validated) -->
+<div class="timer-content" id="timerContent">
+  <div class="course-title" id="courseTitle"></div>
+
+  <svg class="progress-ring" width="180" height="180" viewBox="0 0 180 180">
+    <circle class="progress-bg" cx="90" cy="90" r="80"
+            fill="none" stroke-width="7" />
+    <circle class="progress-fg" id="progressRing" cx="90" cy="90" r="80"
+            fill="none" stroke-width="7" stroke="var(--green)"
+            stroke-dasharray="502.65" stroke-dashoffset="0"
+            transform="rotate(-90 90 90)" />
+  </svg>
+
+  <div class="label" id="label"></div>
+  <div class="digits" id="digits">00:00</div>
+  <div class="end-time" id="endTime"></div>
+  <div class="message" id="message"></div>
+  <div class="done-banner" id="doneBanner">Time's Up!</div>
+  <div class="status-badge" id="statusBadge">No timer set</div>
+</div>
+
+<!-- QR code — always visible on large screens (outside timerContent so it shows on code gate too) -->
+<div class="qr-corner" id="qrCorner">
+  <div class="qr-scan-label">Scan to view this timer on your phone</div>
+  <div id="qrImg"></div>
+  <div class="qr-class-code" id="qrClassCode"></div>
+  <div class="qr-hint" id="qrHint"></div>
+</div>
+
+<script>
+const socket = io();
+const CIRCUMFERENCE = 2 * Math.PI * 80; // 502.65
+const params = new URLSearchParams(window.location.search);
+const isPreview = params.has('preview');
+const isOBS = params.has('obs');
+const urlCode = params.get('code');
+const urlTransparent = params.get('transparent') === 'true';
+const urlClockOnly = params.get('clockonly') === 'true';
+
+const isLargeScreen = window.innerWidth >= 800;
+const isDisplayViewer = isPreview || isOBS || isLargeScreen;
+
+// Track whether student has been validated (survives reconnects)
+let studentValidated = false;
+
+if (isPreview) {
+  document.getElementById('codeGate').style.display = 'none';
+  document.getElementById('timerContent').classList.add('visible');
+  document.getElementById('qrCorner').style.display = 'none';
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+} else if (isOBS) {
+  // OBS browser source — skip code gate, hide QR, show timer
+  document.getElementById('codeGate').style.display = 'none';
+  document.getElementById('timerContent').classList.add('visible');
+  document.getElementById('qrCorner').style.display = 'none';
+} else if (!urlCode && !isLargeScreen) {
+  // Phone without code — show code entry gate
+  document.getElementById('codeInput').focus();
+}
+
+// Re-identify on every connect/reconnect so the server knows our role
+socket.on('connect', () => {
+  if (isPreview) {
+    socket.emit('identify', 'preview');
+  } else if (isOBS) {
+    socket.emit('identify', 'display');
+  } else if (studentValidated) {
+    // Already validated — re-validate with the code we used
+    socket.emit('validate-code', studentValidated);
+  } else if (urlCode) {
+    socket.emit('validate-code', urlCode.toUpperCase());
+  } else if (isLargeScreen) {
+    socket.emit('identify', 'display');
+  }
+});
+
+function submitCode() {
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if (code.length < 4) {
+    document.getElementById('codeError').textContent = 'Please enter a 4-character code.';
+    return;
+  }
+  document.getElementById('codeError').textContent = '';
+  socket.emit('validate-code', code);
+}
+
+// Allow Enter key to submit code
+document.getElementById('codeInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitCode();
+});
+
+socket.on('code-accepted', () => {
+  // Remember the code so we can re-validate on reconnect
+  studentValidated = urlCode ? urlCode.toUpperCase() : document.getElementById('codeInput').value.trim().toUpperCase();
+  document.getElementById('codeGate').style.display = 'none';
+  document.getElementById('timerContent').classList.add('visible');
+});
+
+socket.on('code-rejected', () => {
+  document.getElementById('codeError').textContent = 'Invalid code. Please try again.';
+});
+
+socket.on('code-expired', () => {
+  // Class code was changed — show message
+  document.getElementById('timerContent').classList.remove('visible');
+  document.getElementById('codeGate').style.display = 'flex';
+  document.getElementById('codeInput').value = '';
+  document.getElementById('codeError').textContent = 'This class session has ended.';
+});
+
+function fmt(secs) {
+  const neg = secs < 0;
+  const abs = Math.abs(secs);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const s = abs % 60;
+  const time = h > 0
+    ? h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0')
+    : String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  return time;
+}
+
+function stateClass(rem, total, running) {
+  if (total === 0) return 'state-idle';
+  if (rem <= 0) return 'state-done';
+  if (!running) return 'state-idle';
+  const orangeAt = Math.min(total * 0.15, 180);  // 3 min cap
+  const yellowAt = Math.min(total * 0.35, 600);  // 10 min cap
+  return rem <= orangeAt ? 'state-orange' : rem <= yellowAt ? 'state-yellow' : 'state-green';
+}
+// Note: rem can be negative (overtime). stateClass returns 'state-done' which shows pulsing red.
+
+function strokeColor(cls) {
+  switch(cls) {
+    case 'state-green':  return 'var(--green)';
+    case 'state-yellow': return 'var(--yellow)';
+    case 'state-orange': return 'var(--orange)';
+    case 'state-done':   return 'var(--red)';
+    default:             return 'rgba(255,255,255,0.15)';
+  }
+}
+
+socket.on('timer-update', (s) => {
+  const digitsEl = document.getElementById('digits');
+  digitsEl.textContent = fmt(s.remainingSeconds);
+  const hasHours = Math.abs(s.remainingSeconds) >= 3600;
+  digitsEl.classList.toggle('has-hours', hasHours);
+  document.getElementById('courseTitle').textContent = s.courseTitle || '';
+  document.getElementById('label').textContent = s.label || '';
+  document.getElementById('message').textContent = s.message || '';
+
+  // End time — use server-pushed label instead of hardcoded text
+  const etEl = document.getElementById('endTime');
+  if (s.showEndTime && s.endTime && s.running) {
+    const d = new Date(s.endTime);
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    const prefix = s.endTimeLabel || 'Class resumes at';
+    etEl.textContent = prefix + ' ' + h + ':' + m + ' ' + ampm;
+  } else {
+    etEl.textContent = '';
+  }
+
+  // Progress ring — use originalTotal for correct proportions after pause/restart
+  const ring = document.getElementById('progressRing');
+  const refTotal = s.originalTotal || s.totalSeconds;
+  if (refTotal > 0) {
+    const pct = Math.max(0, s.remainingSeconds / refTotal);
+    ring.style.strokeDashoffset = CIRCUMFERENCE * (1 - pct);
+  } else {
+    ring.style.strokeDashoffset = 0;
+  }
+
+  // Color state — use originalTotal for thresholds
+  const cls = stateClass(s.remainingSeconds, refTotal, s.running);
+  document.body.className = cls;
+  // Display modes — only apply to display/OBS/preview, not phone students
+  // URL parameters override server state (for OBS scenes with different configs)
+  if (isDisplayViewer) {
+    if (urlTransparent || s.transparent) document.body.classList.add('mode-transparent');
+    if (urlClockOnly || s.clockOnly) document.body.classList.add('mode-clock-only');
+  }
+  ring.style.stroke = strokeColor(cls);
+
+  // Status badge — only show when not running
+  const badge = document.getElementById('statusBadge');
+  if (s.totalSeconds === 0) badge.textContent = 'No timer set';
+  else if (s.running) badge.textContent = '';
+  else if (s.remainingSeconds <= 0) badge.textContent = "Time's up";
+  else badge.textContent = '';
+});
+
+socket.on('timer-done', () => {
+  // Vibrate on phones if supported
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+});
+
+// Load QR code immediately (skip in preview mode)
+if (!isPreview) {
+  fetch('/qr').then(function(r) { return r.json(); }).then(function(data) {
+    document.getElementById('qrImg').innerHTML = '<img src="' + data.qr + '" alt="QR code" width="150">';
+    document.getElementById('qrClassCode').textContent = data.code;
+    const baseUrl = data.url.replace(/\?.*$/, '');
+    document.getElementById('qrHint').innerHTML = "Can’t scan? Go to<br><b>" + baseUrl + "</b><br>and enter code <b>" + data.code + "</b>";
+  }).catch(function() {});
+}
+
+
+// Preview mode: listen for draft updates from instructor page
+if (isPreview) {
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'preview-update') {
+      if (e.data.label !== undefined) document.getElementById('label').textContent = e.data.label;
+      if (e.data.message !== undefined) document.getElementById('message').textContent = e.data.message;
+    }
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "3",
+    "name": "10-Min Break",
+    "minutes": 10,
+    "label": "Break",
+    "message": "Be back in 10!",
+    "showEndTime": true
+  },
+  {
+    "id": "4",
+    "name": "Lab Time",
+    "minutes": 30,
+    "label": "Lab Activity",
+    "message": "Work through the lab at your own pace.",
+    "showEndTime": true
+  },
+  {
+    "id": "1",
+    "name": "Lunch Break",
+    "minutes": 60,
+    "label": "Lunch Break",
+    "message": "Enjoy your lunch! See you back in class soon.",
+    "showEndTime": true
+  },
+  {
+    "id": "5",
+    "name": "Extended Lab",
+    "minutes": 60,
+    "label": "Lab Activity",
+    "message": "Take your time — ask questions if you get stuck.",
+    "showEndTime": true
+  },
+  {
+    "id": "2",
+    "name": "Short Break",
+    "minutes": 15,
+    "label": "Short Break",
+    "message": "Quick break — grab a coffee or stretch!",
+    "showEndTime": true
+  }
+]
