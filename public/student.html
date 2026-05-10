@@ -249,6 +249,7 @@ const isDisplayViewer = isPreview || isOBS || isLargeScreen;
 
 // Track whether student has been validated (survives reconnects)
 let studentValidated = false;
+let codeExpired = false;  // true after disconnect-all; suppresses auto-retry with stale urlCode
 
 if (isPreview) {
   document.getElementById('codeGate').style.display = 'none';
@@ -275,7 +276,8 @@ socket.on('connect', () => {
   } else if (studentValidated) {
     // Already validated — re-validate with the code we used
     socket.emit('validate-code', studentValidated);
-  } else if (urlCode) {
+  } else if (urlCode && !codeExpired) {
+    // First connect with QR code — auto-validate (skip if code was expired by disconnect-all)
     socket.emit('validate-code', urlCode.toUpperCase());
   } else if (isLargeScreen) {
     socket.emit('identify', 'display');
@@ -283,17 +285,24 @@ socket.on('connect', () => {
 });
 
 function submitCode() {
+  const errEl = document.getElementById('codeError');
   const code = document.getElementById('codeInput').value.trim().toUpperCase();
   if (code.length < 4) {
-    document.getElementById('codeError').textContent = 'Please enter a 4-character code.';
+    errEl.textContent = 'Please enter a 4-character code.';
     return;
   }
   if (!socket.connected) {
-    document.getElementById('codeError').textContent = 'Connecting to server... please try again in a moment.';
+    errEl.textContent = 'Connecting to server... please try again in a moment.';
     return;
   }
-  document.getElementById('codeError').textContent = '';
+  errEl.textContent = 'Validating...';
   socket.emit('validate-code', code);
+  // If no response within 3 seconds, show a diagnostic message
+  setTimeout(() => {
+    if (errEl.textContent === 'Validating...') {
+      errEl.textContent = 'No response from server. Connected: ' + socket.connected + ', ID: ' + socket.id;
+    }
+  }, 3000);
 }
 
 // Allow Enter key to submit code
@@ -303,18 +312,22 @@ document.getElementById('codeInput').addEventListener('keydown', (e) => {
 
 socket.on('code-accepted', () => {
   // Remember the code so we can re-validate on reconnect
-  studentValidated = urlCode ? urlCode.toUpperCase() : document.getElementById('codeInput').value.trim().toUpperCase();
+  codeExpired = false;
+  studentValidated = document.getElementById('codeInput').value.trim().toUpperCase() || (urlCode ? urlCode.toUpperCase() : '');
   document.getElementById('codeGate').style.display = 'none';
   document.getElementById('timerContent').classList.add('visible');
 });
 
 socket.on('code-rejected', () => {
   document.getElementById('codeError').textContent = 'Invalid code. Please try again.';
+  // Ensure gate is visible (may have been hidden on QR-code arrival)
+  document.getElementById('codeGate').style.display = 'flex';
 });
 
 socket.on('code-expired', () => {
   // Class code was changed — clear old validation so reconnect doesn't retry stale code
   studentValidated = false;
+  codeExpired = true;
   document.getElementById('timerContent').classList.remove('visible');
   document.getElementById('codeGate').style.display = 'flex';
   document.getElementById('codeInput').value = '';
