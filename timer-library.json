@@ -1,42 +1,138 @@
 [
   {
-    "id": "3",
-    "name": "10-Min Break",
-    "minutes": 10,
-    "label": "Break",
-    "message": "Be back in 10!",
-    "showEndTime": true
+    "name": "First Morning Countdown SQL101",
+    "label": "Welcome!",
+    "minutes": 60,
+    "endTimeLabel": "Class starts at",
+    "message": "",
+    "showEndTime": true,
+    "goToTab": "timer",
+    "id": "mouulf2bbga0",
+    "transparent": false,
+    "clockOnly": false
   },
   {
-    "id": "4",
-    "name": "Lab Time",
-    "minutes": 30,
-    "label": "Lab Activity",
-    "message": "Work through the lab at your own pace.",
-    "showEndTime": true
+    "name": "Returning Morning Countdown SQL101",
+    "label": "Welcome back!",
+    "minutes": 60,
+    "endTimeLabel": "Class starts at",
+    "message": "",
+    "showEndTime": true,
+    "goToTab": "library",
+    "id": "motdfk3gbx0q",
+    "transparent": false,
+    "clockOnly": false
   },
   {
     "id": "1",
-    "name": "Lunch Break",
+    "name": "Lunch 60",
     "minutes": 60,
     "label": "Lunch Break",
     "message": "Enjoy your lunch! See you back in class soon.",
-    "showEndTime": true
-  },
-  {
-    "id": "5",
-    "name": "Extended Lab",
-    "minutes": 60,
-    "label": "Lab Activity",
-    "message": "Take your time — ask questions if you get stuck.",
-    "showEndTime": true
+    "showEndTime": true,
+    "endTimeLabel": "Class resumes at",
+    "goToTab": "text"
   },
   {
     "id": "2",
-    "name": "Short Break",
+    "name": "Break 15",
     "minutes": 15,
-    "label": "Short Break",
-    "message": "Quick break — grab a coffee or stretch!",
-    "showEndTime": true
+    "label": "Break",
+    "message": "Break — grab a coffee or stretch!",
+    "showEndTime": true,
+    "endTimeLabel": "Class resumes at",
+    "goToTab": "text"
+  },
+  {
+    "id": "3",
+    "name": "Break 10",
+    "minutes": 10,
+    "label": "Break",
+    "message": "Be back in 10!",
+    "showEndTime": true,
+    "endTimeLabel": "Class resumes at",
+    "goToTab": "text"
+  },
+  {
+    "name": "Break 5",
+    "minutes": 5,
+    "label": "Break",
+    "message": "Break — grab a coffee or stretch!",
+    "showEndTime": true,
+    "endTimeLabel": "Class resumes at",
+    "goToTab": "library",
+    "id": "motcu580rle0",
+    "transparent": false,
+    "clockOnly": false
+  },
+  {
+    "id": "4",
+    "name": "Lab 30",
+    "minutes": 30,
+    "label": "Lab {Lab Number}",
+    "message": "Don't hesitate to ask questions when you have them!",
+    "showEndTime": true,
+    "endTimeLabel": "Class resumes at",
+    "goToTab": "timer"
+  },
+  {
+    "id": "5",
+    "name": "Lab 60",
+    "minutes": 60,
+    "label": "Lab {Lab Number}",
+    "message": "Take your time — ask questions if you get stuck.",
+    "showEndTime": true,
+    "endTimeLabel": "Class resumes at",
+    "goToTab": "timer"
+  },
+  {
+    "name": "Lab 30 Break 15",
+    "label": "Lab {Lab Number} & Break",
+    "minutes": 45,
+    "endTimeLabel": "Class resumes at",
+    "message": "Remember to ask questions if you get stuck and enjoy your break!",
+    "showEndTime": true,
+    "goToTab": "timer",
+    "id": "motd2xq0dsj0"
+  },
+  {
+    "name": "Lab 45 Break 15",
+    "label": "Lab {Lab Number} & Break",
+    "minutes": 60,
+    "endTimeLabel": "Class resumes at",
+    "message": "Remember to ask questions if you get stuck and enjoy your break!",
+    "showEndTime": true,
+    "goToTab": "timer",
+    "id": "motcz5sr6k3n"
+  },
+  {
+    "name": "Lab 60 Break 15",
+    "label": "Lab {Lab Number} & Break",
+    "minutes": 75,
+    "endTimeLabel": "Class resumes at",
+    "message": "Remember to ask questions if you get stuck and enjoy your break!",
+    "showEndTime": true,
+    "goToTab": "timer",
+    "id": "motd4csevyfn"
+  },
+  {
+    "name": "Lab 60 Lunch 60",
+    "label": "Lab {Lab Number} & Lunch Break",
+    "minutes": 120,
+    "endTimeLabel": "Class resumes at",
+    "message": "Have a great lunch and remember to ask questions if you get stuck!",
+    "showEndTime": true,
+    "goToTab": "timer",
+    "id": "motdcxeycjmk"
+  },
+  {
+    "name": "Sample",
+    "label": "sample",
+    "minutes": 15,
+    "endTimeLabel": "Class resumes at",
+    "message": "",
+    "showEndTime": true,
+    "goToTab": "library",
+    "id": "moz1br0rc8q8"
   }
 ]

@@ -427,15 +427,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('stop', () => {
-    timerState.label = '';
-    timerState.message = '';
     timerState.totalSeconds = 0;
     timerState.originalTotal = 0;
     timerState.remainingSeconds = 0;
     timerState.running = false;
     timerState.endTime = null;
     timerState.endTimeFormatted = '';
-    timerState.endTimeLabel = 'Class resumes at';
     stopTick();
     broadcast();
   });
@@ -463,6 +460,11 @@ io.on('connection', (socket) => {
   socket.on('update-display-modes', ({ transparent, clockOnly }) => {
     timerState.transparent = !!transparent;
     timerState.clockOnly = !!clockOnly;
+    broadcast();
+  });
+
+  socket.on('update-show-end-time', ({ showEndTime }) => {
+    timerState.showEndTime = showEndTime !== false;
     broadcast();
   });
 

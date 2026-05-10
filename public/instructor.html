@@ -25,21 +25,19 @@
   .subtitle { font-size: 0.8rem; color: var(--dim); text-align: center; margin-bottom: 20px; }
 
   /* Clock header — sits above tabs in left column */
-  .clock-header {
-    margin-bottom: 4px;
-  }
-  .timer-digits-box {
-    background: var(--card); border-radius: 12px; padding: 10px 24px;
-    border: 2px solid var(--accent);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
-  .box-buttons {
-    display: flex; gap: 6px; justify-content: center; align-items: center;
+  .transport-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
     margin-top: 4px;
   }
-  .timer-digits {
-    font-size: 5rem; font-weight: 700; font-variant-numeric: tabular-nums;
-    letter-spacing: 2px; line-height: 1; color: var(--text);
+  .connected-badge {
+    text-align: center; margin-top: 2px;
+  }
+  .connected-label {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--dim); margin-bottom: 2px;
+  }
+  .connected-count {
+    font-size: 2rem; font-weight: 700; color: var(--green);
   }
   .end-time { color: var(--blue); }
   .status-running { color: var(--green); }
@@ -49,38 +47,255 @@
 
   @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.3 } }
 
-  /* Two-column layout below header */
-  .main-layout { display: flex; gap: 20px; align-items: flex-start; }
-  .col-left { flex: 1; min-width: 0; }
+  /* Two-column layout: mockup left, tabs right */
+  .main-layout {
+    display: flex; gap: 20px; align-items: flex-start;
+  }
+  .col-left {
+    display: flex; flex-direction: column; gap: 8px;
+    flex-shrink: 0;
+  }
   .col-right {
-    width: 224px; flex-shrink: 0;
-    position: sticky; top: 20px; align-self: flex-start;
+    flex: 1; min-width: 0;
+  }
+  .mockup-area {
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .mockup-side-left {
+    display: flex; flex-direction: column; gap: 6px;
+    min-width: 120px; max-width: 140px; padding-top: 20px;
   }
 
-  /* Phone preview */
-  .phone-preview-wrapper { position: relative; }
-  .phone-preview-frame {
-    width: 100%; aspect-ratio: 9/16;
-    border-radius: 18px; border: 2px solid #333;
-    overflow: hidden; background: #1a1a2e;
-    transition: border-color 0.3s;
+  /* ── Mockup side panel ── */
+  .text-side-label {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #666;
   }
-  .phone-preview-frame iframe {
-    /* Render at natural phone size, scale down to fit */
-    width: 390px; height: 692px;
-    border: none; pointer-events: none;
-    transform-origin: top left;
-    /* scale computed by JS on load to fit container */
+  .text-side-input {
+    width: 100%; padding: 8px 10px; border: 1px solid #666; border-radius: 6px;
+    background: var(--bg); color: var(--text); font-size: 0.9rem; font-family: inherit;
   }
-  .phone-preview-frame.pv-draft {
-    border-style: dashed; border-color: var(--yellow);
+  .text-side-input:focus { outline: none; border-color: var(--blue); }
+  .text-side-hint { font-size: 0.65rem; color: #555; line-height: 1.3; }
+  .btn-push-all {
+    padding: 10px 16px; border: 2px solid var(--blue); border-radius: 8px;
+    background: transparent; color: var(--blue); font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit;
   }
-  .pp-mode-label {
-    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px;
-    font-weight: 700; text-align: center; margin-top: 6px;
+  .btn-push-all:hover { background: rgba(52,152,219,0.15); }
+  .push-all-hint { font-size: 0.6rem; color: #555; line-height: 1.3; text-align: center; }
+
+  /* Phone mockup frame */
+  .phone-mockup {
+    width: 250px; flex-shrink: 0;
+    height: 500px;
+    background: #1a1a2e;
+    border-radius: 22px;
+    border: 3px solid #333;
+    padding: 24px 12px 16px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 5px;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    overflow: visible;
   }
-  .pp-mode-label.mode-live { color: var(--green); }
-  .pp-mode-label.mode-preview { color: var(--yellow); }
+  .phone-mockup-notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 70px; height: 5px; background: #333; border-radius: 3px;
+  }
+
+  /* Editable fields inside the mockup — match student.html styling */
+  .mock-field-wrap {
+    width: 100%; position: relative;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .mock-editable {
+    background: transparent; border: 1px dashed transparent;
+    border-radius: 4px; padding: 3px 5px; outline: none;
+    text-align: center; width: 100%; transition: border-color 0.2s, background 0.2s;
+    cursor: text;
+  }
+  .mock-editable:hover { border-color: rgba(255,255,255,0.15); }
+  .mock-editable:focus { border-color: var(--blue); background: rgba(52,152,219,0.08); }
+  .mock-editable.field-dirty { border-color: var(--yellow); border-style: dotted; }
+  .mock-editable:empty::before {
+    content: attr(data-placeholder);
+    color: rgba(255,255,255,0.2); font-style: italic;
+  }
+
+  /* Match student.html field styles — scaled to 64% of phone (250/390) */
+  .mock-course-title {
+    font-size: 1.02rem; font-weight: 700;
+    color: rgba(255,255,255,0.85); line-height: 1.2;
+    white-space: pre-line; min-height: 1.4em;
+    max-height: 2.8em; overflow: hidden;
+  }
+  .mock-label {
+    font-size: 1.15rem; font-weight: 700; color: #e0e0e0;
+    opacity: 0.95; white-space: pre-line; min-height: 1.2em;
+    max-height: 2.4em; overflow: hidden;
+    margin-bottom: 3px;
+  }
+  .mock-end-time-label {
+    font-size: 1.02rem; color: var(--green); min-height: 1.2em;
+    max-height: 1.6em; overflow: hidden;
+  }
+  .mock-end-time-computed {
+    font-size: 1.02rem; color: var(--green); opacity: 0.6;
+  }
+  #mockCtxEndTimeLabel {
+    top: 50%; transform: translateY(-62%);
+  }
+  #mockChkEndTime {
+    top: 50%; transform: translateY(-95%);
+  }
+  .mock-message {
+    font-size: 0.9rem; color: #bbb; line-height: 1.4;
+    white-space: pre-line; min-height: 1.5em; max-width: 100%;
+    overflow: hidden;
+  }
+  /* Let the message field-wrap grow to fill remaining phone space */
+  .mock-field-wrap:last-child { flex: 1; }
+  .mock-field-wrap:last-child .mock-message { height: 100%; }
+
+  /* Non-editable elements — scaled to 64% of phone (250/390) */
+  .mock-ring { width: 115px; height: 115px; margin: 3px 0; }
+  .mock-ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 5; }
+  .mock-ring-fg { fill: none; stroke: var(--green); stroke-width: 5; stroke-linecap: round;
+    stroke-dasharray: 327; stroke-dashoffset: 72;
+    transition: stroke 0.8s, stroke-dashoffset 0.3s; }
+  .mock-digits {
+    font-size: 4.3rem; font-weight: 800; color: var(--green);
+    font-variant-numeric: tabular-nums; letter-spacing: 2px;
+    line-height: 1; margin: 4px 0; cursor: pointer;
+    transition: color 0.8s;
+  }
+  .mock-digits:hover { opacity: 0.8; }
+
+  /* Live mockup color states — mirror student.html */
+  .phone-mockup.state-green { background: #0d3b2e; }
+  .phone-mockup.state-yellow { background: #332b00; }
+  .phone-mockup.state-orange { background: #3b2010; }
+  .phone-mockup.state-done { background: #4a0e0e; }
+  .phone-mockup.state-green .mock-digits,
+  .phone-mockup.state-green .mock-ring-fg { color: var(--green); stroke: var(--green); }
+  .phone-mockup.state-yellow .mock-digits { color: var(--yellow); }
+  .phone-mockup.state-yellow .mock-ring-fg { stroke: var(--yellow); }
+  .phone-mockup.state-orange .mock-digits { color: #e67e22; }
+  .phone-mockup.state-orange .mock-ring-fg { stroke: #e67e22; }
+  .phone-mockup.state-done .mock-digits { color: var(--red); }
+  .phone-mockup.state-done .mock-ring-fg { stroke: var(--red); }
+
+  /* Duration popup overlay */
+  .duration-popup-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: none; justify-content: center; align-items: center;
+    pointer-events: none;
+  }
+  .duration-popup-backdrop.open { display: flex; }
+  .duration-popup {
+    background: rgba(30, 30, 50, 0.45);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 16px; padding: 24px 28px 20px;
+    position: absolute; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    max-width: 520px; pointer-events: auto; cursor: grab;
+  }
+  .duration-popup-close {
+    position: absolute; top: 10px; right: 14px;
+    background: none; border: none; color: var(--dim); font-size: 1.2rem;
+    cursor: pointer; padding: 4px 8px;
+  }
+  .duration-popup-close:hover { color: var(--text); }
+
+  /* Custom confirm dialog */
+  .confirm-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.4); justify-content: center; align-items: center;
+  }
+  .confirm-backdrop.open { display: flex; }
+  .confirm-box {
+    background: rgba(30, 30, 50, 0.7);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 14px; padding: 24px 28px 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    max-width: 360px; text-align: center;
+  }
+  .confirm-msg {
+    font-size: 0.9rem; color: var(--text); margin-bottom: 20px; line-height: 1.4;
+  }
+  .confirm-buttons { display: flex; gap: 12px; justify-content: center; }
+  .confirm-btn {
+    padding: 7px 20px; border-radius: 6px; font-size: 0.85rem;
+    font-family: inherit; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    border: 1.5px solid var(--blue);
+  }
+  .confirm-btn-yes { background: var(--blue); color: #fff; }
+  .confirm-btn-yes:hover { background: #2980b9; }
+  .confirm-btn-no { background: transparent; color: var(--blue); }
+  .confirm-btn-no:hover { background: rgba(52,152,219,0.15); }
+
+  /* Custom prompt dialog */
+  .prompt-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.4); justify-content: center; align-items: center;
+  }
+  .prompt-backdrop.open { display: flex; }
+  .prompt-box {
+    background: rgba(30, 30, 50, 0.7);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 14px; padding: 24px 28px 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    max-width: 360px; text-align: center;
+  }
+  .prompt-label {
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--dim); margin-bottom: 12px;
+  }
+  .prompt-input {
+    width: 100%; box-sizing: border-box; padding: 8px 12px;
+    border: 1.5px solid var(--blue); border-radius: 6px;
+    background: rgba(255,255,255,0.08); color: var(--text);
+    font-size: 1rem; font-family: inherit; margin-bottom: 18px;
+    outline: none;
+  }
+  .prompt-input:focus { border-color: var(--green); }
+  .prompt-buttons { display: flex; gap: 12px; }
+  .prompt-buttons .confirm-btn { flex: 1; }
+  .duration-popup-title {
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--dim); margin-bottom: 16px; text-align: center;
+    cursor: grab; user-select: none;
+  }
+  .duration-popup-title:active { cursor: grabbing; }
+
+  /* Contextual Push/Clear buttons */
+  .mock-ctx {
+    display: none; position: absolute; right: -44px; top: 50%; transform: translateY(-50%);
+    flex-direction: column; gap: 3px; z-index: 100;
+  }
+  .mock-ctx.visible { display: flex; }
+  .mock-ctx-btn {
+    font-size: 0.55rem; padding: 2px 5px; border-radius: 4px; cursor: pointer;
+    font-family: inherit; font-weight: 600; white-space: nowrap;
+    border: none; transition: all 0.15s;
+  }
+  .mock-ctx-push { background: var(--blue); color: #fff; }
+  .mock-ctx-push:hover { background: #2980b9; }
+  .mock-ctx-clear { background: #fff; color: var(--blue); }
+  .mock-ctx-clear:hover { background: #e0e0e0; }
+  .mock-ctx-revert { background: #d35400; color: #fff; }
+  .mock-ctx-revert:hover { background: #b94700; }
+  .mock-ctx-go { background: transparent; color: #fff; border: 1.5px solid var(--blue); font-size: 0.7rem; }
+  .mock-ctx-go:hover { color: var(--green); border-color: var(--green); }
+
+  /* Checkbox on left of field */
+  .mock-chk {
+    display: none; position: absolute; left: -22px; top: 50%; transform: translateY(-50%);
+  }
+  .mock-chk.visible { display: block; }
+  .mock-chk input { accent-color: var(--blue); width: 13px; height: 13px; cursor: pointer; }
 
   /* Tabs */
   .tab-bar {
@@ -241,19 +456,19 @@
   /* Transport buttons */
   .transport-btn svg { pointer-events: none; }
   .transport-btn {
-    width: 34px; height: 30px; border: 2px solid transparent; border-radius: 6px;
-    background: transparent; color: #777; font-size: 1.2rem;
+    height: 32px; border: 1.5px solid var(--blue); border-radius: 6px;
+    background: transparent; color: var(--blue); font-size: 1.1rem;
     cursor: pointer; transition: all 0.15s;
     display: flex; align-items: center; justify-content: center; padding: 0;
   }
-  .transport-btn.enabled { color: #fff; }
-  .transport-btn.enabled svg { stroke: #fff; }
-  .transport-btn:not(.enabled) svg { stroke: #777; }
-  .transport-btn.enabled:hover { border-color: #fff; }
-  .transport-btn:not(.enabled) { cursor: default; opacity: 0.7; }
+  .transport-btn.enabled { color: var(--blue); border-color: var(--blue); }
+  .transport-btn.enabled svg { stroke: var(--blue); }
+  .transport-btn:not(.enabled) svg { stroke: #555; }
+  .transport-btn.enabled:hover { background: rgba(52,152,219,0.15); }
+  .transport-btn:not(.enabled) { cursor: default; opacity: 0.4; color: #555; border-color: #555; }
   .transport-btn.tb-start { font-size: 1.0rem; }
-  .transport-btn.tb-pause { font-size: 1.4rem; padding-bottom: 2px; }
-  .transport-btn.tb-reset { font-size: 1.5rem; padding-top: 2px; }
+  .transport-btn.tb-pause { font-size: 1.3rem; padding-bottom: 2px; }
+  .transport-btn.tb-reset { font-size: 1.4rem; padding-top: 2px; }
   .transport-btn.tb-stop { }
 
   /* Quick-time preset buttons */
@@ -277,7 +492,7 @@
   /* Library grid */
   .lib-grid { width: 100%; border-collapse: collapse; }
   .lib-grid-header {
-    display: grid; grid-template-columns: 46px 2fr 36px 2fr 3fr 22px 22px 22px;
+    display: grid; grid-template-columns: auto auto 2fr 36px 2fr 3fr 22px 22px 22px;
     gap: 6px; padding: 4px 6px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     position: relative;
@@ -301,7 +516,7 @@
   .btn-clear-sort:hover { color: var(--red); border-color: var(--red); }
   .btn-clear-sort.visible { display: inline-block; }
   .lib-row {
-    display: grid; grid-template-columns: 46px 2fr 36px 2fr 3fr 22px 22px 22px;
+    display: grid; grid-template-columns: auto auto 2fr 36px 2fr 3fr 22px 22px 22px;
     gap: 6px; align-items: center;
     padding: 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.04);
     transition: background 0.15s;
@@ -328,16 +543,18 @@
   }
   .lib-row-title { color: #bbb; }
   .lib-row-btn {
-    padding: 3px 6px; border: 1px solid var(--blue); border-radius: 5px;
-    background: transparent; color: var(--blue); font-size: 0.65rem; white-space: nowrap;
+    padding: 2px 5px; border: 1px solid var(--blue); border-radius: 5px;
+    background: transparent; color: var(--blue); font-size: 0.6rem; white-space: nowrap;
     cursor: pointer; transition: all 0.15s;
-    text-align: center;
+    text-align: center; width: 40px; box-sizing: border-box;
+    display: inline-flex; align-items: center; justify-content: center;
   }
   .lib-row-btn:hover { background: rgba(52,152,219,0.15); }
   .lib-row-btn.btn-loaded {
-    border-color: var(--green); color: var(--green); font-size: 0.58rem;
+    border-color: var(--green); color: var(--green);
   }
   .lib-row-btn.btn-loaded:hover { background: rgba(78,204,163,0.15); }
+  .lib-row-go { padding: 2px 4px; font-size: 0.55rem; }
   .lib-icon-btn {
     width: 22px; height: 22px; border: 1px solid #444; border-radius: 4px;
     background: transparent; font-size: 0.75rem;
@@ -379,8 +596,7 @@
     padding: 5px 12px; border: none; border-radius: 6px;
     background: var(--blue); color: #fff; font-size: 0.78rem; cursor: pointer;
   }
-  .connected-count { font-size: 0.8rem; color: var(--dim); margin-top: 8px; }
-  .connected-count span { color: var(--green); font-weight: 600; }
+  .connected-count { font-size: 2rem; font-weight: 700; color: var(--green); margin-top: 2px; }
 
 </style>
 </head>
@@ -389,194 +605,118 @@
 <div class="page-wrap">
 
 
-<!-- Main content: clock + tabs + preview side by side -->
+<!-- Clock Display -->
+<!-- timer-digits kept hidden for JS references -->
+<div style="display:none"><div class="timer-digits" id="timerDigits">00:00</div></div>
+
+<!-- Main two-column layout: mockup left, tabs right -->
 <div class="main-layout">
 
-  <!-- Left column: clock + tabs + controls -->
+  <!-- Left column: Name/Push All + Phone mockup -->
   <div class="col-left">
-
-    <!-- Clock Display -->
-    <div class="clock-header">
-      <div class="timer-digits-box">
-        <div class="timer-digits" id="timerDigits">00:00</div>
-        <div class="box-buttons">
+    <div class="mockup-area">
+      <div class="mockup-side-left">
+        <div class="text-side-label">Preset Name</div>
+        <input type="text" class="text-side-input" id="fieldName" placeholder="e.g. Break 15" autocomplete="off">
+        <div class="text-side-hint">Library only — not shown to students.</div>
+        <hr style="border:none; border-top:1px solid #333; margin:8px 0;">
+        <button class="btn-push-all" onclick="pushAllFields()">Push All</button>
+        <div class="push-all-hint">Pushes all checked fields.</div>
+        <hr style="border:none; border-top:1px solid #333; margin:8px 0;">
+        <div class="transport-grid">
           <button class="transport-btn tb-start" onclick="doStart()" title="Start">&#9654;&#xFE0E;</button>
           <button class="transport-btn tb-pause" onclick="doPause()" title="Pause">&#9208;&#xFE0E;</button>
           <button class="transport-btn tb-stop" onclick="doStop()" title="Stop">&#9209;&#xFE0E;</button>
           <button class="transport-btn tb-reset" onclick="doReset()" title="Reset">&#8634;</button>
           <button class="transport-btn tb-restore tb-reset" onclick="doRestore()" title="Restore last timer" style="position:relative;">&#8634;<svg style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);margin-top:1px;" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1.5" x2="5" y2="5"/><line x1="5" y1="5" x2="7" y2="6.5"/></svg></button>
-          <button class="transport-btn tb-clear" onclick="doClearAll()" title="Clear all fields"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 8-8 3 3-8 8-5 5z"/><line x1="8" y1="12" x2="11" y2="15"/><line x1="3" y1="20" x2="21" y2="20"/></svg></button>
+          <button class="transport-btn tb-clear" onclick="doClearAll()" title="Clear all fields"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 8-8 3 3-8 8-5 5z"/><line x1="8" y1="12" x2="11" y2="15"/><line x1="3" y1="20" x2="21" y2="20"/></svg></button>
         </div>
-        <div class="connected-count" style="text-align:center; margin-top:6px;">Phones connected: <span id="connectedCount">0</span></div>
+        <hr style="border:none; border-top:1px solid #333; margin:8px 0;">
+        <div class="connected-badge">
+          <div class="connected-label">Phones Connected</div>
+          <div class="connected-count" id="connectedCount">0</div>
+        </div>
+      </div>
+
+      <!-- Phone mockup -->
+      <div class="phone-mockup" id="phoneMockup">
+        <div class="phone-mockup-notch"></div>
+
+        <!-- Course Title -->
+        <div class="mock-field-wrap">
+          <div class="mock-chk" id="mockChkCourse"><input type="checkbox" id="includeCourseTitle" checked title="Include when pushing"></div>
+          <div class="mock-editable mock-course-title" contenteditable="true" data-placeholder="Course Title" id="fieldCourseTitle"></div>
+          <div class="mock-ctx" id="mockCtxCourseTitle">
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldCourseTitle')" title="Push &amp; Start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-push" id="btnPushCourseTitle" onclick="pushCourseTitle()">Push</button>
+            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearCourseTitle()">Clear</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldCourseTitle')">Revert</button>
+          </div>
+        </div>
+
+        <!-- Progress Ring -->
+        <svg class="mock-ring" id="mockRing" viewBox="0 0 130 130">
+          <circle class="mock-ring-bg" cx="65" cy="65" r="52"/>
+          <circle class="mock-ring-fg" id="mockRingFg" cx="65" cy="65" r="52" transform="rotate(-90 65 65)"/>
+        </svg>
+
+        <!-- Label / Title -->
+        <div class="mock-field-wrap">
+          <div class="mock-chk" id="mockChkLabel"><input type="checkbox" id="includeTitle" checked title="Include when pushing"></div>
+          <div class="mock-editable mock-label" contenteditable="true" data-placeholder="Timer Label" id="fieldLabel"></div>
+          <div class="mock-ctx" id="mockCtxLabel">
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldLabel')" title="Push &amp; Start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-push" onclick="loadTitle()">Push</button>
+            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearTitle()">Clear</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldLabel')">Revert</button>
+          </div>
+        </div>
+
+        <!-- Digits (clickable to open duration popup) -->
+        <div class="mock-digits" id="mockDigits" onclick="openDurationPopup()" title="Click to set duration">00:00</div>
+
+        <!-- End Time Label + computed time -->
+        <div class="mock-field-wrap">
+          <div class="mock-chk" id="mockChkEndTime"><input type="checkbox" id="includeEndTimeLabel" checked title="Include when pushing"></div>
+          <div class="mock-editable mock-end-time-label" contenteditable="true" data-placeholder="End Time Label" id="fieldEndTimeLabel">Class resumes at</div>
+          <div class="mock-end-time-computed" id="mockEndTimeComputed"></div>
+          <div class="mock-ctx" id="mockCtxEndTimeLabel">
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldEndTimeLabel')" title="Push &amp; Start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-push" onclick="loadEndTimeLabel()">Push</button>
+            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearEndTimeLabel()">Clear</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldEndTimeLabel')">Revert</button>
+          </div>
+        </div>
+
+        <!-- Message -->
+        <div class="mock-field-wrap">
+          <div class="mock-chk" id="mockChkMessage"><input type="checkbox" id="includeMessage" checked title="Include when pushing"></div>
+          <div class="mock-editable mock-message" contenteditable="true" data-placeholder="Message to students" id="fieldMessage"></div>
+          <div class="mock-ctx" id="mockCtxMessage">
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldMessage')" title="Push &amp; Start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-push" onclick="loadMessage()">Push</button>
+            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearMessage()">Clear</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldMessage')">Revert</button>
+          </div>
+        </div>
       </div>
     </div>
+  </div><!-- /col-left -->
+
+  <!-- Right column: tabs -->
+  <div class="col-right">
 
     <!-- Tab bar -->
     <div class="tab-bar">
       <button class="tab-btn active" onclick="switchTab('library')">Library</button>
-      <button class="tab-btn" onclick="switchTab('text')">Text</button>
-      <button class="tab-btn" onclick="switchTab('timer')">Timer</button>
       <button class="tab-btn" onclick="switchTab('options')">Options</button>
       <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
     </div>
 
     <!-- Tab: Library -->
     <div class="tab-content active" id="tab-library">
-      <div id="libraryList" style="max-height:300px; overflow-y:auto;"></div>
+      <div id="libraryList" style="max-height:460px; overflow-y:auto;"></div>
       <button class="btn-new-timer" onclick="newTimerToFields()">+ New Timer</button>
-    </div>
-
-    <!-- Tab: Text -->
-    <div class="tab-content" id="tab-text">
-
-      <!-- Course Title (persistent — not part of library) -->
-      <label class="field">
-        <div class="lbl">Course Title <span style="font-weight:400;color:#555;">(always visible to students)</span></div>
-        <input type="text" id="fieldCourseTitle" placeholder="e.g. Introduction to Python" autocomplete="off">
-      </label>
-      <div class="field-actions" style="margin-left:0; margin-top:-6px; justify-content:flex-end;">
-        <button class="btn-field-load" id="btnPushCourseTitle" onclick="pushCourseTitle()">Push</button>
-        <div class="checkbox-row" style="margin:0; margin-left:8px;">
-          <input type="checkbox" id="includeCourseTitle" class="custom-cb" checked>
-          <label for="includeCourseTitle">Select for pushing</label>
-        </div>
-        <button class="btn-field-clear" onclick="clearCourseTitle()">Clear</button>
-      </div>
-
-      <!-- Name (library only) -->
-      <label class="field">
-        <div class="lbl">Name <span style="font-weight:400;color:#555;">(library only)</span></div>
-        <input type="text" id="fieldName" placeholder="e.g. Break 15" autocomplete="off">
-      </label>
-      <div class="field-actions" style="margin-left:0; margin-top:-6px; justify-content:flex-end;">
-        <button class="btn-field-clear" onclick="document.getElementById('fieldName').value='';checkDirty();">Clear</button>
-      </div>
-
-      <!-- Title -->
-      <label class="field">
-        <div class="lbl">Title <span style="font-weight:400;color:#555;">(shown to students)</span></div>
-        <input type="text" id="fieldLabel" placeholder="e.g. Lunch Break" autocomplete="off">
-      </label>
-      <div class="field-actions" style="margin-left:0; margin-top:-6px; justify-content:flex-end;">
-        <button class="btn-field-load" onclick="loadTitle()">Push</button>
-        <div class="checkbox-row" style="margin:0; margin-left:8px;">
-          <input type="checkbox" id="includeTitle" class="custom-cb" checked>
-          <label for="includeTitle">Select for pushing</label>
-        </div>
-        <button class="btn-field-clear" onclick="clearTitle()">Clear</button>
-      </div>
-
-      <!-- End Time Label -->
-      <label class="field">
-        <div class="lbl">End Time Label <span style="font-weight:400;color:#555;">(shown before end time)</span></div>
-        <input type="text" id="fieldEndTimeLabel" placeholder="e.g. Class resumes at" value="Class resumes at" autocomplete="off">
-      </label>
-      <div class="field-actions" style="margin-left:0; margin-top:-6px; justify-content:flex-end;">
-        <button class="btn-field-load" onclick="loadEndTimeLabel()">Push</button>
-        <div class="checkbox-row" style="margin:0; margin-left:8px;">
-          <input type="checkbox" id="includeEndTimeLabel" class="custom-cb" checked>
-          <label for="includeEndTimeLabel">Select for pushing</label>
-        </div>
-        <button class="btn-field-clear" onclick="clearEndTimeLabel()">Clear</button>
-      </div>
-
-      <!-- Message -->
-      <label class="field" style="margin-bottom:0;">
-        <div class="lbl">Message <span style="font-weight:400;color:#555;">(shown to students)</span></div>
-        <textarea id="fieldMessage" rows="6" placeholder="e.g. Enjoy your break! Class resumes shortly." style="min-height:120px;" autocomplete="off"></textarea>
-      </label>
-      <div class="field-actions" style="margin-left:0; justify-content:flex-end;">
-        <button class="btn-field-load" onclick="loadMessage()">Push</button>
-        <div class="checkbox-row" style="margin:0; margin-left:8px;">
-          <input type="checkbox" id="includeMessage" class="custom-cb" checked>
-          <label for="includeMessage">Select for pushing</label>
-        </div>
-        <button class="btn-field-clear" onclick="clearMessage()">Clear</button>
-      </div>
-
-    </div>
-
-    <!-- Tab: Timer -->
-    <div class="tab-content" id="tab-timer">
-      <div style="display:flex; gap:16px; align-items:flex-start; justify-content:center; flex-wrap:wrap; max-width:100%; overflow-x:auto;">
-        <div class="spinner-field">
-          <div class="lbl">Duration</div>
-          <div class="spinner-group">
-            <div>
-              <div class="spin-label">hr</div>
-              <div class="spinner">
-                <button data-spin="durH" data-dir="up">&#9650;</button>
-                <div class="spin-value" id="durH">0</div>
-                <button data-spin="durH" data-dir="down">&#9660;</button>
-              </div>
-            </div>
-            <div class="spin-separator">:</div>
-            <div>
-              <div class="spin-label">min</div>
-              <div class="spinner">
-                <button data-spin="durM" data-dir="up">&#9650;</button>
-                <div class="spin-value" id="durM">15</div>
-                <button data-spin="durM" data-dir="down">&#9660;</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="sync-arrows">
-          <svg width="40" height="24" viewBox="0 0 40 24">
-            <line x1="2" y1="10" x2="38" y2="10" stroke="#888" stroke-width="1.5"/>
-            <line x1="38" y1="10" x2="31" y2="3" stroke="#888" stroke-width="1.5"/>
-            <line x1="2" y1="14" x2="38" y2="14" stroke="#888" stroke-width="1.5"/>
-            <line x1="2" y1="14" x2="9" y2="21" stroke="#888" stroke-width="1.5"/>
-          </svg>
-        </div>
-        <div class="spinner-field">
-          <div class="lbl">Target Time</div>
-          <div class="spinner-group">
-            <div>
-              <div class="spin-label">hr</div>
-              <div class="spinner">
-                <button data-spin="tarH" data-dir="up">&#9650;</button>
-                <div class="spin-value" id="tarH">12</div>
-                <button data-spin="tarH" data-dir="down">&#9660;</button>
-              </div>
-            </div>
-            <div class="spin-separator">:</div>
-            <div>
-              <div class="spin-label">min</div>
-              <div class="spinner">
-                <button data-spin="tarM" data-dir="up">&#9650;</button>
-                <div class="spin-value" id="tarM">00</div>
-                <button data-spin="tarM" data-dir="down">&#9660;</button>
-              </div>
-            </div>
-            <button class="ampm-btn" id="tarAmPm" onclick="toggleAmPm()">PM</button>
-          </div>
-        </div>
-        <div class="spinner-field" style="margin-left:24px;">
-          <div class="lbl">Quick Set</div>
-          <div class="quick-times">
-            <button onclick="setQuickTime(5)">5</button>
-            <button onclick="setQuickTime(45)">45</button>
-            <button onclick="setQuickTime(10)">10</button>
-            <button onclick="setQuickTime(60)">60</button>
-            <button onclick="setQuickTime(15)">15</button>
-            <button onclick="setQuickTime(75)">75</button>
-            <button onclick="setQuickTime(20)">20</button>
-            <button onclick="setQuickTime(90)">90</button>
-            <button onclick="setQuickTime(30)">30</button>
-            <button onclick="setQuickTime(120)">120</button>
-          </div>
-        </div>
-      </div>
-      <div class="field-actions" style="margin-top: 12px; margin-left: 0;">
-        <button class="btn-field-load" onclick="loadTime()">Push</button>
-        <button class="btn-field-add" onclick="addTimerTime()">+Add</button>
-        <button class="btn-field-clear" onclick="clearTime()">Clear</button>
-        <div class="checkbox-row" style="margin:0; margin-left:8px;">
-          <input type="checkbox" id="includeTime" class="custom-cb" checked>
-          <label for="includeTime">Select for pushing</label>
-        </div>
-      </div>
     </div>
 
     <!-- Tab: Options (per-timer, saved with library items) -->
@@ -591,20 +731,18 @@
 
       <div class="checkbox-row" style="margin-bottom:10px;">
         <input type="checkbox" id="fieldTransparent" class="custom-cb">
-        <label for="fieldTransparent">Transparent background (OBS/display only)</label>
+        <label for="fieldTransparent">Transparent background</label>
       </div>
 
       <div class="checkbox-row" style="margin-bottom:10px;">
         <input type="checkbox" id="fieldClockOnly" class="custom-cb">
-        <label for="fieldClockOnly">Clock only — hide text and ring (OBS/display only)</label>
+        <label for="fieldClockOnly">Clock only — hide text and ring</label>
       </div>
 
       <div style="display:flex; align-items:center; gap:8px; margin-top:18px;">
         <label for="optGoToTab" style="font-size:0.85rem; color:#aaa;">After loading, go to tab:</label>
         <select id="optGoToTab" style="padding:6px 10px; border:1px solid #666; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem;">
           <option value="library">Library</option>
-          <option value="text">Text</option>
-          <option value="timer">Timer</option>
           <option value="options">Options</option>
           <option value="settings">Settings</option>
         </select>
@@ -635,8 +773,6 @@
             <label for="optStartTab" style="font-size:0.85rem; color:#aaa;">After starting, go to tab:</label>
             <select id="optStartTab" style="padding:6px 10px; border:1px solid #666; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem;">
               <option value="library">Library</option>
-              <option value="text">Text</option>
-              <option value="timer">Timer</option>
               <option value="options">Options</option>
               <option value="settings">Settings</option>
             </select>
@@ -716,22 +852,98 @@
       </div>
     </div>
 
-
-  </div><!-- /col-left -->
-
-  <!-- Right column: phone preview -->
-  <div class="col-right">
-    <div class="phone-preview-wrapper">
-      <div class="phone-preview-frame" id="previewFrame">
-        <iframe id="previewIframe" src="/student.html?preview=true"></iframe>
-      </div>
-      <div class="pp-mode-label mode-live" id="ppModeLabel">Live</div>
-    </div>
   </div><!-- /col-right -->
 
 </div><!-- /main-layout -->
 
 </div><!-- /page-wrap -->
+
+<!-- Duration Popup Overlay -->
+<div class="duration-popup-backdrop" id="durationPopupBackdrop">
+  <div class="duration-popup" id="durationPopup">
+    <button class="duration-popup-close" onclick="closeDurationPopup()">&#10005;</button>
+    <div class="duration-popup-title">Duration / Target Time</div>
+    <div style="display:flex; gap:16px; align-items:flex-start; justify-content:center; flex-wrap:wrap;">
+      <div class="spinner-field">
+        <div class="lbl">Duration</div>
+        <div class="spinner-group">
+          <div>
+            <div class="spin-label">hr</div>
+            <div class="spinner">
+              <button data-spin="durH" data-dir="up">&#9650;</button>
+              <div class="spin-value" id="durH">0</div>
+              <button data-spin="durH" data-dir="down">&#9660;</button>
+            </div>
+          </div>
+          <div class="spin-separator">:</div>
+          <div>
+            <div class="spin-label">min</div>
+            <div class="spinner">
+              <button data-spin="durM" data-dir="up">&#9650;</button>
+              <div class="spin-value" id="durM">15</div>
+              <button data-spin="durM" data-dir="down">&#9660;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sync-arrows">
+        <svg width="40" height="24" viewBox="0 0 40 24">
+          <line x1="2" y1="10" x2="38" y2="10" stroke="#888" stroke-width="1.5"/>
+          <line x1="38" y1="10" x2="31" y2="3" stroke="#888" stroke-width="1.5"/>
+          <line x1="2" y1="14" x2="38" y2="14" stroke="#888" stroke-width="1.5"/>
+          <line x1="2" y1="14" x2="9" y2="21" stroke="#888" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="spinner-field">
+        <div class="lbl">Target Time</div>
+        <div class="spinner-group">
+          <div>
+            <div class="spin-label">hr</div>
+            <div class="spinner">
+              <button data-spin="tarH" data-dir="up">&#9650;</button>
+              <div class="spin-value" id="tarH">12</div>
+              <button data-spin="tarH" data-dir="down">&#9660;</button>
+            </div>
+          </div>
+          <div class="spin-separator">:</div>
+          <div>
+            <div class="spin-label">min</div>
+            <div class="spinner">
+              <button data-spin="tarM" data-dir="up">&#9650;</button>
+              <div class="spin-value" id="tarM">00</div>
+              <button data-spin="tarM" data-dir="down">&#9660;</button>
+            </div>
+          </div>
+          <button class="ampm-btn" id="tarAmPm" onclick="toggleAmPm()">PM</button>
+        </div>
+      </div>
+      <div class="spinner-field" style="margin-left:24px;">
+        <div class="lbl">Quick Set</div>
+        <div class="quick-times">
+          <button onclick="setQuickTime(5)">5</button>
+          <button onclick="setQuickTime(45)">45</button>
+          <button onclick="setQuickTime(10)">10</button>
+          <button onclick="setQuickTime(60)">60</button>
+          <button onclick="setQuickTime(15)">15</button>
+          <button onclick="setQuickTime(75)">75</button>
+          <button onclick="setQuickTime(20)">20</button>
+          <button onclick="setQuickTime(90)">90</button>
+          <button onclick="setQuickTime(30)">30</button>
+          <button onclick="setQuickTime(120)">120</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:12px; justify-content:center; align-items:center;">
+      <button onclick="loadTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Push</button>
+      <button onclick="addTimerTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">+Add</button>
+      <button onclick="clearTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Clear</button>
+      <div class="checkbox-row" style="margin:0; margin-left:8px;">
+        <input type="checkbox" id="includeTime" class="custom-cb" checked>
+        <label for="includeTime">Include when starting</label>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 const socket = io();
@@ -744,13 +956,14 @@ let timerRemaining = 0;
 let lastTimerData = null;
 
 // ── Tab switching ──
-const TAB_NAMES = ['library', 'text', 'timer', 'options', 'settings'];
+const TAB_NAMES = ['library', 'options', 'settings'];
 function switchTab(name) {
+  // Map legacy tab names to valid tabs
+  if (!TAB_NAMES.includes(name)) name = 'library';
   const scrollY = window.scrollY;
-  // Set a min-height on the tab container to prevent page height from shrinking
-  const tabContainer = document.querySelector('.tab-content.active');
-  const colLeft = document.querySelector('.col-left');
-  if (colLeft) colLeft.style.minHeight = colLeft.offsetHeight + 'px';
+  // Set a min-height on the tab column to prevent page height from shrinking
+  const colRight = document.querySelector('.col-right');
+  if (colRight) colRight.style.minHeight = colRight.offsetHeight + 'px';
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
@@ -759,9 +972,294 @@ function switchTab(name) {
   window.scrollTo(0, scrollY);
   requestAnimationFrame(() => {
     window.scrollTo(0, scrollY);
-    // Release min-height after scroll is restored
-    if (colLeft) colLeft.style.minHeight = '';
+    if (colRight) colRight.style.minHeight = '';
   });
+}
+
+// ── Contenteditable field helpers ──
+// Read text from a contenteditable div (equivalent to input.value)
+function getField(id) { return (document.getElementById(id).textContent || '').trim(); }
+// Write text to a contenteditable div (equivalent to input.value = ...)
+function setField(id, val) { document.getElementById(id).textContent = val; }
+
+// ── Dirty-field tracking (changed but not pushed) ──
+// Stores the field text (in field format) that students currently see
+const liveText = { fieldCourseTitle: '', fieldLabel: '', fieldEndTimeLabel: '', fieldMessage: '' };
+
+function markDirtyFields() {
+  for (const id of Object.keys(liveText)) {
+    const el = document.getElementById(id);
+    const current = (el.textContent || '').trim();
+    const isDirty = current !== liveText[id];
+    el.classList.toggle('field-dirty', isDirty);
+  }
+}
+
+// Record what's live after a push (use raw field text — no conversion needed)
+function revertField(fieldId) {
+  const el = document.getElementById(fieldId);
+  el.textContent = liveText[fieldId];
+  markDirtyFields();
+  el.focus();
+}
+
+let lastPushTime = 0;
+function markPushed(fieldId) {
+  liveText[fieldId] = (document.getElementById(fieldId).textContent || '').trim();
+  lastPushTime = Date.now();
+  // console.log('PUSHED', fieldId, '→ liveText set to', JSON.stringify(liveText[fieldId]));
+  markDirtyFields();
+}
+
+// Sync from server timer-update (convert actual newlines back to literal \n for field comparison)
+function syncLiveFromServer(s) {
+  // Don't let an in-flight timer-update overwrite a value we just pushed
+  const elapsed = Date.now() - lastPushTime;
+  if (elapsed < 2000) return;
+  liveText.fieldCourseTitle = (s.courseTitle || '').trim();
+  liveText.fieldLabel       = (s.label || '').trim();
+  liveText.fieldEndTimeLabel= (s.endTimeLabel || '').trim();
+  liveText.fieldMessage     = (s.message || '').trim();
+  markDirtyFields();
+}
+
+// Re-check on every keystroke in any mockup field
+document.addEventListener('input', (e) => {
+  if (e.target.closest('.mock-editable')) markDirtyFields();
+});
+
+// ── Phone mockup: contextual buttons ──
+const mockFieldMap = {
+  fieldCourseTitle: { ctx: 'mockCtxCourseTitle', chk: 'mockChkCourse' },
+  fieldLabel:       { ctx: 'mockCtxLabel',       chk: 'mockChkLabel' },
+  fieldEndTimeLabel:{ ctx: 'mockCtxEndTimeLabel', chk: 'mockChkEndTime' },
+  fieldMessage:     { ctx: 'mockCtxMessage',      chk: 'mockChkMessage' },
+};
+
+document.addEventListener('focusin', (e) => {
+  // Don't hide buttons if focus moved to a contextual button itself
+  if (e.target.closest('.mock-ctx') || e.target.closest('.mock-chk')) return;
+
+  const el = e.target.closest('.mock-editable');
+  // Hide all contextual buttons first
+  document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
+  document.querySelectorAll('.mock-chk').forEach(b => b.classList.remove('visible'));
+  if (el && mockFieldMap[el.id]) {
+    const map = mockFieldMap[el.id];
+    document.getElementById(map.ctx).classList.add('visible');
+    document.getElementById(map.chk).classList.add('visible');
+  }
+});
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.mock-editable') && !e.target.closest('.mock-ctx') && !e.target.closest('.mock-chk')) {
+    document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
+    document.querySelectorAll('.mock-chk').forEach(b => b.classList.remove('visible'));
+  }
+});
+
+// ── Push All — push all checked fields at once ──
+function pushAllFields() {
+  if (document.getElementById('includeCourseTitle').checked) pushCourseTitle();
+  if (document.getElementById('includeTitle').checked) loadTitle();
+  if (document.getElementById('includeEndTimeLabel').checked) loadEndTimeLabel();
+  if (document.getElementById('includeMessage').checked) loadMessage();
+}
+
+function pushAllAndStart() {
+  pushAllFields();
+  closeDurationPopup();
+  doStart();
+}
+
+function customPrompt(label) {
+  return new Promise((resolve) => {
+    const backdrop = document.getElementById('promptBackdrop');
+    const input = document.getElementById('promptInput');
+    const ok = document.getElementById('promptOk');
+    const cancel = document.getElementById('promptCancel');
+    document.getElementById('promptLabel').textContent = label;
+    input.value = '';
+    backdrop.classList.add('open');
+    input.focus();
+    function cleanup() {
+      backdrop.classList.remove('open');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      input.removeEventListener('keydown', onKey);
+    }
+    function onOk() { cleanup(); resolve(input.value); }
+    function onCancel() { cleanup(); resolve(null); }
+    function onKey(e) {
+      if (e.key === 'Enter') { e.preventDefault(); onOk(); }
+      if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+    }
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+    input.addEventListener('keydown', onKey);
+  });
+}
+
+function customConfirm(msg) {
+  return new Promise((resolve) => {
+    const backdrop = document.getElementById('confirmBackdrop');
+    document.getElementById('confirmMsg').textContent = msg;
+    backdrop.classList.add('open');
+    const yes = document.getElementById('confirmYes');
+    const no = document.getElementById('confirmNo');
+    function cleanup() {
+      backdrop.classList.remove('open');
+      yes.removeEventListener('click', onYes);
+      no.removeEventListener('click', onNo);
+    }
+    function onYes() { cleanup(); resolve(true); }
+    function onNo() { cleanup(); resolve(false); }
+    yes.addEventListener('click', onYes);
+    no.addEventListener('click', onNo);
+  });
+}
+
+async function pushFieldAndStart(fieldId) {
+  if (timerIsRunning) {
+    if (!await customConfirm('A timer is currently running. Stop it and start a new one?')) return;
+    stopAlarmLoop(); warningFired = false; socket.emit('reset');
+    await new Promise(r => setTimeout(r, 150));
+  }
+  const pushMap = {
+    fieldCourseTitle: pushCourseTitle,
+    fieldLabel: loadTitle,
+    fieldEndTimeLabel: loadEndTimeLabel,
+    fieldMessage: loadMessage,
+  };
+  if (pushMap[fieldId]) pushMap[fieldId]();
+  doStart();
+}
+
+// ── Duration popup ──
+function openDurationPopup() {
+  document.getElementById('durationPopupBackdrop').classList.add('open');
+  // Update mockup digits to show current duration setting
+  updateMockDigitsFromSpinners();
+}
+function closeDurationPopup() {
+  document.getElementById('durationPopupBackdrop').classList.remove('open');
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('durationPopupBackdrop').classList.contains('open')) {
+    closeDurationPopup();
+  }
+});
+
+// ── Draggable duration popup ──
+(function() {
+  const popup = document.querySelector('.duration-popup');
+  const titleBar = document.querySelector('.duration-popup-title');
+  let dragging = false, offsetX = 0, offsetY = 0;
+
+  // Center popup when opened
+  const observer = new MutationObserver(() => {
+    const backdrop = document.getElementById('durationPopupBackdrop');
+    if (backdrop.classList.contains('open') && !popup.style.left) {
+      const rect = popup.getBoundingClientRect();
+      popup.style.left = ((window.innerWidth - rect.width) / 2) + 'px';
+      popup.style.top = ((window.innerHeight - rect.height) / 2) + 'px';
+    }
+  });
+  observer.observe(document.getElementById('durationPopupBackdrop'), { attributes: true, attributeFilter: ['class'] });
+
+  popup.addEventListener('mousedown', (e) => {
+    // Only drag from non-interactive areas (not buttons, inputs, spinners)
+    if (e.target.closest('button, input, .spinner-val, .spin-btn, .quick-time-grid')) return;
+    dragging = true;
+    const rect = popup.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    popup.style.left = (e.clientX - offsetX) + 'px';
+    popup.style.top = (e.clientY - offsetY) + 'px';
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+})();
+
+function updateMockDigitsFromSpinners() {
+  if (timerIsRunning || timerRemaining > 0) return; // don't overwrite live countdown
+  const mins = getDurationMinutes();
+  const totalSecs = mins * 60;
+  document.getElementById('mockDigits').textContent = fmt(totalSecs);
+  // Update computed end time
+  updateMockEndTime(mins);
+}
+
+function updateMockEndTime(mins) {
+  const el = document.getElementById('mockEndTimeComputed');
+  if (mins > 0) {
+    const end = new Date(Date.now() + mins * 60000);
+    let h = end.getHours() % 12; if (h === 0) h = 12;
+    const m = String(end.getMinutes()).padStart(2, '0');
+    const ampm = end.getHours() >= 12 ? 'PM' : 'AM';
+    el.textContent = h + ':' + m + ' ' + ampm;
+  } else {
+    el.textContent = '';
+  }
+}
+
+// ── Live mockup updates ──
+const MOCK_CIRCUMFERENCE = 2 * Math.PI * 52; // matches ring r=52
+
+function updateMockupLive(s) {
+  const mockup = document.getElementById('phoneMockup');
+  const digits = document.getElementById('mockDigits');
+  const ringFg = document.getElementById('mockRingFg');
+  const endTimeEl = document.getElementById('mockEndTimeComputed');
+
+  // Update digits
+  digits.textContent = fmt(s.remainingSeconds);
+
+  // Update ring
+  const refTotal = s.originalTotal || s.totalSeconds;
+  if (refTotal > 0) {
+    const remaining = Math.max(0, s.remainingSeconds);
+    const pct = remaining / refTotal;
+    const RESCALE_THRESHOLD = 600;
+    const ringPct = refTotal <= RESCALE_THRESHOLD ? pct : Math.pow(pct, 0.55);
+    ringFg.style.strokeDashoffset = MOCK_CIRCUMFERENCE * (1 - ringPct);
+  } else {
+    ringFg.style.strokeDashoffset = 0;
+  }
+
+  // Update end time display
+  if (s.showEndTime && s.endTimeFormatted) {
+    endTimeEl.textContent = s.endTimeFormatted;
+  } else {
+    endTimeEl.textContent = '';
+  }
+
+  // Update color state
+  mockup.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-done');
+  if (s.running || (s.totalSeconds > 0 && s.remainingSeconds > 0)) {
+    if (s.remainingSeconds <= 0) {
+      mockup.classList.add('state-done');
+    } else {
+      const pct = s.remainingSeconds / refTotal;
+      // Hybrid thresholds matching student.html
+      const yellowThresh = Math.min(0.35, 600 / refTotal);
+      const orangeThresh = Math.min(0.15, 180 / refTotal);
+      if (pct <= orangeThresh) mockup.classList.add('state-orange');
+      else if (pct <= yellowThresh) mockup.classList.add('state-yellow');
+      else mockup.classList.add('state-green');
+    }
+  } else if (s.totalSeconds > 0 && s.remainingSeconds <= 0) {
+    mockup.classList.add('state-done');
+  }
+}
+
+function resetMockupIdle() {
+  const mockup = document.getElementById('phoneMockup');
+  mockup.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-done');
+  document.getElementById('mockRingFg').style.strokeDashoffset = MOCK_CIRCUMFERENCE * 0.22; // default partial fill
+  updateMockDigitsFromSpinners();
 }
 
 // ── Formatting helpers ──
@@ -783,6 +1281,7 @@ socket.on('connect', () => {
 });
 
 // ── Socket events ──
+let initialSyncDone = false;
 socket.on('timer-update', (s) => {
   timerIsRunning = s.running;
   timerTotal = s.totalSeconds;
@@ -790,25 +1289,43 @@ socket.on('timer-update', (s) => {
   timerRemaining = s.remainingSeconds;
   document.getElementById('timerDigits').textContent = fmt(s.remainingSeconds);
 
+  // On first update, populate all mockup fields from server so nothing starts dirty
+  if (!initialSyncDone) {
+    initialSyncDone = true;
+    const setIfEmpty = (id, val) => {
+      const el = document.getElementById(id);
+      if (!el.textContent.trim()) el.textContent = val || '';
+    };
+    setIfEmpty('fieldCourseTitle', s.courseTitle);
+    setIfEmpty('fieldLabel', s.label);
+    setIfEmpty('fieldEndTimeLabel', s.endTimeLabel);
+    setIfEmpty('fieldMessage', s.message);
+  }
+
   // Warning check
   if (s.running && s.remainingSeconds > 0) checkWarning(s.remainingSeconds);
 
   // Sync course title from server (in case another tab set it)
-  // Never overwrite the field if we recently pushed — wait for server to catch up
   const ctField = document.getElementById('fieldCourseTitle');
-  if (Date.now() - ctPushTime < 2000) {
+  if (Date.now() - ctPushTime < 2000 || Date.now() - lastPushTime < 2000) {
     // Skip sync — push is still round-tripping
   } else if (!ctField.matches(':focus')) {
-    const ctDisplay = (s.courseTitle || '').replace(/\n/g, '\\n');
-    if (ctDisplay !== ctField.value) {
-      ctField.value = ctDisplay;
+    const ctDisplay = (s.courseTitle || '');
+    if (ctDisplay !== ctField.textContent) {
+      ctField.textContent = ctDisplay;
     }
   }
 
-  // Track live server state for preview mode detection
-  liveLabel = s.label || '';
-  liveMessage = s.message || '';
-  updatePreviewMode();
+  // Sync live state for dirty-field detection
+  syncLiveFromServer(s);
+
+  // Update live mockup
+  if (s.running || s.totalSeconds > 0) {
+    updateMockupLive(s);
+  } else {
+    resetMockupIdle();
+  }
+
   updateButtonStates();
 });
 
@@ -836,58 +1353,19 @@ document.getElementById('muteStudents').addEventListener('change', () => {
   socket.emit('set-mute', document.getElementById('muteStudents').checked);
 });
 
-// ── Preview vs Live mode ──
-let liveLabel = '';
-let liveMessage = '';
-let lastSentLabel = null;
-let lastSentMessage = null;
-
-function sendToPreview(data) {
-  const iframe = document.getElementById('previewIframe');
-  if (iframe && iframe.contentWindow) {
-    iframe.contentWindow.postMessage({ type: 'preview-update', ...data }, '*');
-  }
-}
-
-function updatePreviewMode() {
-  // Normalize literal \n to real newline so draft detection doesn't false-positive after pushing
-  const normBR = (s) => (s || '').replace(/\\n/g, '\n');
-  const draftLabel = normBR(document.getElementById('fieldLabel').value);
-  const draftMessage = normBR(document.getElementById('fieldMessage').value);
-  // Don't flag as draft when timer is idle — fields having content while stopped is just prep
-  const isIdle = !timerIsRunning && timerTotal === 0;
-  const isDraft = !isIdle && ((draftLabel !== liveLabel) || (draftMessage !== liveMessage));
-  const frame = document.getElementById('previewFrame');
-  const modeLabel = document.getElementById('ppModeLabel');
-  if (isDraft) {
-    frame.classList.add('pv-draft');
-    modeLabel.textContent = 'Preview';
-    modeLabel.className = 'pp-mode-label mode-preview';
-    // Only send to preview when draft values actually change
-    if (draftLabel !== lastSentLabel || draftMessage !== lastSentMessage) {
-      lastSentLabel = draftLabel;
-      lastSentMessage = draftMessage;
-      sendToPreview({ label: draftLabel, message: draftMessage });
-    }
-  } else {
-    frame.classList.remove('pv-draft');
-    modeLabel.textContent = 'Live';
-    modeLabel.className = 'pp-mode-label mode-live';
-    lastSentLabel = null;
-    lastSentMessage = null;
-  }
-}
-
-// Live-preview as user types
+// ── Input event listeners for dirty detection ──
 document.getElementById('fieldName').addEventListener('input', () => checkDirty());
-document.getElementById('fieldLabel').addEventListener('input', () => { updatePreviewMode(); checkDirty(); });
+document.getElementById('fieldLabel').addEventListener('input', () => checkDirty());
 document.getElementById('fieldEndTimeLabel').addEventListener('input', () => checkDirty());
-document.getElementById('fieldMessage').addEventListener('input', () => { updatePreviewMode(); checkDirty(); });
-document.getElementById('fieldShowEnd').addEventListener('change', () => checkDirty());
+document.getElementById('fieldMessage').addEventListener('input', () => checkDirty());
+document.getElementById('fieldShowEnd').addEventListener('change', () => {
+  checkDirty();
+  socket.emit('update-show-end-time', { showEndTime: document.getElementById('fieldShowEnd').checked });
+});
 // Capture course title on mousedown — before focus leaves the field and before
 // a queued timer-update can overwrite the field with stale server state
 document.getElementById('btnPushCourseTitle').addEventListener('mousedown', () => {
-  ctCapturedVal = document.getElementById('fieldCourseTitle').value.trim().replace(/\\n/g, '\n');
+  ctCapturedVal = getField('fieldCourseTitle').replace(/\\n/g, '\n');
   ctPushTime = Date.now();
 });
 
@@ -1093,7 +1571,7 @@ function syncDurationFromTarget() {
 }
 
 // ── Placeholder resolution (at push time) ──
-function resolveParams(label, message) {
+async function resolveParams(label, message) {
   // Strip literal \n before placeholder detection so it's not treated as a prompt
   const stripNL = (s) => (s || '').replace(/\\n/g, '');
   const combined = stripNL(label) + ' ' + stripNL(message);
@@ -1107,7 +1585,7 @@ function resolveParams(label, message) {
   });
   const values = {};
   for (const ph of placeholders) {
-    const val = prompt(ph + ':');
+    const val = await customPrompt(ph);
     if (val === null) return null; // user cancelled
     values[ph] = val;
   }
@@ -1134,24 +1612,28 @@ function loadTime() {
 let ctPushTime = 0;
 let ctCapturedVal = null;
 function pushCourseTitle() {
-  const val = ctCapturedVal !== null ? ctCapturedVal : document.getElementById('fieldCourseTitle').value.trim().replace(/\\n/g, '\n');
+  const val = ctCapturedVal !== null ? ctCapturedVal : getField('fieldCourseTitle').replace(/\\n/g, '\n');
   ctCapturedVal = null;
   socket.emit('update-course-title', { courseTitle: val });
+  markPushed('fieldCourseTitle');
 }
 function clearCourseTitle() {
-  document.getElementById('fieldCourseTitle').value = '';
+  setField('fieldCourseTitle', '');
+  markDirtyFields();
 }
 
-function loadTitle() {
-  const rawLabel = document.getElementById('fieldLabel').value.trim();
-  const resolved = resolveParams(rawLabel, '');
+async function loadTitle() {
+  const rawLabel = getField('fieldLabel');
+  const resolved = await resolveParams(rawLabel, '');
   if (!resolved) return;
+  if (resolved.label !== rawLabel) setField('fieldLabel', resolved.label);
   socket.emit('update-label', { label: resolved.label });
+  markPushed('fieldLabel');
 }
 
 function clearTitle() {
-  document.getElementById('fieldLabel').value = '';
-  updatePreviewMode();
+  setField('fieldLabel', '');
+  markDirtyFields();
 }
 
 function clearTime() {
@@ -1162,38 +1644,53 @@ function clearTime() {
   document.getElementById('tarAmPm').textContent = 'PM';
 }
 
-function loadMessage() {
-  const rawMessage = document.getElementById('fieldMessage').value.trim();
-  const resolved = resolveParams('', rawMessage);
+async function loadMessage() {
+  const rawMessage = getField('fieldMessage');
+  const resolved = await resolveParams('', rawMessage);
   if (!resolved) return;
+  if (resolved.message !== rawMessage) setField('fieldMessage', resolved.message);
   socket.emit('update-message', { message: resolved.message });
+  markPushed('fieldMessage');
 }
 
 function clearMessage() {
-  document.getElementById('fieldMessage').value = '';
-  updatePreviewMode();
+  setField('fieldMessage', '');
+  markDirtyFields();
 }
 
 function loadEndTimeLabel() {
-  const etl = document.getElementById('fieldEndTimeLabel').value.trim();
+  const etl = getField('fieldEndTimeLabel');
   socket.emit('update-end-time-label', { endTimeLabel: etl });
+  markPushed('fieldEndTimeLabel');
 }
 
 function clearEndTimeLabel() {
-  document.getElementById('fieldEndTimeLabel').value = '';
+  setField('fieldEndTimeLabel', '');
   checkDirty();
+  markDirtyFields();
 }
 
 
-function doStart() {
+async function doStart() {
   if (!document.querySelector('.tb-start').classList.contains('enabled')) return;
+
+  // If running, confirm before interrupting
+  if (timerIsRunning) {
+    if (!await customConfirm('A timer is currently running. Stop it and start a new one?')) return;
+    stopAlarmLoop(); warningFired = false; socket.emit('reset');
+    await new Promise(r => setTimeout(r, 150));
+  }
+
   stopAlarmLoop(); warningFired = false;
 
   // If timer is paused (was running, now stopped with time remaining), just resume
-  if (timerTotal > 0 && !timerIsRunning && timerRemaining > 0 && timerRemaining < timerTotal) {
+  if (timerTotal > 0 && timerRemaining > 0 && timerRemaining < timerTotal) {
     socket.emit('start');
     return;
   }
+
+  // Block server sync during the push sequence
+  lastPushTime = Date.now();
 
   // Otherwise push all checked fields then start
   const useCourseTitle  = document.getElementById('includeCourseTitle').checked;
@@ -1202,10 +1699,14 @@ function doStart() {
   const useMessage      = document.getElementById('includeMessage').checked;
   const useEndTimeLabel = document.getElementById('includeEndTimeLabel').checked;
 
-  const rawLabel = useTitle ? document.getElementById('fieldLabel').value.trim() : '';
-  const rawMessage = useMessage ? document.getElementById('fieldMessage').value.trim() : '';
-  const resolved = resolveParams(rawLabel, rawMessage);
+  const rawLabel = useTitle ? getField('fieldLabel') : '';
+  const rawMessage = useMessage ? getField('fieldMessage') : '';
+  const resolved = await resolveParams(rawLabel, rawMessage);
   if (!resolved) return;
+
+  // Update mockup fields with resolved values
+  if (useTitle && resolved.label !== rawLabel) setField('fieldLabel', resolved.label);
+  if (useMessage && resolved.message !== rawMessage) setField('fieldMessage', resolved.message);
 
   if (useTime) {
     const minutes = getTimerMinutes();
@@ -1221,16 +1722,25 @@ function doStart() {
   if (useTitle) socket.emit('update-label', { label: resolved.label });
   if (useMessage) socket.emit('update-message', { message: resolved.message });
   if (useEndTimeLabel) {
-    const etl = document.getElementById('fieldEndTimeLabel').value.trim();
+    const etl = getField('fieldEndTimeLabel');
     socket.emit('update-end-time-label', { endTimeLabel: etl });
   }
   if (useCourseTitle) {
-    const ct = document.getElementById('fieldCourseTitle').value.trim().replace(/\\n/g, '\n');
+    const ct = getField('fieldCourseTitle').replace(/\\n/g, '\n');
     socket.emit('update-course-title', { courseTitle: ct });
   }
 
+  // Mark pushed fields so dirty borders clear
+  if (useCourseTitle) markPushed('fieldCourseTitle');
+  if (useTitle) markPushed('fieldLabel');
+  if (useEndTimeLabel) markPushed('fieldEndTimeLabel');
+  if (useMessage) markPushed('fieldMessage');
+
   // Start after a brief delay to let the server process the pushes
-  setTimeout(() => socket.emit('start'), 100);
+  setTimeout(() => {
+    socket.emit('start');
+    lastPushTime = Date.now();
+  }, 100);
 }
 function doPause() {
   if (!document.querySelector('.tb-pause').classList.contains('enabled')) return;
@@ -1253,17 +1763,18 @@ function doClearAll() {
   if (!document.querySelector('.tb-clear').classList.contains('enabled')) return;
   activeLibId = null;
   document.getElementById('fieldName').value = '';
-  document.getElementById('fieldLabel').value = '';
+  setField('fieldLabel', '');
   setDurationFromMinutes(0);
   blankTarget();
-  document.getElementById('fieldEndTimeLabel').value = '';
-  document.getElementById('fieldMessage').value = '';
+  setField('fieldEndTimeLabel', '');
+  setField('fieldMessage', '');
   document.getElementById('fieldShowEnd').checked = true;
   document.getElementById('fieldTransparent').checked = false;
   document.getElementById('fieldClockOnly').checked = false;
   document.getElementById('optGoToTab').value = 'library';
   renderLibrary();
-  updatePreviewMode();
+  resetMockupIdle();
+  markDirtyFields();
   updateButtonStates();
 }
 
@@ -1355,7 +1866,7 @@ function renderLibrary() {
   const sc = (col) => libSortCol === col ? 'sortable sort-active' : 'sortable';
 
   el.innerHTML = '<div class="lib-grid">' +
-    '<div class="lib-grid-header"><span></span>' +
+    '<div class="lib-grid-header"><span></span><span></span>' +
     '<span class="' + sc('name') + '" onclick="toggleSort(\'name\')">Name' + arrow('name') + '</span>' +
     '<span class="' + sc('minutes') + '" onclick="toggleSort(\'minutes\')" style="text-align:right">Dur' + arrow('minutes') + '</span>' +
     '<span class="' + sc('label') + '" onclick="toggleSort(\'label\')">Title' + arrow('label') + '</span>' +
@@ -1366,6 +1877,7 @@ function renderLibrary() {
     sorted.map(t => `
     <div class="lib-row ${active(t.id) ? 'active' : ''}" draggable="true" data-id="${t.id}">
       <button class="lib-row-btn ${active(t.id) ? 'btn-loaded' : ''}" onclick="event.stopPropagation();loadLibTimer('${t.id}')">${active(t.id) ? 'Loaded' : 'Load'}</button>
+      <button class="lib-row-btn lib-row-go" onclick="event.stopPropagation();loadAndStart('${t.id}')" title="Load &amp; Start">&#9654;&#xFE0E;</button>
       <span class="lib-row-name" title="${esc(t.name)}">${esc(t.name)}</span>
       <span class="lib-row-mins">${t.minutes}m</span>
       <span class="lib-row-title" title="${esc(t.label || '')}">${esc(t.label || '')}</span>
@@ -1444,30 +1956,77 @@ function selectTimer(id) {
   loadLibTimer(id);
 }
 
+async function loadAndStart(id) {
+  if (timerIsRunning) {
+    if (!await customConfirm('A timer is currently running. Stop it and start a new one?')) return;
+    stopAlarmLoop(); warningFired = false; socket.emit('reset');
+    await new Promise(r => setTimeout(r, 150));
+  }
+  loadLibTimer(id);
+
+  // Block server sync from overwriting liveText during the push sequence
+  lastPushTime = Date.now();
+
+  // Push everything unconditionally — this is a full preset load
+  const ct = getField('fieldCourseTitle').replace(/\\n/g, '\n');
+  socket.emit('update-course-title', { courseTitle: ct });
+  const rawLabel = getField('fieldLabel');
+  const rawMessage = getField('fieldMessage');
+  const resolved = await resolveParams(rawLabel, rawMessage);
+  if (!resolved) return;
+  if (resolved.label !== rawLabel) setField('fieldLabel', resolved.label);
+  if (resolved.message !== rawMessage) setField('fieldMessage', resolved.message);
+  socket.emit('update-label', { label: resolved.label });
+  socket.emit('update-message', { message: resolved.message });
+  const etl = getField('fieldEndTimeLabel');
+  socket.emit('update-end-time-label', { endTimeLabel: etl });
+  const minutes = getTimerMinutes();
+  if (minutes <= 0) return;
+  const showEndTime = document.getElementById('fieldShowEnd').checked;
+  socket.emit('set-timer-only', { minutes, showEndTime });
+  socket.emit('update-display-modes', {
+    transparent: document.getElementById('fieldTransparent').checked,
+    clockOnly: document.getElementById('fieldClockOnly').checked,
+  });
+
+  // Mark all fields as pushed
+  markPushed('fieldCourseTitle');
+  markPushed('fieldLabel');
+  markPushed('fieldEndTimeLabel');
+  markPushed('fieldMessage');
+
+  setTimeout(() => {
+    socket.emit('start');
+    // Refresh the push guard so server broadcasts from start don't trigger dirty borders
+    lastPushTime = Date.now();
+  }, 150);
+}
+
 function loadLibTimer(id) {
   const t = library.find(x => x.id === id);
   if (!t) return;
 
   activeLibId = id;
   document.getElementById('fieldName').value = t.name || '';
-  document.getElementById('fieldLabel').value = t.label || '';
+  setField('fieldLabel', t.label || '');
   setDurationFromMinutes(t.minutes);
   syncTargetFromDuration();
-  document.getElementById('fieldEndTimeLabel').value = t.endTimeLabel || 'Class resumes at';
-  document.getElementById('fieldMessage').value = t.message || '';
+  setField('fieldEndTimeLabel', t.endTimeLabel || 'Class resumes at');
+  setField('fieldMessage', t.message || '');
   document.getElementById('fieldShowEnd').checked = t.showEndTime !== false;
   document.getElementById('fieldTransparent').checked = !!t.transparent;
   document.getElementById('fieldClockOnly').checked = !!t.clockOnly;
 
-  // Per-item options — map legacy tab names
+  // Per-item options — map legacy tab names (text/timer tabs removed)
   let goTo = t.goToTab || 'library';
-  if (goTo === 'identity' || goTo === 'setup') goTo = 'text';
-  if (goTo === 'time') goTo = 'timer';
-  if (goTo === 'message') goTo = 'text';
+  if (goTo === 'identity' || goTo === 'setup' || goTo === 'text') goTo = 'library';
+  if (goTo === 'time' || goTo === 'timer') goTo = 'library';
+  if (goTo === 'message') goTo = 'library';
   document.getElementById('optGoToTab').value = goTo;
 
   renderLibrary();
-  updatePreviewMode();
+  updateMockDigitsFromSpinners();
+  markDirtyFields();
   updateButtonStates();
 
   // Navigate to the configured tab
@@ -1479,10 +2038,10 @@ function isLibDirty(id) {
   const t = library.find(x => x.id === id);
   if (!t) return false;
   const name = document.getElementById('fieldName').value.trim();
-  const label = document.getElementById('fieldLabel').value.trim();
+  const label = getField('fieldLabel');
   const mins = getDurationMinutes();
-  const endTimeLabel = document.getElementById('fieldEndTimeLabel').value.trim();
-  const message = document.getElementById('fieldMessage').value.trim();
+  const endTimeLabel = getField('fieldEndTimeLabel');
+  const message = getField('fieldMessage');
   const showEnd = document.getElementById('fieldShowEnd').checked;
   const transparent = document.getElementById('fieldTransparent').checked;
   const clockOnly = document.getElementById('fieldClockOnly').checked;
@@ -1500,11 +2059,13 @@ function isLibDirty(id) {
 
 function checkDirty() {
   if (activeLibId) renderLibrary();
+  updateMockDigitsFromSpinners();
 }
 
 function setQuickTime(mins) {
   setDurationFromMinutes(mins);
   syncTargetFromDuration();
+  updateMockDigitsFromSpinners();
   checkDirty();
   updateButtonStates();
 }
@@ -1519,7 +2080,7 @@ async function saveOverTimer(id) {
   const t = library.find(x => x.id === id);
   if (!t) return;
   const newName = document.getElementById('fieldName').value.trim();
-  const newLabel = document.getElementById('fieldLabel').value.trim();
+  const newLabel = getField('fieldLabel');
   const newMins = getDurationMinutes();
   const missing = [];
   if (!newName) missing.push('Name');
@@ -1529,8 +2090,8 @@ async function saveOverTimer(id) {
   t.name = newName;
   t.label = newLabel;
   t.minutes = newMins;
-  t.endTimeLabel = document.getElementById('fieldEndTimeLabel').value.trim() || 'Class resumes at';
-  t.message = document.getElementById('fieldMessage').value.trim();
+  t.endTimeLabel = getField('fieldEndTimeLabel') || 'Class resumes at';
+  t.message = getField('fieldMessage');
   t.showEndTime = document.getElementById('fieldShowEnd').checked;
   t.transparent = document.getElementById('fieldTransparent').checked;
   t.clockOnly = document.getElementById('fieldClockOnly').checked;
@@ -1556,21 +2117,20 @@ async function duplicateTimer(id) {
   const newest = library[library.length - 1];
   activeLibId = newest.id;
   document.getElementById('fieldName').value = newest.name;
-  document.getElementById('fieldLabel').value = newest.label || '';
+  setField('fieldLabel', newest.label || '');
   setDurationFromMinutes(newest.minutes);
   syncTargetFromDuration();
-  document.getElementById('fieldEndTimeLabel').value = newest.endTimeLabel || 'Class resumes at';
-  document.getElementById('fieldMessage').value = newest.message || '';
+  setField('fieldEndTimeLabel', newest.endTimeLabel || 'Class resumes at');
+  setField('fieldMessage', newest.message || '');
   document.getElementById('fieldShowEnd').checked = newest.showEndTime !== false;
   document.getElementById('fieldTransparent').checked = !!newest.transparent;
   document.getElementById('fieldClockOnly').checked = !!newest.clockOnly;
   let newGoTo = newest.goToTab || 'library';
-  if (newGoTo === 'identity' || newGoTo === 'setup') newGoTo = 'text';
-  if (newGoTo === 'time') newGoTo = 'timer';
-  if (newGoTo === 'message') newGoTo = 'text';
+  if (newGoTo === 'identity' || newGoTo === 'setup' || newGoTo === 'text') newGoTo = 'library';
+  if (newGoTo === 'time' || newGoTo === 'timer') newGoTo = 'library';
+  if (newGoTo === 'message') newGoTo = 'library';
   document.getElementById('optGoToTab').value = newGoTo;
   renderLibrary();
-  updatePreviewMode();
 }
 
 async function newTimerToFields() {
@@ -1581,14 +2141,14 @@ async function newTimerToFields() {
     if (!name) return;
     document.getElementById('fieldName').value = name;
   }
-  const label = document.getElementById('fieldLabel').value.trim();
+  const label = getField('fieldLabel');
   const minutes = getDurationMinutes();
   const missing = [];
   if (!minutes) missing.push('Duration');
   if (!label) missing.push('Title');
   if (missing.length) { alert(missing.join(', ') + ' required.'); return; }
-  const endTimeLabel = document.getElementById('fieldEndTimeLabel').value.trim() || 'Class resumes at';
-  const message = document.getElementById('fieldMessage').value.trim();
+  const endTimeLabel = getField('fieldEndTimeLabel') || 'Class resumes at';
+  const message = getField('fieldMessage');
   const showEndTime = document.getElementById('fieldShowEnd').checked;
   const goToTab = document.getElementById('optGoToTab').value;
   const item = { name, label, minutes, endTimeLabel, message, showEndTime, goToTab };
@@ -1783,18 +2343,8 @@ function addCustomSound(input) {
   input.value = '';
 }
 
-// ── Scale preview iframe to fit container ──
-function scalePreview() {
-  const frame = document.querySelector('.phone-preview-frame');
-  const iframe = document.getElementById('previewIframe');
-  if (!frame || !iframe) return;
-  const containerWidth = frame.clientWidth;
-  const scale = containerWidth / 390;
-  iframe.style.transform = 'scale(' + scale + ')';
-  iframe.style.height = (frame.clientHeight / scale) + 'px';
-}
-window.addEventListener('load', scalePreview);
-window.addEventListener('resize', scalePreview);
+// ── Update mockup digits when spinners change ──
+// (hook into spinUp/spinDown via existing checkDirty path — also call after load)
 
 // ── Button state management ──
 function updateButtonStates() {
@@ -1806,7 +2356,7 @@ function updateButtonStates() {
   // Start: enabled when paused OR when there's a duration to push+start
   const startBtn = document.querySelector('.tb-start');
   const hasDuration = getDurationMinutes() > 0;
-  startBtn.classList.toggle('enabled', (paused) || (!running && hasDuration));
+  startBtn.classList.toggle('enabled', (paused) || hasDuration);
 
   // Pause: enabled when running
   const pauseBtn = document.querySelector('.tb-pause');
@@ -1826,11 +2376,11 @@ function updateButtonStates() {
 
   // Clear-all: enabled when any field has content
   const clearBtn = document.querySelector('.tb-clear');
-  const hasLabel = document.getElementById('fieldLabel').value.trim() !== '';
-  const hasMessage = document.getElementById('fieldMessage').value.trim() !== '';
+  const hasLabel = getField('fieldLabel') !== '';
+  const hasMessage = getField('fieldMessage') !== '';
   const hasName = document.getElementById('fieldName').value.trim() !== '';
-  const hasEndTimeLabel = document.getElementById('fieldEndTimeLabel').value.trim() !== '' &&
-                          document.getElementById('fieldEndTimeLabel').value.trim() !== 'Class resumes at';
+  const hasEndTimeLabel = getField('fieldEndTimeLabel') !== '' &&
+                          getField('fieldEndTimeLabel') !== 'Class resumes at';
   clearBtn.classList.toggle('enabled', hasLabel || hasMessage || hasDuration || hasName || hasEndTimeLabel);
 }
 
@@ -1863,5 +2413,24 @@ document.getElementById('optStartTab').addEventListener('change', () => {
 // Load saved startup tab into dropdown
 if (startTab) document.getElementById('optStartTab').value = startTab;
 </script>
+<div class="prompt-backdrop" id="promptBackdrop">
+  <div class="prompt-box">
+    <div class="prompt-label" id="promptLabel"></div>
+    <input type="text" class="prompt-input" id="promptInput" autocomplete="off">
+    <div class="prompt-buttons">
+      <button class="confirm-btn confirm-btn-yes" id="promptOk">OK</button>
+      <button class="confirm-btn confirm-btn-no" id="promptCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="confirm-backdrop" id="confirmBackdrop">
+  <div class="confirm-box">
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-buttons">
+      <button class="confirm-btn confirm-btn-yes" id="confirmYes">Yes</button>
+      <button class="confirm-btn confirm-btn-no" id="confirmNo">Cancel</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

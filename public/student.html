@@ -20,7 +20,7 @@
   /* Background color states */
   body.state-idle    { background: #1a1a2e; color: #e0e0e0; }
   body.state-green   { background: #0d3b2e; color: #e0e0e0; }
-  body.state-yellow  { background: #3b3010; color: #e0e0e0; }
+  body.state-yellow  { background: #332b00; color: #e0e0e0; }
   body.state-orange  { background: #3b2010; color: #e0e0e0; }
   body.state-red     { background: #3b1010; color: #e0e0e0; }
   body.state-done    { background: #4a0e0e; color: #e0e0e0; }
@@ -353,11 +353,17 @@ socket.on('timer-update', (s) => {
   }
 
   // Progress ring — use originalTotal for correct proportions after pause/restart
+  // On long timers (>10 min), use a power curve (pct^0.55) so the ring drains
+  // faster at the start and gradually slower toward the end. This keeps the ring
+  // visible in the final minutes without any sudden pace change.
   const ring = document.getElementById('progressRing');
   const refTotal = s.originalTotal || s.totalSeconds;
   if (refTotal > 0) {
-    const pct = Math.max(0, s.remainingSeconds / refTotal);
-    ring.style.strokeDashoffset = CIRCUMFERENCE * (1 - pct);
+    const remaining = Math.max(0, s.remainingSeconds);
+    const pct = remaining / refTotal;
+    const RESCALE_THRESHOLD = 600;  // only rescale timers longer than 10 min
+    const ringPct = refTotal <= RESCALE_THRESHOLD ? pct : Math.pow(pct, 0.55);
+    ring.style.strokeDashoffset = CIRCUMFERENCE * (1 - ringPct);
   } else {
     ring.style.strokeDashoffset = 0;
   }
@@ -366,10 +372,13 @@ socket.on('timer-update', (s) => {
   const cls = stateClass(s.remainingSeconds, refTotal, s.running);
   document.body.className = cls;
   // Display modes — only apply to display/OBS/preview, not phone students
-  // URL parameters override server state (for OBS scenes with different configs)
-  if (isDisplayViewer) {
-    if (urlTransparent || s.transparent) document.body.classList.add('mode-transparent');
-    if (urlClockOnly || s.clockOnly) document.body.classList.add('mode-clock-only');
+  // OBS uses only its URL parameters; everyone else uses server flags
+  if (isOBS) {
+    document.body.classList.toggle('mode-transparent', urlTransparent);
+    document.body.classList.toggle('mode-clock-only', urlClockOnly);
+  } else {
+    document.body.classList.toggle('mode-transparent', !!s.transparent);
+    document.body.classList.toggle('mode-clock-only', !!s.clockOnly);
   }
   ring.style.stroke = strokeColor(cls);
 
@@ -396,16 +405,6 @@ if (!isPreview) {
   }).catch(function() {});
 }
 
-
-// Preview mode: listen for draft updates from instructor page
-if (isPreview) {
-  window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'preview-update') {
-      if (e.data.label !== undefined) document.getElementById('label').textContent = e.data.label;
-      if (e.data.message !== undefined) document.getElementById('message').textContent = e.data.message;
-    }
-  });
-}
 </script>
 </body>
 </html>
