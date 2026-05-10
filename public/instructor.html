@@ -68,14 +68,14 @@
 
   /* ── Mockup side panel ── */
   .text-side-label {
-    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #666;
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--dim);
   }
   .text-side-input {
     width: 100%; padding: 8px 10px; border: 1px solid #666; border-radius: 6px;
     background: var(--bg); color: var(--text); font-size: 0.9rem; font-family: inherit;
   }
   .text-side-input:focus { outline: none; border-color: var(--blue); }
-  .text-side-hint { font-size: 0.65rem; color: #555; line-height: 1.3; }
+  .text-side-hint { font-size: 0.65rem; color: var(--dim); line-height: 1.3; }
   .btn-push-all {
     padding: 10px 16px; border: 2px solid var(--blue); border-radius: 8px;
     background: transparent; color: var(--blue); font-size: 0.85rem; font-weight: 600;
@@ -649,8 +649,7 @@
         <input type="text" class="text-side-input" id="fieldName" placeholder="e.g. Break 15" autocomplete="off">
         <div class="text-side-hint">Library only — not shown to students.</div>
         <hr style="border:none; border-top:1px solid #333; margin:8px 0;">
-        <button class="btn-push-all" onclick="pushAllFields()">Push All</button>
-        <div class="push-all-hint">Pushes all checked fields.</div>
+        <button class="btn-push-all" onclick="pushAllFields()" title="Pushes all checked fields">Push All</button>
         <hr style="border:none; border-top:1px solid #333; margin:8px 0;">
         <div class="transport-grid">
           <button class="transport-btn tb-start" onclick="doStart()" title="Push all and start">&#9654;&#xFE0E;</button>
@@ -891,7 +890,7 @@
 <div class="duration-popup-backdrop" id="durationPopupBackdrop">
   <div class="duration-popup" id="durationPopup">
     <button class="duration-popup-close" onclick="closeDurationPopup()">&#10005;</button>
-    <div class="duration-popup-title">Duration / Target Time</div>
+    <div class="duration-popup-title">Set Time</div>
     <div style="display:flex; gap:24px; align-items:stretch; justify-content:center;">
       <!-- Left column: spinners stacked vertically -->
       <div style="display:flex; flex-direction:column; align-items:center;">
@@ -1941,7 +1940,7 @@ function renderLibrary() {
     sorted.map(t => `
     <div class="lib-row ${active(t.id) ? 'active' : ''}" draggable="true" data-id="${t.id}">
       <button class="lib-row-btn ${active(t.id) ? 'btn-loaded' : ''}" onclick="event.stopPropagation();loadLibTimer('${t.id}')">${active(t.id) ? 'Loaded' : 'Load'}</button>
-      <button class="lib-row-btn lib-row-go" onclick="event.stopPropagation();loadAndStart('${t.id}')" title="Push all and start">&#9654;&#xFE0E;</button>
+      <button class="lib-row-btn lib-row-go" onclick="event.stopPropagation();loadAndStart('${t.id}')" title="Load all, push all, and start">&#9654;&#xFE0E;</button>
       <span class="lib-row-name" title="${esc(t.name)}">${esc(t.name)}</span>
       <span class="lib-row-mins">${t.minutes}m</span>
       <span class="lib-row-title" title="${esc(t.label || '')}">${esc(t.label || '')}</span>
