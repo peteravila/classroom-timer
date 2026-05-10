@@ -230,8 +230,8 @@
 <div class="qr-corner" id="qrCorner">
   <div class="qr-scan-label">Scan to view this timer on your phone</div>
   <div id="qrImg"></div>
-  <div class="qr-class-code" id="qrClassCode"></div>
   <div class="qr-hint" id="qrHint"></div>
+  <div class="qr-class-code" id="qrClassCode"></div>
 </div>
 
 <script>
@@ -288,6 +288,10 @@ function submitCode() {
     document.getElementById('codeError').textContent = 'Please enter a 4-character code.';
     return;
   }
+  if (!socket.connected) {
+    document.getElementById('codeError').textContent = 'Connecting to server... please try again in a moment.';
+    return;
+  }
   document.getElementById('codeError').textContent = '';
   socket.emit('validate-code', code);
 }
@@ -309,7 +313,8 @@ socket.on('code-rejected', () => {
 });
 
 socket.on('code-expired', () => {
-  // Class code was changed — show message
+  // Class code was changed — clear old validation so reconnect doesn't retry stale code
+  studentValidated = false;
   document.getElementById('timerContent').classList.remove('visible');
   document.getElementById('codeGate').style.display = 'flex';
   document.getElementById('codeInput').value = '';
@@ -422,7 +427,7 @@ if (!isPreview) {
     document.getElementById('qrImg').innerHTML = '<img src="' + data.qr + '" alt="QR code" width="150">';
     document.getElementById('qrClassCode').textContent = data.code;
     const baseUrl = data.url.replace(/\?.*$/, '');
-    document.getElementById('qrHint').innerHTML = "Can’t scan? Go to<br><b>" + baseUrl + "</b><br>and enter code <b>" + data.code + "</b>";
+    document.getElementById(‘qrHint’).innerHTML = "Can’t scan? Go to<br><b>" + baseUrl + "</b>";
   }).catch(function() {});
 }
 
