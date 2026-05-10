@@ -2136,11 +2136,16 @@ function isLibDirty(id) {
   const transparent = document.getElementById('fieldTransparent').checked;
   const clockOnly = document.getElementById('fieldClockOnly').checked;
   const goToTab = document.getElementById('optGoToTab').value;
+  // Skip label/message comparison if the saved value has placeholders (e.g. {lab_number})
+  // because resolveParams substitutes them with user input during loadAndStart
+  const hasPlaceholder = (s) => /\{[^}]+\}/.test(s || '');
+  const labelDirty = hasPlaceholder(t.label) ? false : (label !== (t.label || ''));
+  const messageDirty = hasPlaceholder(t.message) ? false : (message !== (t.message || ''));
   return (name !== (t.name || '')) ||
-         (label !== (t.label || '')) ||
+         labelDirty ||
          (mins !== t.minutes) ||
          (endTimeLabel !== (t.endTimeLabel || 'Class resumes at')) ||
-         (message !== (t.message || '')) ||
+         messageDirty ||
          (showEnd !== (t.showEndTime !== false)) ||
          (transparent !== !!t.transparent) ||
          (clockOnly !== !!t.clockOnly) ||
