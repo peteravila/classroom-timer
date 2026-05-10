@@ -427,7 +427,7 @@ if (!isPreview) {
     document.getElementById('qrImg').innerHTML = '<img src="' + data.qr + '" alt="QR code" width="150">';
     document.getElementById('qrClassCode').textContent = data.code;
     const baseUrl = data.url.replace(/\?.*$/, '');
-    document.getElementById(‘qrHint’).innerHTML = "Can’t scan? Go to<br><b>" + baseUrl + "</b>";
+    document.getElementById('qrHint').innerHTML = "Can't scan? Go to<br><b>" + baseUrl + "</b>";
   }).catch(function() {});
 }
 
