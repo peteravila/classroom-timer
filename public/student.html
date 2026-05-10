@@ -292,7 +292,13 @@ function submitCode() {
     return;
   }
   if (!socket.connected) {
-    errEl.textContent = 'Connecting to server... please try again in a moment.';
+    errEl.textContent = 'Reconnecting...';
+    socket.connect();
+    // Wait for connection, then auto-retry
+    socket.once('connect', () => {
+      errEl.textContent = '';
+      socket.emit('validate-code', code);
+    });
     return;
   }
   errEl.textContent = 'Validating...';
@@ -332,6 +338,10 @@ socket.on('code-expired', () => {
   document.getElementById('codeGate').style.display = 'flex';
   document.getElementById('codeInput').value = '';
   document.getElementById('codeError').textContent = 'This class session has ended.';
+  // Server will force-disconnect us next — ensure we reconnect
+  setTimeout(() => {
+    if (!socket.connected) socket.connect();
+  }, 1000);
 });
 
 function fmt(secs) {
