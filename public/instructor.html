@@ -1879,25 +1879,22 @@ function saveLibraryLocal() {
 }
 
 async function restoreLibraryFromLocal() {
+  // Only use localStorage as a fallback when the server has no real data
+  // (e.g. MongoDB is down and the server fell back to defaults).
+  // Never delete server-side items — the server/MongoDB is the source of truth.
   try {
+    const res = await fetch('/api/library');
+    const serverLib = await res.json();
+    // If the server already has a non-default library, trust it
+    if (serverLib.length > 0) return;
+    // Server is empty — restore from localStorage if available
     const saved = localStorage.getItem('timerLibrary');
     if (!saved) return;
     const local = JSON.parse(saved);
     if (!Array.isArray(local) || local.length === 0) return;
-    // Push local library to server (replaces whatever defaults the server has)
     for (const item of local) {
       await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
     }
-    // Remove any server-side items not in localStorage (e.g. stale defaults)
-    const res = await fetch('/api/library');
-    const serverLib = await res.json();
-    const localIds = new Set(local.map(t => t.id));
-    for (const t of serverLib) {
-      if (!localIds.has(t.id)) {
-        await fetch('/api/library/' + t.id, { method: 'DELETE' });
-      }
-    }
-    // Restore order
     const ids = local.map(t => t.id);
     await fetch('/api/library/reorder', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ids }) });
   } catch(e) {}
@@ -2512,9 +2509,8 @@ document.getElementById('includeEndTimeLabel').addEventListener('change', update
 document.getElementById('includeTime').addEventListener('change', updateButtonStates);
 document.getElementById('includeMessage').addEventListener('change', updateButtonStates);
 
-// Init — restore library from localStorage if server lost it (Render redeploy)
+// Init — fetch library from server (MongoDB is the source of truth)
 (async () => {
-  await restoreLibraryFromLocal();
   await fetchLibrary();
   updateButtonStates();
 })();
