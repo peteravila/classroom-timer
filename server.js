@@ -472,17 +472,17 @@ io.on('connection', (socket) => {
   socket.on('restore-last-timer', () => {
     if (!lastTimer) return;
     const now = Date.now();
-    const remaining = Math.round((lastTimer.endTime - now) / 1000);
+    const newEndTime = now + lastTimer.originalTotal * 1000;
     timerState.label = lastTimer.label;
     timerState.message = lastTimer.message;
     timerState.originalTotal = lastTimer.originalTotal;
     timerState.totalSeconds = lastTimer.originalTotal;
-    timerState.remainingSeconds = remaining;
+    timerState.remainingSeconds = lastTimer.originalTotal;
     timerState.showEndTime = lastTimer.showEndTime;
     timerState.endTimeLabel = lastTimer.endTimeLabel;
     timerState.running = true;
-    timerState.endTime = lastTimer.endTime;
-    timerState.endTimeFormatted = formatEndTime(lastTimer.endTime);
+    timerState.endTime = newEndTime;
+    timerState.endTimeFormatted = formatEndTime(newEndTime);
     stopTick();
     // Start ticking from the restored end time
     let doneFired = remaining <= 0;

@@ -999,6 +999,7 @@ let timerTotal = 0;
 let timerOriginalTotal = 0;
 let timerRemaining = 0;
 let lastTimerData = null;
+let justLoadedId = null;  // suppress dirty check right after loadAndStart
 
 // ── Tab switching ──
 const TAB_NAMES = ['library', 'options', 'settings'];
@@ -2083,6 +2084,10 @@ async function loadAndStart(id) {
   markPushed('fieldEndTimeLabel');
   markPushed('fieldMessage');
 
+  // Suppress dirty check for this library item until the user edits a field
+  justLoadedId = id;
+  renderLibrary();
+
   setTimeout(() => {
     socket.emit('start');
     // Refresh the push guard so server broadcasts from start don't trigger dirty borders
@@ -2127,6 +2132,7 @@ function loadLibTimer(id) {
 
 // ── Dirty detection for library save ──
 function isLibDirty(id) {
+  if (justLoadedId === id) return false;
   const t = library.find(x => x.id === id);
   if (!t) return false;
   // Normalize: convert literal \n to real newlines, strip placeholders for comparison
@@ -2152,6 +2158,7 @@ function isLibDirty(id) {
 }
 
 function checkDirty() {
+  justLoadedId = null;  // user edited a field, re-enable dirty detection
   if (activeLibId) renderLibrary();
   updateMockDigitsFromSpinners();
 }
