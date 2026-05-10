@@ -313,7 +313,8 @@
   .mock-ctx-revert { background: #d35400; color: #fff; }
   .mock-ctx-revert:hover { background: #b94700; }
   .mock-ctx-go { background: transparent; color: #fff; border: 1.5px solid var(--blue); font-size: 0.7rem; }
-  .mock-ctx-go:hover { color: var(--green); border-color: var(--green); }
+  .mock-ctx-go:hover:not(.disabled) { color: var(--green); border-color: var(--green); }
+  .mock-ctx-go.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 
   /* Checkbox on left of field */
   .mock-chk {
@@ -974,7 +975,7 @@
       </div>
     </div>
     <div style="display:flex; gap:8px; margin-top:28px; justify-content:flex-start; align-items:center; padding-left:12px;">
-      <button onclick="pushTimeAndStart()" title="Push time and start" style="padding:6px 8px; border:1.5px solid var(--green); border-radius:6px; background:transparent; color:var(--green); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">&#9654;</button>
+      <button id="popupStartBtn" onclick="pushTimeAndStart()" title="Push time and start" style="padding:6px 8px; border:1.5px solid var(--green); border-radius:6px; background:transparent; color:var(--green); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">&#9654;</button>
       <button onclick="addTimerTime()" title="Add time to running timer" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">+Add</button>
       <button onclick="clearTime()" title="Clear duration" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Clear</button>
       <div class="checkbox-row" style="margin:0; margin-left:8px;">
@@ -1164,14 +1165,28 @@ async function pushFieldAndStart(fieldId) {
     stopAlarmLoop(); warningFired = false; socket.emit('reset');
     await new Promise(r => setTimeout(r, 150));
   }
+  stopAlarmLoop(); warningFired = false;
+  lastPushTime = Date.now();
   const pushMap = {
     fieldCourseTitle: pushCourseTitle,
     fieldLabel: loadTitle,
     fieldEndTimeLabel: loadEndTimeLabel,
     fieldMessage: loadMessage,
   };
-  if (pushMap[fieldId]) pushMap[fieldId]();
-  doStart();
+  if (pushMap[fieldId]) await pushMap[fieldId]();
+  // Push the current timer duration so there's something to start
+  const minutes = getTimerMinutes();
+  if (minutes <= 0) return;
+  const showEndTime = document.getElementById('fieldShowEnd').checked;
+  socket.emit('set-timer-only', { minutes, showEndTime });
+  socket.emit('update-display-modes', {
+    transparent: document.getElementById('fieldTransparent').checked,
+    clockOnly: document.getElementById('fieldClockOnly').checked,
+  });
+  setTimeout(() => {
+    socket.emit('start');
+    lastPushTime = Date.now();
+  }, 150);
 }
 
 // ── Duration popup ──
@@ -2445,6 +2460,20 @@ function updateButtonStates() {
   const hasEndTimeLabel = getField('fieldEndTimeLabel') !== '' &&
                           getField('fieldEndTimeLabel') !== 'Class resumes at';
   clearBtn.classList.toggle('enabled', hasLabel || hasMessage || hasDuration || hasName || hasEndTimeLabel);
+
+  // Field play buttons: disabled when no duration set
+  document.querySelectorAll('.mock-ctx-go').forEach(btn => {
+    btn.classList.toggle('disabled', !hasDuration);
+    btn.disabled = !hasDuration;
+  });
+
+  // Popup start button: disabled when no duration set
+  const popupStart = document.getElementById('popupStartBtn');
+  if (popupStart) {
+    popupStart.disabled = !hasDuration;
+    popupStart.style.opacity = hasDuration ? '1' : '0.3';
+    popupStart.style.pointerEvents = hasDuration ? 'auto' : 'none';
+  }
 }
 
 // Update button states when fields change
