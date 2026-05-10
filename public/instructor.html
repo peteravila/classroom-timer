@@ -975,7 +975,7 @@
       </div>
     </div>
     <div style="display:flex; gap:8px; margin-top:28px; justify-content:center; align-items:center;">
-      <button onclick="loadTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Push</button>
+      <button onclick="pushTimeAndStart()" style="padding:6px 16px; border:1.5px solid var(--green); border-radius:6px; background:transparent; color:var(--green); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">&#9654; Start</button>
       <button onclick="addTimerTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">+Add</button>
       <button onclick="clearTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Clear</button>
       <div class="checkbox-row" style="margin:0; margin-left:8px;">
@@ -1648,6 +1648,29 @@ function loadTime() {
     transparent: document.getElementById('fieldTransparent').checked,
     clockOnly: document.getElementById('fieldClockOnly').checked,
   });
+}
+
+async function pushTimeAndStart() {
+  if (timerIsRunning) {
+    if (!await customConfirm('A timer is currently running. Stop it and start a new one?')) return;
+    stopAlarmLoop(); warningFired = false; socket.emit('reset');
+    await new Promise(r => setTimeout(r, 150));
+  }
+  stopAlarmLoop(); warningFired = false;
+  const minutes = getTimerMinutes();
+  if (minutes <= 0) return;
+  lastPushTime = Date.now();
+  const showEndTime = document.getElementById('fieldShowEnd').checked;
+  socket.emit('set-timer-only', { minutes, showEndTime });
+  socket.emit('update-display-modes', {
+    transparent: document.getElementById('fieldTransparent').checked,
+    clockOnly: document.getElementById('fieldClockOnly').checked,
+  });
+  setTimeout(() => {
+    socket.emit('start');
+    lastPushTime = Date.now();
+    closeDurationPopup();
+  }, 150);
 }
 
 let ctPushTime = 0;
