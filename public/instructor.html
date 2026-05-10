@@ -1176,6 +1176,26 @@ function customConfirm(msg) {
   });
 }
 
+function customAlert(msg) {
+  return new Promise((resolve) => {
+    const backdrop = document.getElementById('confirmBackdrop');
+    document.getElementById('confirmMsg').textContent = msg;
+    document.getElementById('confirmYes').textContent = 'OK';
+    document.getElementById('confirmNo').style.display = 'none';
+    backdrop.classList.add('open');
+    const yes = document.getElementById('confirmYes');
+    function cleanup() {
+      backdrop.classList.remove('open');
+      yes.removeEventListener('click', onOk);
+      // Restore confirm dialog defaults
+      document.getElementById('confirmYes').textContent = 'Yes';
+      document.getElementById('confirmNo').style.display = '';
+    }
+    function onOk() { cleanup(); resolve(); }
+    yes.addEventListener('click', onOk);
+  });
+}
+
 async function pushFieldAndStart(fieldId) {
   if (timerIsRunning) {
     if (!await customConfirm('A timer is currently running. Stop it and start a new one?')) return;
@@ -1417,8 +1437,8 @@ socket.on('mute-state', (isMuted) => {
   document.getElementById('muteStudents').checked = isMuted;
 });
 
-function generateNewCode() {
-  if (!confirm('Disconnect all students? A new class code will be generated and students will need to reconnect.')) return;
+async function generateNewCode() {
+  if (!await customConfirm('Disconnect all students? A new class code will be generated and students will need to reconnect.')) return;
   socket.emit('generate-code');
 }
 
@@ -2199,7 +2219,7 @@ async function saveOverTimer(id) {
   if (!newName) missing.push('Name');
   if (!newMins) missing.push('Duration');
   if (!newLabel) missing.push('Title');
-  if (missing.length) { alert(missing.join(', ') + ' required.'); return; }
+  if (missing.length) { await customAlert(missing.join(', ') + ' required.'); return; }
   t.name = newName;
   t.label = newLabel;
   t.minutes = newMins;
@@ -2214,7 +2234,7 @@ async function saveOverTimer(id) {
 }
 
 async function deleteTimer(id) {
-  if (!confirm('Delete this timer from the library?')) return;
+  if (!await customConfirm('Delete this timer from the library?')) return;
   await fetch('/api/library/' + id, { method: 'DELETE' });
   if (activeLibId === id) activeLibId = null;
   await fetchLibrary();
@@ -2250,7 +2270,7 @@ async function newTimerToFields() {
   activeLibId = null;
   let name = document.getElementById('fieldName').value.trim();
   if (!name) {
-    name = prompt('Timer name:');
+    name = await customPrompt('Timer name:');
     if (!name) return;
     document.getElementById('fieldName').value = name;
   }
@@ -2259,7 +2279,7 @@ async function newTimerToFields() {
   const missing = [];
   if (!minutes) missing.push('Duration');
   if (!label) missing.push('Title');
-  if (missing.length) { alert(missing.join(', ') + ' required.'); return; }
+  if (missing.length) { await customAlert(missing.join(', ') + ' required.'); return; }
   const endTimeLabel = getField('fieldEndTimeLabel') || 'Class resumes at';
   const message = getField('fieldMessage');
   const showEndTime = document.getElementById('fieldShowEnd').checked;
@@ -2289,15 +2309,15 @@ async function importLibrary(input) {
   try {
     const text = await file.text();
     const imported = JSON.parse(text);
-    if (!Array.isArray(imported)) { alert('Invalid library file.'); return; }
-    if (!confirm('Replace current library with imported data? (' + imported.length + ' timers)')) return;
+    if (!Array.isArray(imported)) { await customAlert('Invalid library file.'); return; }
+    if (!await customConfirm('Replace current library with imported data? (' + imported.length + ' timers)')) return;
     const res = await fetch('/api/library/import', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(imported) });
     library = await res.json();
     saveLibraryLocal();
     activeLibId = null;
     renderLibrary();
   } catch (e) {
-    alert('Error reading file: ' + e.message);
+    await customAlert('Error reading file: ' + e.message);
   }
   input.value = ''; // reset so same file can be re-imported
 }
@@ -2452,7 +2472,7 @@ function addCustomSound(input) {
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
   // TODO: upload to server, add to dropdown, render in custom sounds list
-  alert('Custom sound upload coming soon: ' + file.name);
+  customAlert('Custom sound upload coming soon: ' + file.name);
   input.value = '';
 }
 
@@ -2552,7 +2572,7 @@ if (startTab) document.getElementById('optStartTab').value = startTab;
 <div class="confirm-backdrop" id="confirmBackdrop">
   <div class="confirm-box">
     <div class="confirm-msg" id="confirmMsg"></div>
-    <div class="confirm-buttons">
+    <div class="confirm-buttons" id="confirmButtons">
       <button class="confirm-btn confirm-btn-yes" id="confirmYes">Yes</button>
       <button class="confirm-btn confirm-btn-no" id="confirmNo">Cancel</button>
     </div>
