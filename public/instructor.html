@@ -526,14 +526,14 @@
   /* Library grid */
   .lib-grid { width: 100%; border-collapse: collapse; }
   .lib-grid-header {
-    display: grid; grid-template-columns: auto auto 2fr 36px 2fr 3fr 22px 22px 22px;
+    display: grid; grid-template-columns: 40px 40px 2fr 36px 2fr 3fr 22px 22px 22px;
     gap: 6px; padding: 4px 6px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     position: relative;
   }
   .lib-grid-header span {
     font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;
-    color: #555; font-weight: 600;
+    color: var(--dim); font-weight: 600;
   }
   .lib-grid-header span.sortable {
     cursor: pointer; user-select: none; transition: color 0.15s;
@@ -550,7 +550,7 @@
   .btn-clear-sort:hover { color: var(--red); border-color: var(--red); }
   .btn-clear-sort.visible { display: inline-block; }
   .lib-row {
-    display: grid; grid-template-columns: auto auto 2fr 36px 2fr 3fr 22px 22px 22px;
+    display: grid; grid-template-columns: 40px 40px 2fr 36px 2fr 3fr 22px 22px 22px;
     gap: 6px; align-items: center;
     padding: 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.04);
     transition: background 0.15s;
@@ -1830,7 +1830,9 @@ function doPause() {
 }
 function doReset() {
   if (!document.querySelector('.tb-reset').classList.contains('enabled')) return;
-  stopAlarmLoop(); warningFired = false; socket.emit('reset');
+  stopAlarmLoop(); warningFired = false;
+  socket.emit('reset');
+  setTimeout(() => socket.emit('start'), 150);
 }
 function doStop() {
   if (!document.querySelector('.tb-stop').classList.contains('enabled')) return;
@@ -2127,6 +2129,8 @@ function loadLibTimer(id) {
 function isLibDirty(id) {
   const t = library.find(x => x.id === id);
   if (!t) return false;
+  // Normalize: convert literal \n to real newlines, strip placeholders for comparison
+  const norm = (s) => (s || '').replace(/\\n/g, '\n').replace(/\{[^}]+\}/g, '').trim();
   const name = document.getElementById('fieldName').value.trim();
   const label = getField('fieldLabel');
   const mins = getDurationMinutes();
@@ -2136,16 +2140,11 @@ function isLibDirty(id) {
   const transparent = document.getElementById('fieldTransparent').checked;
   const clockOnly = document.getElementById('fieldClockOnly').checked;
   const goToTab = document.getElementById('optGoToTab').value;
-  // Skip label/message comparison if the saved value has placeholders (e.g. {lab_number})
-  // because resolveParams substitutes them with user input during loadAndStart
-  const hasPlaceholder = (s) => /\{[^}]+\}/.test(s || '');
-  const labelDirty = hasPlaceholder(t.label) ? false : (label !== (t.label || ''));
-  const messageDirty = hasPlaceholder(t.message) ? false : (message !== (t.message || ''));
   return (name !== (t.name || '')) ||
-         labelDirty ||
+         (norm(label) !== norm(t.label)) ||
          (mins !== t.minutes) ||
-         (endTimeLabel !== (t.endTimeLabel || 'Class resumes at')) ||
-         messageDirty ||
+         (norm(endTimeLabel) !== norm(t.endTimeLabel || 'Class resumes at')) ||
+         (norm(message) !== norm(t.message)) ||
          (showEnd !== (t.showEndTime !== false)) ||
          (transparent !== !!t.transparent) ||
          (clockOnly !== !!t.clockOnly) ||
