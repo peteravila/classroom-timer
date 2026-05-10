@@ -502,7 +502,7 @@
 
   /* Quick-time preset buttons */
   .quick-times {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;
+    display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(5, 1fr); gap: 4px;
   }
   .quick-times button {
     border-radius: 5px; border: 1px solid #444;
@@ -892,7 +892,7 @@
   <div class="duration-popup" id="durationPopup">
     <button class="duration-popup-close" onclick="closeDurationPopup()">&#10005;</button>
     <div class="duration-popup-title">Duration / Target Time</div>
-    <div style="display:flex; gap:24px; align-items:flex-start; justify-content:center;">
+    <div style="display:flex; gap:24px; align-items:stretch; justify-content:center;">
       <!-- Left column: spinners stacked vertically -->
       <div style="display:flex; flex-direction:column; align-items:center;">
         <div class="spinner-field">
@@ -958,9 +958,9 @@
         </div>
       </div>
       <!-- Right column: quick set -->
-      <div class="spinner-field">
+      <div class="spinner-field" style="align-self:stretch;">
         <div class="lbl">Quick Set</div>
-        <div class="quick-times">
+        <div class="quick-times" style="flex:1;">
           <button onclick="setQuickTime(5)">5</button>
           <button onclick="setQuickTime(45)">45</button>
           <button onclick="setQuickTime(10)">10</button>
