@@ -221,7 +221,7 @@
     background: rgba(30, 30, 50, 0.45);
     backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
     border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 16px; padding: 24px 28px 20px;
+    border-radius: 16px; padding: 24px 28px 28px;
     position: absolute; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     max-width: 520px; pointer-events: auto; cursor: grab;
   }
@@ -450,7 +450,7 @@
     flex: 0 0 auto !important; margin: 4px 0;
   }
   .spinner-field { display: flex; flex-direction: column; flex: 0 0 auto !important; }
-  .spinner-field > .lbl { font-size: 0.8rem; color: #aaa; margin-bottom: 3px; }
+  .spinner-field > .lbl { font-size: 0.8rem; color: #aaa; margin-bottom: 3px; text-align: center; }
   .spinner-field .ampm-btn {
     width: 48px; height: 34px; border: 1px solid #333; border-radius: 6px;
     background: var(--bg); color: var(--text); font-size: 0.85rem; font-weight: 600;
@@ -502,14 +502,14 @@
 
   /* Quick-time preset buttons */
   .quick-times {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;
   }
   .quick-times button {
     border-radius: 5px; border: 1px solid #444;
-    background: var(--card2); color: var(--dim); font-size: 0.65rem;
+    background: var(--card2); color: var(--dim); font-size: 0.8rem;
     font-weight: 600; cursor: pointer; transition: all 0.15s;
     display: flex; align-items: center; justify-content: center;
-    padding: 1px 3px; min-width: 24px; height: 22px;
+    padding: 4px 10px; min-width: 36px;
   }
   .quick-times button:hover {
     border-color: var(--green); color: var(--green);
@@ -974,7 +974,7 @@
         </div>
       </div>
     </div>
-    <div style="display:flex; gap:8px; margin-top:12px; justify-content:center; align-items:center;">
+    <div style="display:flex; gap:8px; margin-top:28px; justify-content:center; align-items:center;">
       <button onclick="loadTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Push</button>
       <button onclick="addTimerTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">+Add</button>
       <button onclick="clearTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Clear</button>
