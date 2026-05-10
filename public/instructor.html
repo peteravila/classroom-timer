@@ -208,12 +208,7 @@
   .phone-mockup.state-done .mock-end-time-computed { color: var(--red); }
   .phone-mockup.state-done .mock-ring-fg { stroke: var(--red); }
 
-  .phone-mockup.state-done .mock-digits,
-  .phone-mockup.state-done .mock-label,
-  .phone-mockup.state-done .mock-course-title,
-  .phone-mockup.state-done .mock-message,
-  .phone-mockup.state-done .mock-end-time-label,
-  .phone-mockup.state-done .mock-end-time-computed { animation: pulse 1s infinite; }
+  .phone-mockup.state-done .mock-digits { animation: pulse 1s infinite; }
 
   /* Duration popup overlay */
   .duration-popup-backdrop {
@@ -417,25 +412,18 @@
     font-size: 0.7rem; color: #666; text-align: center; margin-bottom: 2px;
   }
   .spinner {
-    display: flex; flex-direction: column; align-items: center; width: 48px;
+    display: flex; flex-direction: row; align-items: center; width: 60px;
   }
-  .spinner button {
-    width: 100%; height: 22px; border: 1px solid #333; background: var(--card2);
-    color: var(--dim); font-size: 0.7rem; cursor: pointer; display: flex;
-    align-items: center; justify-content: center; transition: background 0.15s;
-    user-select: none; -webkit-user-select: none;
-  }
-  .spinner button:hover { background: var(--accent); color: var(--text); }
-  .spinner button:first-child { border-radius: 6px 6px 0 0; }
-  .spinner button:last-child { border-radius: 0 0 6px 6px; }
   .spinner .spin-value {
-    width: 100%; height: 34px; border-left: 1px solid #333; border-right: 1px solid #333;
+    flex: 1; height: 34px; border: 1px solid #333; border-right: none;
+    border-radius: 6px 0 0 6px;
     background: var(--bg); color: var(--text); font-size: 1.1rem;
     font-variant-numeric: tabular-nums; display: flex; align-items: center;
     justify-content: center; cursor: text;
   }
   .spinner .spin-input {
-    width: 100%; height: 34px; border: 1px solid var(--blue);
+    flex: 1; height: 34px; border: 1px solid var(--blue);
+    border-radius: 6px 0 0 6px;
     background: var(--bg); color: var(--text); font-size: 1.1rem;
     font-variant-numeric: tabular-nums; text-align: center;
     outline: none; box-sizing: border-box; padding: 0;
@@ -445,15 +433,27 @@
   .spinner .spin-input::-webkit-inner-spin-button {
     -webkit-appearance: none; margin: 0;
   }
+  .spin-btns {
+    display: flex; flex-direction: column; height: 34px;
+  }
+  .spin-btns button {
+    width: 20px; flex: 1; border: 1px solid #333; background: var(--card2);
+    color: var(--dim); font-size: 0.5rem; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; transition: background 0.15s;
+    user-select: none; -webkit-user-select: none; padding: 0;
+  }
+  .spin-btns button:hover { background: var(--accent); color: var(--text); }
+  .spin-btns button:first-child { border-radius: 0 6px 0 0; border-bottom: none; }
+  .spin-btns button:last-child { border-radius: 0 0 6px 0; }
   .sync-arrows {
     display: flex; align-items: center;
     flex: 0 0 auto !important; margin: 0 10px;
-    padding-top: 64px;
+    padding-top: 18px;
   }
   .spinner-field { display: flex; flex-direction: column; flex: 0 0 auto !important; }
   .spinner-field > .lbl { font-size: 0.8rem; color: #aaa; margin-bottom: 3px; }
   .spinner-field .ampm-btn {
-    width: 48px; height: 78px; border: 1px solid #333; border-radius: 6px;
+    width: 48px; height: 34px; border: 1px solid #333; border-radius: 6px;
     background: var(--bg); color: var(--text); font-size: 0.85rem; font-weight: 600;
     cursor: pointer; margin-top: 14px; transition: background 0.15s;
   }
@@ -900,18 +900,22 @@
           <div>
             <div class="spin-label">hr</div>
             <div class="spinner">
-              <button data-spin="durH" data-dir="up">&#9650;</button>
               <div class="spin-value" id="durH">0</div>
-              <button data-spin="durH" data-dir="down">&#9660;</button>
+              <div class="spin-btns">
+                <button data-spin="durH" data-dir="up">&#9650;</button>
+                <button data-spin="durH" data-dir="down">&#9660;</button>
+              </div>
             </div>
           </div>
           <div class="spin-separator">:</div>
           <div>
             <div class="spin-label">min</div>
             <div class="spinner">
-              <button data-spin="durM" data-dir="up">&#9650;</button>
               <div class="spin-value" id="durM">15</div>
-              <button data-spin="durM" data-dir="down">&#9660;</button>
+              <div class="spin-btns">
+                <button data-spin="durM" data-dir="up">&#9650;</button>
+                <button data-spin="durM" data-dir="down">&#9660;</button>
+              </div>
             </div>
           </div>
         </div>
@@ -930,18 +934,22 @@
           <div>
             <div class="spin-label">hr</div>
             <div class="spinner">
-              <button data-spin="tarH" data-dir="up">&#9650;</button>
               <div class="spin-value" id="tarH">12</div>
-              <button data-spin="tarH" data-dir="down">&#9660;</button>
+              <div class="spin-btns">
+                <button data-spin="tarH" data-dir="up">&#9650;</button>
+                <button data-spin="tarH" data-dir="down">&#9660;</button>
+              </div>
             </div>
           </div>
           <div class="spin-separator">:</div>
           <div>
             <div class="spin-label">min</div>
             <div class="spinner">
-              <button data-spin="tarM" data-dir="up">&#9650;</button>
               <div class="spin-value" id="tarM">00</div>
-              <button data-spin="tarM" data-dir="down">&#9660;</button>
+              <div class="spin-btns">
+                <button data-spin="tarM" data-dir="up">&#9650;</button>
+                <button data-spin="tarM" data-dir="down">&#9660;</button>
+              </div>
             </div>
           </div>
           <button class="ampm-btn" id="tarAmPm" onclick="toggleAmPm()">PM</button>
