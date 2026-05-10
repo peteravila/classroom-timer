@@ -653,7 +653,7 @@
         <div class="push-all-hint">Pushes all checked fields.</div>
         <hr style="border:none; border-top:1px solid #333; margin:8px 0;">
         <div class="transport-grid">
-          <button class="transport-btn tb-start" onclick="doStart()" title="Start">&#9654;&#xFE0E;</button>
+          <button class="transport-btn tb-start" onclick="doStart()" title="Push all and start">&#9654;&#xFE0E;</button>
           <button class="transport-btn tb-pause" onclick="doPause()" title="Pause">&#9208;&#xFE0E;</button>
           <button class="transport-btn tb-stop" onclick="doStop()" title="Stop">&#9209;&#xFE0E;</button>
           <button class="transport-btn tb-reset" onclick="doReset()" title="Reset">&#8634;</button>
@@ -676,7 +676,7 @@
           <div class="mock-chk" id="mockChkCourse"><input type="checkbox" id="includeCourseTitle" checked title="Include when pushing"></div>
           <div class="mock-editable mock-course-title" contenteditable="true" data-placeholder="Course Title" id="fieldCourseTitle"></div>
           <div class="mock-ctx" id="mockCtxCourseTitle">
-            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldCourseTitle')" title="Push &amp; Start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldCourseTitle')" title="Push this and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" id="btnPushCourseTitle" onclick="pushCourseTitle()">Push</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearCourseTitle()">Clear</button>
             <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldCourseTitle')">Revert</button>
@@ -694,7 +694,7 @@
           <div class="mock-chk" id="mockChkLabel"><input type="checkbox" id="includeTitle" checked title="Include when pushing"></div>
           <div class="mock-editable mock-label" contenteditable="true" data-placeholder="Timer Label" id="fieldLabel"></div>
           <div class="mock-ctx" id="mockCtxLabel">
-            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldLabel')" title="Push &amp; Start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldLabel')" title="Push this and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" onclick="loadTitle()">Push</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearTitle()">Clear</button>
             <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldLabel')">Revert</button>
@@ -710,7 +710,7 @@
           <div class="mock-editable mock-end-time-label" contenteditable="true" data-placeholder="End Time Label" id="fieldEndTimeLabel">Class resumes at</div>
           <div class="mock-end-time-computed" id="mockEndTimeComputed"></div>
           <div class="mock-ctx" id="mockCtxEndTimeLabel">
-            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldEndTimeLabel')" title="Push &amp; Start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldEndTimeLabel')" title="Push this and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" onclick="loadEndTimeLabel()">Push</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearEndTimeLabel()">Clear</button>
             <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldEndTimeLabel')">Revert</button>
@@ -722,7 +722,7 @@
           <div class="mock-chk" id="mockChkMessage"><input type="checkbox" id="includeMessage" checked title="Include when pushing"></div>
           <div class="mock-editable mock-message" contenteditable="true" data-placeholder="Message to students" id="fieldMessage"></div>
           <div class="mock-ctx" id="mockCtxMessage">
-            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldMessage')" title="Push &amp; Start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldMessage')" title="Push this and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" onclick="loadMessage()">Push</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearMessage()">Clear</button>
             <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldMessage')">Revert</button>
@@ -974,10 +974,10 @@
         </div>
       </div>
     </div>
-    <div style="display:flex; gap:8px; margin-top:28px; justify-content:center; align-items:center;">
-      <button onclick="pushTimeAndStart()" style="padding:6px 16px; border:1.5px solid var(--green); border-radius:6px; background:transparent; color:var(--green); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">&#9654; Start</button>
-      <button onclick="addTimerTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">+Add</button>
-      <button onclick="clearTime()" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Clear</button>
+    <div style="display:flex; gap:8px; margin-top:28px; justify-content:flex-start; align-items:center; padding-left:12px;">
+      <button onclick="pushTimeAndStart()" title="Push time and start" style="padding:6px 8px; border:1.5px solid var(--green); border-radius:6px; background:transparent; color:var(--green); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">&#9654;</button>
+      <button onclick="addTimerTime()" title="Add time to running timer" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">+Add</button>
+      <button onclick="clearTime()" title="Clear duration" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Clear</button>
       <div class="checkbox-row" style="margin:0; margin-left:8px;">
         <input type="checkbox" id="includeTime" class="custom-cb" checked>
         <label for="includeTime">Include when starting</label>
@@ -1941,7 +1941,7 @@ function renderLibrary() {
     sorted.map(t => `
     <div class="lib-row ${active(t.id) ? 'active' : ''}" draggable="true" data-id="${t.id}">
       <button class="lib-row-btn ${active(t.id) ? 'btn-loaded' : ''}" onclick="event.stopPropagation();loadLibTimer('${t.id}')">${active(t.id) ? 'Loaded' : 'Load'}</button>
-      <button class="lib-row-btn lib-row-go" onclick="event.stopPropagation();loadAndStart('${t.id}')" title="Load &amp; Start">&#9654;&#xFE0E;</button>
+      <button class="lib-row-btn lib-row-go" onclick="event.stopPropagation();loadAndStart('${t.id}')" title="Push all and start">&#9654;&#xFE0E;</button>
       <span class="lib-row-name" title="${esc(t.name)}">${esc(t.name)}</span>
       <span class="lib-row-mins">${t.minutes}m</span>
       <span class="lib-row-title" title="${esc(t.label || '')}">${esc(t.label || '')}</span>
