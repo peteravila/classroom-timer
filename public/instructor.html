@@ -132,7 +132,6 @@
   .mock-label {
     font-size: 1.15rem; font-weight: 700; color: #e0e0e0;
     opacity: 0.95; white-space: pre-line; min-height: 1.2em;
-    max-height: 2.4em; overflow: hidden;
     margin-bottom: 3px;
   }
   .mock-end-time-label {
@@ -167,8 +166,9 @@
     font-size: 4.3rem; font-weight: 800; color: var(--green);
     font-variant-numeric: tabular-nums; letter-spacing: 2px;
     line-height: 1; margin: 4px 0; cursor: pointer;
-    transition: color 0.8s;
+    transition: color 0.8s, font-size 0.3s;
   }
+  .mock-digits.has-hours { font-size: 3.2rem; }
   .mock-digits:hover { opacity: 0.8; }
 
   /* Live mockup color states — mirror student.html */
@@ -1247,7 +1247,9 @@ function updateMockDigitsFromSpinners() {
   if (timerIsRunning || timerRemaining > 0) return; // don't overwrite live countdown
   const mins = getDurationMinutes();
   const totalSecs = mins * 60;
-  document.getElementById('mockDigits').textContent = fmt(totalSecs);
+  const mockD = document.getElementById('mockDigits');
+  mockD.textContent = fmt(totalSecs);
+  mockD.classList.toggle('has-hours', totalSecs >= 3600);
   // Update computed end time
   updateMockEndTime(mins);
 }
@@ -1276,6 +1278,7 @@ function updateMockupLive(s) {
 
   // Update digits
   digits.textContent = fmt(s.remainingSeconds);
+  digits.classList.toggle('has-hours', Math.abs(s.remainingSeconds) >= 3600);
 
   // Update ring
   const refTotal = s.originalTotal || s.totalSeconds;
@@ -1766,16 +1769,12 @@ async function doStart() {
 
   stopAlarmLoop(); warningFired = false;
 
-  // If timer is paused (was running, now stopped with time remaining), just resume
-  if (timerTotal > 0 && timerRemaining > 0 && timerRemaining < timerTotal) {
-    socket.emit('start');
-    return;
-  }
-
   // Block server sync during the push sequence
   lastPushTime = Date.now();
 
-  // Otherwise push all checked fields then start
+  const isPaused = timerTotal > 0 && timerRemaining > 0 && timerRemaining < timerTotal;
+
+  // Push all checked fields then start
   const useCourseTitle  = document.getElementById('includeCourseTitle').checked;
   const useTitle        = document.getElementById('includeTitle').checked;
   const useTime         = document.getElementById('includeTime').checked;
@@ -1791,11 +1790,12 @@ async function doStart() {
   if (useTitle && resolved.label !== rawLabel) setField('fieldLabel', resolved.label);
   if (useMessage && resolved.message !== rawMessage) setField('fieldMessage', resolved.message);
 
-  if (useTime) {
+  if (useTime && !isPaused) {
     const minutes = getTimerMinutes();
-    if (minutes <= 0) return;
-    const showEndTime = document.getElementById('fieldShowEnd').checked;
-    socket.emit('set-timer-only', { minutes, showEndTime });
+    if (minutes > 0) {
+      const showEndTime = document.getElementById('fieldShowEnd').checked;
+      socket.emit('set-timer-only', { minutes, showEndTime });
+    }
   }
   // Always push display modes
   socket.emit('update-display-modes', {
@@ -2116,6 +2116,9 @@ function loadLibTimer(id) {
   if (goTo === 'time' || goTo === 'timer') goTo = 'library';
   if (goTo === 'message') goTo = 'library';
   document.getElementById('optGoToTab').value = goTo;
+
+  // Suppress dirty check — fields were just loaded from this library item
+  justLoadedId = id;
 
   renderLibrary();
   updateMockDigitsFromSpinners();

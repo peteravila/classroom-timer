@@ -72,8 +72,10 @@
     "label": "Lab {Lab Number}",
     "message": "Don't hesitate to ask questions when you have them!",
     "showEndTime": true,
-    "endTimeLabel": "Class resumes at",
-    "goToTab": "timer"
+    "endTimeLabel": "This lab ends at",
+    "goToTab": "library",
+    "transparent": false,
+    "clockOnly": false
   },
   {
     "id": "5",
@@ -82,57 +84,89 @@
     "label": "Lab {Lab Number}",
     "message": "Take your time — ask questions if you get stuck.",
     "showEndTime": true,
-    "endTimeLabel": "Class resumes at",
-    "goToTab": "timer"
+    "endTimeLabel": "This lab ends at",
+    "goToTab": "library",
+    "transparent": false,
+    "clockOnly": false
   },
   {
     "name": "Lab 30 Break 15",
     "label": "Lab {Lab Number} & Break",
     "minutes": 45,
-    "endTimeLabel": "Class resumes at",
+    "endTimeLabel": "This lab & break ends at",
     "message": "Remember to ask questions if you get stuck and enjoy your break!",
     "showEndTime": true,
-    "goToTab": "timer",
-    "id": "motd2xq0dsj0"
+    "goToTab": "library",
+    "id": "motd2xq0dsj0",
+    "transparent": false,
+    "clockOnly": false
   },
   {
     "name": "Lab 45 Break 15",
     "label": "Lab {Lab Number} & Break",
     "minutes": 60,
-    "endTimeLabel": "Class resumes at",
+    "endTimeLabel": "This lab & break ends at",
     "message": "Remember to ask questions if you get stuck and enjoy your break!",
     "showEndTime": true,
-    "goToTab": "timer",
-    "id": "motcz5sr6k3n"
+    "goToTab": "library",
+    "id": "motcz5sr6k3n",
+    "transparent": false,
+    "clockOnly": false
   },
   {
     "name": "Lab 60 Break 15",
     "label": "Lab {Lab Number} & Break",
     "minutes": 75,
-    "endTimeLabel": "Class resumes at",
+    "endTimeLabel": "This lab & break ends at",
     "message": "Remember to ask questions if you get stuck and enjoy your break!",
     "showEndTime": true,
-    "goToTab": "timer",
-    "id": "motd4csevyfn"
+    "goToTab": "library",
+    "id": "motd4csevyfn",
+    "transparent": false,
+    "clockOnly": false
   },
   {
     "name": "Lab 60 Lunch 60",
     "label": "Lab {Lab Number} & Lunch Break",
     "minutes": 120,
-    "endTimeLabel": "Class resumes at",
+    "endTimeLabel": "This lab & break ends at",
     "message": "Have a great lunch and remember to ask questions if you get stuck!",
     "showEndTime": true,
-    "goToTab": "timer",
-    "id": "motdcxeycjmk"
+    "goToTab": "library",
+    "id": "motdcxeycjmk",
+    "transparent": false,
+    "clockOnly": false
   },
   {
-    "name": "Sample",
-    "label": "sample",
-    "minutes": 15,
-    "endTimeLabel": "Class resumes at",
-    "message": "",
+    "name": "Hot Lab 5",
+    "label": "{Instructions}",
+    "minutes": 5,
+    "endTimeLabel": "This lab ends at",
+    "message": "You don't have to get it right to succeed; the important thing is the attempt. It will introduce you to your roadblocks.",
     "showEndTime": true,
     "goToTab": "library",
-    "id": "moz1br0rc8q8"
+    "id": "mp048wl0u4x4",
+    "transparent": false,
+    "clockOnly": false
+  },
+  {
+    "name": "Hot Lab 10",
+    "label": "{Instructions}",
+    "minutes": 10,
+    "endTimeLabel": "This lab ends at",
+    "message": "You don't have to get it right to succeed; the important thing is the attempt. It will introduce you to your roadblocks.",
+    "showEndTime": true,
+    "goToTab": "library",
+    "id": "mp04c0vklkun"
+  },
+  {
+    "name": "Hot Lab 15",
+    "label": "{Instructions}",
+    "minutes": 15,
+    "endTimeLabel": "This lab ends at",
+    "message": "You don't have to get it right to succeed; the important thing is the attempt. It will introduce you to your roadblocks.",
+    "showEndTime": true,
+    "goToTab": "library",
+    "id": "mp04e9yrfhf6"
   }
 ]
