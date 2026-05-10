@@ -23,6 +23,7 @@
   body.state-yellow  { background: #332b00; color: #e0e0e0; }
   body.state-orange  { background: #3b2010; color: #e0e0e0; }
   body.state-red     { background: #3b1010; color: #e0e0e0; }
+  body.state-paused  { background: #1a1a2e; color: #e0e0e0; }
   body.state-done    { background: #4a0e0e; color: #e0e0e0; }
 
   /* Transparent mode — for OBS/display only */
@@ -57,6 +58,7 @@
   .state-yellow .digits { color: var(--yellow); }
   .state-orange .digits { color: var(--orange); }
   .state-done .digits   { color: var(--red); animation: pulse 1s infinite; }
+  .state-paused .digits { color: #888; }
   .state-idle .digits   { color: #556; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
@@ -67,6 +69,7 @@
   .state-yellow .end-time { color: var(--yellow); }
   .state-orange .end-time { color: var(--orange); }
   .state-done .end-time   { color: var(--red); }
+  .state-paused .end-time { color: #888; }
   .state-idle .end-time   { color: #556; }
 
   /* All text follows digit color through state transitions */
@@ -74,12 +77,14 @@
   .state-yellow .label, .state-yellow .course-title  { color: var(--yellow); }
   .state-orange .label, .state-orange .course-title  { color: var(--orange); }
   .state-done .label,   .state-done .course-title    { color: var(--red); }
+  .state-paused .label, .state-paused .course-title  { color: #888; }
   .state-idle .label,   .state-idle .course-title    { color: #e0e0e0; }
 
   .state-green .message  { color: var(--green); }
   .state-yellow .message { color: var(--yellow); }
   .state-orange .message { color: var(--orange); }
   .state-done .message   { color: var(--red); }
+  .state-paused .message { color: #888; }
   .state-idle .message   { color: #bbb; }
 
 
@@ -326,6 +331,7 @@ function fmt(secs) {
 function stateClass(rem, total, running) {
   if (total === 0) return 'state-idle';
   if (rem <= 0) return 'state-done';
+  if (!running && rem > 0 && rem < total) return 'state-paused';
   if (!running) return 'state-idle';
   const orangeAt = Math.min(total * 0.15, 180);  // 3 min cap
   const yellowAt = Math.min(total * 0.35, 600);  // 10 min cap
@@ -338,6 +344,7 @@ function strokeColor(cls) {
     case 'state-green':  return 'var(--green)';
     case 'state-yellow': return 'var(--yellow)';
     case 'state-orange': return 'var(--orange)';
+    case 'state-paused': return '#888';
     case 'state-done':   return 'var(--red)';
     default:             return 'rgba(255,255,255,0.15)';
   }

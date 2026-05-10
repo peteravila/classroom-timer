@@ -210,6 +210,14 @@
 
   .phone-mockup.state-done .mock-digits { animation: pulse 1s infinite; }
 
+  .phone-mockup.state-paused .mock-digits,
+  .phone-mockup.state-paused .mock-label,
+  .phone-mockup.state-paused .mock-course-title,
+  .phone-mockup.state-paused .mock-message,
+  .phone-mockup.state-paused .mock-end-time-label,
+  .phone-mockup.state-paused .mock-end-time-computed { color: #888; }
+  .phone-mockup.state-paused .mock-ring-fg { stroke: #888; }
+
   /* Duration popup overlay */
   .duration-popup-backdrop {
     display: none; position: fixed; inset: 0; z-index: 1000;
@@ -304,16 +312,12 @@
   .mock-ctx-btn {
     font-size: 0.55rem; padding: 2px 5px; border-radius: 4px; cursor: pointer;
     font-family: inherit; font-weight: 600; white-space: nowrap;
-    border: none; transition: all 0.15s;
+    border: 1.5px solid var(--blue); background: transparent; color: var(--blue);
+    transition: all 0.15s;
   }
-  .mock-ctx-push { background: var(--blue); color: #fff; }
-  .mock-ctx-push:hover { background: #2980b9; }
-  .mock-ctx-clear { background: #fff; color: var(--blue); }
-  .mock-ctx-clear:hover { background: #e0e0e0; }
-  .mock-ctx-revert { background: #d35400; color: #fff; }
-  .mock-ctx-revert:hover { background: #b94700; }
-  .mock-ctx-go { background: transparent; color: #fff; border: 1.5px solid var(--blue); font-size: 0.7rem; }
-  .mock-ctx-go:hover:not(.disabled) { color: var(--green); border-color: var(--green); }
+  .mock-ctx-btn:hover { background: rgba(52,152,219,0.15); }
+  .mock-ctx-go { font-size: 0.7rem; }
+  .mock-ctx-go:hover:not(.disabled) { color: var(--green); border-color: var(--green); background: rgba(78,204,163,0.1); }
   .mock-ctx-go.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 
   /* Checkbox on left of field */
@@ -493,9 +497,9 @@
   }
   .transport-btn.enabled { color: var(--blue); border-color: var(--blue); }
   .transport-btn.enabled svg { stroke: var(--blue); }
-  .transport-btn:not(.enabled) svg { stroke: #555; }
+  .transport-btn:not(.enabled) svg { stroke: #666; }
   .transport-btn.enabled:hover { background: rgba(52,152,219,0.15); }
-  .transport-btn:not(.enabled) { cursor: default; opacity: 0.4; color: #555; border-color: #555; }
+  .transport-btn:not(.enabled) { cursor: default; opacity: 0.7; color: #666; border-color: #666; }
   .transport-btn.tb-start { font-size: 1.0rem; }
   .transport-btn.tb-pause { font-size: 1.3rem; padding-bottom: 2px; }
   .transport-btn.tb-reset { font-size: 1.4rem; padding-top: 2px; }
@@ -1292,27 +1296,25 @@ function updateMockupLive(s) {
   }
 
   // Update color state
-  mockup.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-done');
-  if (s.running || (s.totalSeconds > 0 && s.remainingSeconds > 0)) {
-    if (s.remainingSeconds <= 0) {
-      mockup.classList.add('state-done');
-    } else {
-      const pct = s.remainingSeconds / refTotal;
-      // Hybrid thresholds matching student.html
-      const yellowThresh = Math.min(0.35, 600 / refTotal);
-      const orangeThresh = Math.min(0.15, 180 / refTotal);
-      if (pct <= orangeThresh) mockup.classList.add('state-orange');
-      else if (pct <= yellowThresh) mockup.classList.add('state-yellow');
-      else mockup.classList.add('state-green');
-    }
-  } else if (s.totalSeconds > 0 && s.remainingSeconds <= 0) {
+  mockup.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-done', 'state-paused');
+  if (s.remainingSeconds <= 0 && s.totalSeconds > 0) {
     mockup.classList.add('state-done');
+  } else if (!s.running && s.remainingSeconds > 0 && s.remainingSeconds < s.totalSeconds) {
+    mockup.classList.add('state-paused');
+  } else if (s.running && s.remainingSeconds > 0) {
+    const pct = s.remainingSeconds / refTotal;
+    // Hybrid thresholds matching student.html
+    const yellowThresh = Math.min(0.35, 600 / refTotal);
+    const orangeThresh = Math.min(0.15, 180 / refTotal);
+    if (pct <= orangeThresh) mockup.classList.add('state-orange');
+    else if (pct <= yellowThresh) mockup.classList.add('state-yellow');
+    else mockup.classList.add('state-green');
   }
 }
 
 function resetMockupIdle() {
   const mockup = document.getElementById('phoneMockup');
-  mockup.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-done');
+  mockup.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-done', 'state-paused');
   document.getElementById('mockRingFg').style.strokeDashoffset = MOCK_CIRCUMFERENCE * 0.22; // default partial fill
   updateMockDigitsFromSpinners();
 }
@@ -1720,6 +1722,8 @@ function clearTime() {
   setSpinVal('tarH', 12);
   setSpinVal('tarM', 0);
   document.getElementById('tarAmPm').textContent = 'PM';
+  updateMockDigitsFromSpinners();
+  updateButtonStates();
 }
 
 async function loadMessage() {
@@ -2042,6 +2046,10 @@ async function loadAndStart(id) {
   }
   loadLibTimer(id);
 
+  // Hide any contextual buttons/checkboxes that may have appeared during field loading
+  document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
+  document.querySelectorAll('.mock-chk').forEach(b => b.classList.remove('visible'));
+
   // Block server sync from overwriting liveText during the push sequence
   lastPushTime = Date.now();
 
@@ -2106,6 +2114,10 @@ function loadLibTimer(id) {
   updateMockDigitsFromSpinners();
   markDirtyFields();
   updateButtonStates();
+
+  // Hide contextual buttons/checkboxes that may have appeared during field loading
+  document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
+  document.querySelectorAll('.mock-chk').forEach(b => b.classList.remove('visible'));
 
   // Navigate to the configured tab
   if (goTo !== 'library') switchTab(goTo);
