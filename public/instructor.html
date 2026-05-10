@@ -446,9 +446,8 @@
   .spin-btns button:first-child { border-radius: 0 6px 0 0; border-bottom: none; }
   .spin-btns button:last-child { border-radius: 0 0 6px 0; }
   .sync-arrows {
-    display: flex; align-items: center;
-    flex: 0 0 auto !important; margin: 0 10px;
-    padding-top: 18px;
+    display: flex; align-items: center; justify-content: center;
+    flex: 0 0 auto !important; margin: 4px 0;
   }
   .spinner-field { display: flex; flex-direction: column; flex: 0 0 auto !important; }
   .spinner-field > .lbl { font-size: 0.8rem; color: #aaa; margin-bottom: 3px; }
@@ -893,69 +892,73 @@
   <div class="duration-popup" id="durationPopup">
     <button class="duration-popup-close" onclick="closeDurationPopup()">&#10005;</button>
     <div class="duration-popup-title">Duration / Target Time</div>
-    <div style="display:flex; gap:16px; align-items:flex-start; justify-content:center; flex-wrap:wrap;">
-      <div class="spinner-field">
-        <div class="lbl">Duration</div>
-        <div class="spinner-group">
-          <div>
-            <div class="spin-label">hr</div>
-            <div class="spinner">
-              <div class="spin-value" id="durH">0</div>
-              <div class="spin-btns">
-                <button data-spin="durH" data-dir="up">&#9650;</button>
-                <button data-spin="durH" data-dir="down">&#9660;</button>
+    <div style="display:flex; gap:24px; align-items:flex-start; justify-content:center;">
+      <!-- Left column: spinners stacked vertically -->
+      <div style="display:flex; flex-direction:column; align-items:center;">
+        <div class="spinner-field">
+          <div class="lbl">Duration</div>
+          <div class="spinner-group">
+            <div>
+              <div class="spin-label">hr</div>
+              <div class="spinner">
+                <div class="spin-value" id="durH">0</div>
+                <div class="spin-btns">
+                  <button data-spin="durH" data-dir="up">&#9650;</button>
+                  <button data-spin="durH" data-dir="down">&#9660;</button>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="spin-separator">:</div>
-          <div>
-            <div class="spin-label">min</div>
-            <div class="spinner">
-              <div class="spin-value" id="durM">15</div>
-              <div class="spin-btns">
-                <button data-spin="durM" data-dir="up">&#9650;</button>
-                <button data-spin="durM" data-dir="down">&#9660;</button>
+            <div class="spin-separator">:</div>
+            <div>
+              <div class="spin-label">min</div>
+              <div class="spinner">
+                <div class="spin-value" id="durM">15</div>
+                <div class="spin-btns">
+                  <button data-spin="durM" data-dir="up">&#9650;</button>
+                  <button data-spin="durM" data-dir="down">&#9660;</button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      <div class="sync-arrows">
-        <svg width="40" height="24" viewBox="0 0 40 24">
-          <line x1="2" y1="10" x2="38" y2="10" stroke="#888" stroke-width="1.5"/>
-          <line x1="38" y1="10" x2="31" y2="3" stroke="#888" stroke-width="1.5"/>
-          <line x1="2" y1="14" x2="38" y2="14" stroke="#888" stroke-width="1.5"/>
-          <line x1="2" y1="14" x2="9" y2="21" stroke="#888" stroke-width="1.5"/>
-        </svg>
-      </div>
-      <div class="spinner-field">
-        <div class="lbl">Target Time</div>
-        <div class="spinner-group">
-          <div>
-            <div class="spin-label">hr</div>
-            <div class="spinner">
-              <div class="spin-value" id="tarH">12</div>
-              <div class="spin-btns">
-                <button data-spin="tarH" data-dir="up">&#9650;</button>
-                <button data-spin="tarH" data-dir="down">&#9660;</button>
+        <div class="sync-arrows">
+          <svg width="24" height="40" viewBox="0 0 24 40">
+            <line x1="10" y1="2" x2="10" y2="38" stroke="#888" stroke-width="1.5"/>
+            <line x1="10" y1="38" x2="3" y2="31" stroke="#888" stroke-width="1.5"/>
+            <line x1="14" y1="2" x2="14" y2="38" stroke="#888" stroke-width="1.5"/>
+            <line x1="14" y1="2" x2="21" y2="9" stroke="#888" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="spinner-field">
+          <div class="lbl">Target Time</div>
+          <div class="spinner-group">
+            <div>
+              <div class="spin-label">hr</div>
+              <div class="spinner">
+                <div class="spin-value" id="tarH">12</div>
+                <div class="spin-btns">
+                  <button data-spin="tarH" data-dir="up">&#9650;</button>
+                  <button data-spin="tarH" data-dir="down">&#9660;</button>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="spin-separator">:</div>
-          <div>
-            <div class="spin-label">min</div>
-            <div class="spinner">
-              <div class="spin-value" id="tarM">00</div>
-              <div class="spin-btns">
-                <button data-spin="tarM" data-dir="up">&#9650;</button>
-                <button data-spin="tarM" data-dir="down">&#9660;</button>
+            <div class="spin-separator">:</div>
+            <div>
+              <div class="spin-label">min</div>
+              <div class="spinner">
+                <div class="spin-value" id="tarM">00</div>
+                <div class="spin-btns">
+                  <button data-spin="tarM" data-dir="up">&#9650;</button>
+                  <button data-spin="tarM" data-dir="down">&#9660;</button>
+                </div>
               </div>
             </div>
+            <button class="ampm-btn" id="tarAmPm" onclick="toggleAmPm()">PM</button>
           </div>
-          <button class="ampm-btn" id="tarAmPm" onclick="toggleAmPm()">PM</button>
         </div>
       </div>
-      <div class="spinner-field" style="margin-left:24px;">
+      <!-- Right column: quick set -->
+      <div class="spinner-field">
         <div class="lbl">Quick Set</div>
         <div class="quick-times">
           <button onclick="setQuickTime(5)">5</button>
