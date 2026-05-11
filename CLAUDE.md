@@ -68,33 +68,4 @@ This is a real-time classroom timer for virtual instruction (Zoom + OBS). An ins
 
 **Color states on student view:** CSS classes on body — state-idle (#1a1a2e), state-green (#0d3b2e), state-yellow (#3b3010), state-orange (#3b2010), state-done (#4a0e0e). The "almost done" state uses orange, not red, because students were confusing it with "time's up." Hybrid color thresholds: yellow = min(35% of total, 10 minutes), orange = min(15% of total, 3 minutes). This prevents long timers (e.g. multi-hour) from turning yellow/orange too early — short timers use percentages, long timers cap at fixed times.
 
-**Phone mockup as live preview:** The instructor page's phone mockup is not an iframe — it's native HTML/CSS that mirrors the student view. During countdown, it receives timer-update events and updates digits, ring, colors, and state classes in real time. Contenteditable fields on the mockup push changes to the server on blur or via Push buttons.
-
-**Display modes (per-timer, saved with library items):**
-- **Transparent**: Background becomes transparent on OBS/display viewers. Phones are unaffected. Useful for OBS overlays.
-- **Clock only**: Hides everything except the countdown digits on OBS/display viewers. Phones show the full view. Digit color transitions still apply.
-- Both modes can be enabled simultaneously. They only affect display/preview/OBS viewers, never phone students.
-
-**OBS browser source**: Use `?obs=true` parameter (e.g. `https://your-url/?obs=true`). Skips the code gate, hides QR code, identifies as a display viewer, and respects transparent/clock-only modes regardless of window size.
-
-**Restore feature:** When a timer starts, the server snapshots it as `lastTimer` (label, message, originalTotal, showEndTime, endTimeLabel, endTime). If the timer is stopped or the page refreshes, the instructor can restore it — the server recalculates remaining time from the original endTime.
-
-### Deployment
-- Push updated files to GitHub (Peter uses the GitHub web editor or deploy.bat)
-- Render auto-deploys from latest commit (or use Manual Deploy)
-- Deploying restarts the server, which kills any running timer (planned fix: persist timer state to MongoDB)
-- OBS browser sources cache aggressively — right-click → "Refresh cache of current page" after deploys
-- Phone browsers also cache — hard refresh or re-scan QR code after deploys
-- See DEPLOY.md for step-by-step instructions for Peter
-
-### Marketing Materials
-- **LiveTimer_Brochure.pdf** — 3-page dark-themed marketing brochure with screenshots. Generated via Python/reportlab. Source script is session-local (livetimer_brochure10.py). Screenshots are ss_*.png files in the project root.
-- **LiveTimer_Brochure.docx** — Word version of the same brochure, generated via python-docx.
-
-### Pending / In Progress
-- **Persist timer state to MongoDB** — Save running timer state (endTime, label, etc.) so the server can recover after a restart. The keep-alive ping is the first line of defense; MongoDB persistence is the safety net. Agreed upon, not yet implemented.
-- **Progress ring scaling for long timers** — Currently the ring drains by percentage, so on multi-hour timers it's a tiny sliver by the time colors change. Under discussion: rescale the ring in the capped zone, freeze at a minimum %, or leave as-is. Awaiting Peter's decision.
-- **Multi-instructor support (Phase 2)** — Eventually make the app available to multiple instructors, each with their own library and timer state.
-- **Clean up debug code in student.html** — The submitCode() function still has diagnostic timeout/feedback code ("Validating...", "No response from server") that should be simplified once the reconnection flow is confirmed stable.
-- **Deploy latest changes** — The local files have changes (custom dialogs, reconnection fixes, duration popup styling) that haven't been pushed to production yet.
-- **Brochure iteration** — The brochure (v10) has mixed-alignment layout with text wrapping around images, reduced word count, larger fonts. Peter may have further feedback.
+**Phone mockup as li
