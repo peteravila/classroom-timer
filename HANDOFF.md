@@ -203,4 +203,35 @@ See `Pending Items.md` for the detailed list. Summary:
 1. **Persist timer state to MongoDB** — Server restart kills running timer. Agreed upon, not yet implemented.
 2. **Progress ring scaling for long timers** — Ring drains by percentage; tiny changes on multi-hour timers. Awaiting Peter's decision.
 3. **Multi-instructor support (Phase 2)** — One global timer state currently. Planned: unique rooms per instructor.
-4. **Free tier sleep** — Render spins down after ~15 min inactivity. Keep-alive ping mitigates but only while instructor 
+4. **Free tier sleep** — Render spins down after ~15 min inactivity. Keep-alive ping mitigates but only while instructor tab is active.
+5. **No authentication** — Anyone with the instructor URL can control the timer.
+6. **Debug code in student.html submitCode()** — Diagnostic timeout/feedback code should be cleaned up once reconnection flow is confirmed stable.
+7. **Undeployed local changes** — Custom dialogs, reconnection fixes, duration popup styling haven't been pushed to production yet.
+8. **Library mismatch** — Local shows 5 timers but production may have more. Check MongoDB Atlas.
+
+## CSS Design System
+
+Both pages use a consistent dark theme:
+
+```css
+--bg: #1a1a2e        /* Page background */
+--card: #16213e      /* Card/section background */
+--card2: #1c2a4a     /* Library item background */
+--accent: #0f3460    /* Borders, active states */
+--text: #e0e0e0      /* Primary text */
+--dim: #888          /* Secondary text */
+--green: #4ecca3     /* Timer safe / start button */
+--yellow: #f0c24b    /* Timer warning / pause button */
+--red: #e74c3c       /* Timer urgent / done state */
+--blue: #3498db      /* Links, end time, info accents */
+```
+
+## How Peter Uses This in Class
+
+1. Opens instructor panel a couple minutes before needed (to wake up Render)
+2. Shares the student view in Zoom screen share (or uses OBS)
+3. Students scan QR code from shared screen — timer is now on their phone
+4. Picks a timer from the library, optionally tweaks fields on the mockup, clicks play
+5. Students see countdown on the Zoom share AND on their phones
+6. When students walk away (break, lunch), the timer is in their pocket
+7. Color transitions give at-a-glance status; no one needs to ask "how much time is left?"
