@@ -42,7 +42,7 @@
   .label {
     font-size: min(2.2rem, 4.5vh); font-weight: 700; text-align: center;
     min-height: 1.2em; margin-bottom: 10px; opacity: 0.95;
-    white-space: pre-line;
+    white-space: pre-line; max-width: min(460px, 90vw);
     max-height: min(14vh, 7.5rem); overflow: hidden;
   }
 
@@ -91,7 +91,7 @@
 
   .message {
     font-size: min(1.6rem, 3.2vh); color: #bbb; text-align: center;
-    max-width: 460px; line-height: 1.5; margin-top: 20px;
+    max-width: min(460px, 90vw); line-height: 1.5; margin-top: 20px;
     min-height: 1.5em; white-space: pre-line;
     max-height: min(15vh, 8.5rem); overflow: hidden;
   }
@@ -105,7 +105,7 @@
   .course-title {
     font-size: clamp(1.8rem, min(5.5vw, 5.5vh), 3.2rem); font-weight: 700;
     text-align: center; color: rgba(255,255,255,0.85);
-    max-width: 90vw; line-height: 1.2; margin-bottom: 12px;
+    max-width: min(460px, 90vw); line-height: 1.2; margin-bottom: 12px;
     min-height: 0; white-space: pre-line;
     max-height: min(14vh, 7rem); overflow: hidden;
   }
