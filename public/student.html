@@ -457,4 +457,39 @@ socket.on('timer-update', (s) => {
   const cls = stateClass(s.remainingSeconds, refTotal, s.running);
   document.body.className = cls;
   // Display modes — only apply to display/OBS/preview, not phone students
-  // OBS u
+  // OBS uses only its URL parameters; everyone else uses server flags
+  if (isOBS) {
+    document.body.classList.toggle('mode-transparent', urlTransparent);
+    document.body.classList.toggle('mode-clock-only', urlClockOnly);
+  } else {
+    document.body.classList.toggle('mode-transparent', !!s.transparent);
+    document.body.classList.toggle('mode-clock-only', !!s.clockOnly);
+  }
+  ring.style.stroke = strokeColor(cls);
+
+  // Status badge — only show when not running
+  const badge = document.getElementById('statusBadge');
+  if (s.totalSeconds === 0) badge.textContent = 'No timer set';
+  else if (s.running) badge.textContent = '';
+  else if (s.remainingSeconds <= 0) badge.textContent = "Time's up";
+  else badge.textContent = '';
+});
+
+socket.on('timer-done', () => {
+  // Vibrate on phones if supported
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+});
+
+// Load QR code immediately (skip in preview mode)
+if (!isPreview) {
+  fetch('/qr').then(function(r) { return r.json(); }).then(function(data) {
+    document.getElementById('qrImg').innerHTML = '<img src="' + data.qr + '" alt="QR code" width="150">';
+    document.getElementById('qrClassCode').textContent = data.code;
+    const baseUrl = data.url.replace(/\?.*$/, '');
+    document.getElementById('qrHint').innerHTML = "Can't scan? Go to<br><b>" + baseUrl + "</b>";
+  }).catch(function() {});
+}
+
+</script>
+</body>
+</html>
