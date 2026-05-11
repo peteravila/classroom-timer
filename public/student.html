@@ -40,9 +40,10 @@
   body.mode-clock-only .qr-corner { display: none !important; }
 
   .label {
-    font-size: min(1.8rem, 3.5vh); font-weight: 700; text-align: center;
+    font-size: min(2.2rem, 4.5vh); font-weight: 700; text-align: center;
     min-height: 1.2em; margin-bottom: 10px; opacity: 0.95;
     white-space: pre-line;
+    max-height: min(14vh, 7.5rem); overflow: hidden;
   }
 
   .digits {
@@ -89,9 +90,10 @@
 
 
   .message {
-    font-size: min(1.375rem, 2.75vh); color: #bbb; text-align: center;
+    font-size: min(1.6rem, 3.2vh); color: #bbb; text-align: center;
     max-width: 460px; line-height: 1.5; margin-top: 20px;
     min-height: 1.5em; white-space: pre-line;
+    max-height: min(15vh, 8.5rem); overflow: hidden;
   }
 
   .status-badge {
@@ -101,10 +103,11 @@
 
   /* Course title — big banner above the ring */
   .course-title {
-    font-size: clamp(1.6rem, min(5vw, 5vh), 2.8rem); font-weight: 700;
+    font-size: clamp(1.8rem, min(5.5vw, 5.5vh), 3.2rem); font-weight: 700;
     text-align: center; color: rgba(255,255,255,0.85);
     max-width: 90vw; line-height: 1.2; margin-bottom: 12px;
     min-height: 0; white-space: pre-line;
+    max-height: min(14vh, 7rem); overflow: hidden;
   }
   .course-title:empty { display: none; }
 
@@ -378,6 +381,37 @@ function strokeColor(cls) {
   }
 }
 
+// ── Auto-size fields: shrink font to fit within max-height ──
+// Uses the CSS-defined font-size as the max, scales down by percentage
+const autoSizeFields = ['courseTitle', 'label', 'message'];
+const autoSizeMinScale = 0.55; // won't shrink below 55% of CSS default
+const autoSizeStep = 0.05;     // shrink 5% at a time
+
+function autoSizeField(el) {
+  // Reset to CSS default (remove inline override)
+  el.style.fontSize = '';
+  if (!el.textContent) return;
+  // Get the CSS-defined font size as our maximum
+  const maxPx = parseFloat(getComputedStyle(el).fontSize);
+  let scale = 1.0;
+  let sizePx = maxPx;
+  el.style.fontSize = sizePx + 'px';
+  while (el.scrollHeight > el.clientHeight + 1 && scale > autoSizeMinScale) {
+    scale = Math.max(autoSizeMinScale, +(scale - autoSizeStep).toFixed(3));
+    sizePx = Math.round(maxPx * scale * 100) / 100;
+    el.style.fontSize = sizePx + 'px';
+  }
+}
+
+function autoSizeAllFields() {
+  autoSizeFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) autoSizeField(el);
+  });
+}
+
+window.addEventListener('resize', autoSizeAllFields);
+
 socket.on('timer-update', (s) => {
   const digitsEl = document.getElementById('digits');
   digitsEl.textContent = fmt(s.remainingSeconds);
@@ -386,6 +420,7 @@ socket.on('timer-update', (s) => {
   document.getElementById('courseTitle').textContent = s.courseTitle || '';
   document.getElementById('label').textContent = s.label || '';
   document.getElementById('message').textContent = s.message || '';
+  autoSizeAllFields();
 
   // End time — use server-pushed label instead of hardcoded text
   const etEl = document.getElementById('endTime');

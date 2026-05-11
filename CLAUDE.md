@@ -10,22 +10,30 @@
 
 ---
 
+## Product Name
+
+**LiveTimer** — this is the product/brand name. Use it in all user-facing contexts.
+
+---
+
 ## Architecture
 
-This is a real-time classroom timer for virtual instruction (Zoom + OBS). An instructor sets timers (breaks, labs, etc.) and students see a live countdown on their phones or screens.
+This is a real-time classroom timer for virtual instruction (Zoom + OBS). An instructor sets timers (breaks, labs, etc.) and students see a live countdown on their phones or screens. The core differentiator: the timer follows the student — they scan a QR code and the countdown is on their phone, so they can walk away from their desk.
 
 ### Stack
 - Node.js + Express + Socket.io (real-time WebSocket communication)
-- MongoDB Atlas free tier for persistent library storage
+- MongoDB Atlas free tier for persistent library storage and class code persistence
 - Hosted on Render free tier
 - GitHub repo for deployment (push to GitHub → Render auto-deploys)
 
 ### Files
-- **server.js** — Express server, Socket.io event handlers, timer state, MongoDB connection, REST API for library CRUD, QR code generation. Timer state lives in memory; library persists to MongoDB (primary) and JSON file (backup).
-- **public/student.html** — Student-facing timer display. Shows course title, progress ring, countdown digits, label, end time, message. Color transitions: green (>35%) → yellow (15–35%) → orange (≤15%) → pulsing red (time's up/overtime). Also used as preview iframe inside the instructor page.
-- **public/instructor.html** — Instructor control panel. Two-column layout: left column has tabs (Text, Time, Library, Settings), right column has clock display with transport buttons and an embedded student preview iframe.
+- **server.js** — Express server, Socket.io event handlers, timer state, MongoDB connection, REST API for library CRUD, QR code generation, class code persistence. Timer state lives in memory; library and class code persist to MongoDB (primary) and JSON files (backup).
+- **public/student.html** — Student-facing timer display. Shows course title, progress ring, countdown digits, label, end time, message. Color transitions: green → yellow → orange → pulsing red. Includes code entry gate for phone users, QR corner for large displays. Handles socket reconnection after disconnect-all.
+- **public/instructor.html** — Instructor control panel. Single-column layout with a live phone mockup as the centerpiece. Editable fields (course title, label, end time label, message) are inline on the mockup. Below the mockup: transport buttons (play/pause/stop/restore), tabs (Library, Options, Settings), and a draggable duration popup overlay with hour/minute spinners. All native dialogs (confirm/alert/prompt) replaced with custom styled dialogs.
 - **timer-library.json** — Local JSON backup of the timer library (also stored in MongoDB).
-- **package.json** — Dependencies: express, socket.io, mongodb, qrcode. Dev: nodemon.
+- **class-code.json** — Local JSON backup of the current class code (also stored in MongoDB).
+- **package.json** — Dependencies: express, socket.io, mongodb, qrcode, dotenv. Dev: nodemon.
+- **deploy.bat** — Batch script for git add/commit/push deployment.
 
 ### Key Concepts
 
@@ -37,16 +45,22 @@ This is a real-time classroom timer for virtual instruction (Zoom + OBS). An ins
 
 **Keep-alive ping:** instructor.html pings `/api/library` every 5 minutes to prevent Render free tier from spinning down. Only works while instructor tab is active — browsers throttle background tabs.
 
+**Instructor page layout:** The instructor page uses a single-column layout centered around a live phone mockup that mirrors the student view. Text fields (course title, label, end time label, message) are contenteditable elements directly on the mockup — what you edit is what students see. Transport controls (play, pause, stop, restore) sit below the mockup. Tabs below that provide access to Library, Options, and Settings.
+
 **Instructor page tabs:**
-- Text: Course Title, Name (library only), Title, End Time Label, Message — each with Push/checkbox/Clear controls
-- Time: Duration input with quick-set buttons
-- Library: Grid of saved presets with load/save/create/delete/reorder
+- Library: Grid of saved presets with load/save/create/delete/reorder. Click a timer name to load, play button to start immediately.
 - Options: Per-timer settings saved with library items — show end time, transparent background (OBS/display only), clock only (OBS/display only), after-loading tab
 - Settings: Global settings — class code with "Disconnect All Students" button, after-starting tab, alarm, warning, mute toggle, library backup export/import, student URL/QR
 
+**Duration popup:** A draggable overlay with hour/minute spinners and quick-set buttons. CSS uses `backdrop-filter: blur(6px)` with a light translucent background (`rgba(180, 180, 200, 0.2)`) so the timer is visible counting down underneath. Supports both duration mode and target-time mode.
+
+**Custom dialogs:** All native browser confirm(), alert(), and prompt() calls have been replaced with custom styled modal dialogs using frosted glass styling (`backdrop-filter: blur(8px)`, `rgba(30, 30, 50, 0.7)`, `max-width: 360px`). Functions: `customConfirm(msg)` returns a Promise<boolean>, `customAlert(msg)` returns a Promise<void>, `customPrompt(label)` returns a Promise<string|null>.
+
 **Student page layout (top to bottom):** Code entry gate (phones only, if no valid code) → Course title (large banner) → progress ring → label → countdown digits → end time → message → "Time's Up" banner (when done) → status badge → QR corner (large screens only, bottom-right: "Scan to view this timer on your phone" + QR image + class code + "Can't scan?" fallback with URL and code)
 
-**Class code system:** Server generates a 4-character alphanumeric code on startup (no ambiguous chars like 0/O/1/l). Students must enter the code on their phone to see the timer. QR code URL includes `?code=XXXX` so scanning skips the entry screen. Large screens (≥800px, projected displays) skip the code gate entirely and connect as "display" viewers — they always show the timer plus the QR corner with class code and instructions. The instructor's "Disconnect All Students" button generates a new code and disconnects all current students. Current code is displayed in Settings for the instructor to read aloud if needed.
+**Class code system:** Server generates a 4-character alphanumeric code on startup (no ambiguous chars like 0/O/1/l). Code persists to MongoDB and class-code.json so it survives restarts. Students must enter the code on their phone to see the timer. QR code URL includes `?code=XXXX` so scanning skips the entry screen. Large screens (≥800px, projected displays) skip the code gate entirely and connect as "display" viewers — they always show the timer plus the QR corner with class code and instructions. The instructor's "Disconnect All Students" button generates a new code and disconnects all current students.
+
+**Code entry reconnection:** When the instructor clicks "Disconnect All Students", the server calls `disconnectSockets(true)` which kills the underlying transport. The student page uses a `codeExpired` flag to prevent stale QR code auto-retry, and explicitly calls `socket.connect()` when needed. The `submitCode()` function checks `socket.connected` and reconnects before emitting. This ensures students on phones can re-enter a new code after being disconnected.
 
 **Mute toggle:** When muted, broadcast() only sends updates to the instructor room (instructor + preview sockets), not to students. Unmuting pushes the current state to all connected students. Useful for debugging/developing without disrupting students' phones.
 
@@ -54,7 +68,7 @@ This is a real-time classroom timer for virtual instruction (Zoom + OBS). An ins
 
 **Color states on student view:** CSS classes on body — state-idle (#1a1a2e), state-green (#0d3b2e), state-yellow (#3b3010), state-orange (#3b2010), state-done (#4a0e0e). The "almost done" state uses orange, not red, because students were confusing it with "time's up." Hybrid color thresholds: yellow = min(35% of total, 10 minutes), orange = min(15% of total, 3 minutes). This prevents long timers (e.g. multi-hour) from turning yellow/orange too early — short timers use percentages, long timers cap at fixed times.
 
-**Preview iframe:** instructor.html embeds student.html?preview in an iframe. Preview mode hides the QR code, hides scrollbars, and doesn't count as a connected student. Supports draft label/message updates via postMessage.
+**Phone mockup as live preview:** The instructor page's phone mockup is not an iframe — it's native HTML/CSS that mirrors the student view. During countdown, it receives timer-update events and updates digits, ring, colors, and state classes in real time. Contenteditable fields on the mockup push changes to the server on blur or via Push buttons.
 
 **Display modes (per-timer, saved with library items):**
 - **Transparent**: Background becomes transparent on OBS/display viewers. Phones are unaffected. Useful for OBS overlays.
@@ -66,13 +80,21 @@ This is a real-time classroom timer for virtual instruction (Zoom + OBS). An ins
 **Restore feature:** When a timer starts, the server snapshots it as `lastTimer` (label, message, originalTotal, showEndTime, endTimeLabel, endTime). If the timer is stopped or the page refreshes, the instructor can restore it — the server recalculates remaining time from the original endTime.
 
 ### Deployment
-- Push updated files to GitHub
+- Push updated files to GitHub (Peter uses the GitHub web editor or deploy.bat)
 - Render auto-deploys from latest commit (or use Manual Deploy)
 - Deploying restarts the server, which kills any running timer (planned fix: persist timer state to MongoDB)
 - OBS browser sources cache aggressively — right-click → "Refresh cache of current page" after deploys
 - Phone browsers also cache — hard refresh or re-scan QR code after deploys
+- See DEPLOY.md for step-by-step instructions for Peter
 
-### Planned / In Progress
-- **Persist timer state to MongoDB** — Save running timer state (endTime, label, etc.) so the server can recover after a restart. The keep-alive ping is the first line of defense; MongoDB persistence is the safety net.
-- **Progress ring scaling for long timers** — Currently the ring drains by percentage, so on multi-hour timers it's a tiny sliver by the time colors change. Under discussion: rescale the ring in the capped zone, freeze at a minimum %, or leave as-is.
+### Marketing Materials
+- **LiveTimer_Brochure.pdf** — 3-page dark-themed marketing brochure with screenshots. Generated via Python/reportlab. Source script is session-local (livetimer_brochure10.py). Screenshots are ss_*.png files in the project root.
+- **LiveTimer_Brochure.docx** — Word version of the same brochure, generated via python-docx.
+
+### Pending / In Progress
+- **Persist timer state to MongoDB** — Save running timer state (endTime, label, etc.) so the server can recover after a restart. The keep-alive ping is the first line of defense; MongoDB persistence is the safety net. Agreed upon, not yet implemented.
+- **Progress ring scaling for long timers** — Currently the ring drains by percentage, so on multi-hour timers it's a tiny sliver by the time colors change. Under discussion: rescale the ring in the capped zone, freeze at a minimum %, or leave as-is. Awaiting Peter's decision.
 - **Multi-instructor support (Phase 2)** — Eventually make the app available to multiple instructors, each with their own library and timer state.
+- **Clean up debug code in student.html** — The submitCode() function still has diagnostic timeout/feedback code ("Validating...", "No response from server") that should be simplified once the reconnection flow is confirmed stable.
+- **Deploy latest changes** — The local files have changes (custom dialogs, reconnection fixes, duration popup styling) that haven't been pushed to production yet.
+- **Brochure iteration** — The brochure (v10) has mixed-alignment layout with text wrapping around images, reduced word count, larger fonts. Peter may have further feedback.

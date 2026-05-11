@@ -96,7 +96,7 @@
     gap: 5px;
     position: relative;
     box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-    overflow: visible;
+    overflow-x: visible; overflow-y: hidden;
   }
   .phone-mockup-notch {
     position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -107,6 +107,7 @@
   .mock-field-wrap {
     width: 100%; position: relative;
     display: flex; flex-direction: column; align-items: center;
+    flex-shrink: 0;
   }
   .mock-editable {
     background: transparent; border: 1px dashed transparent;
@@ -114,6 +115,8 @@
     text-align: center; width: 100%; transition: border-color 0.2s, background 0.2s;
     cursor: text;
   }
+  .mock-editable::-webkit-scrollbar { width: 3px; }
+  .mock-editable::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
   .mock-editable:hover { border-color: rgba(255,255,255,0.15); }
   .mock-editable:focus { border-color: var(--blue); background: rgba(52,152,219,0.08); }
   .mock-editable.field-dirty { border-color: var(--yellow); border-style: dotted; }
@@ -124,14 +127,15 @@
 
   /* Match student.html field styles — scaled to 64% of phone (250/390) */
   .mock-course-title {
-    font-size: 1.02rem; font-weight: 700;
+    font-size: 1.4rem; font-weight: 700;
     color: rgba(255,255,255,0.85); line-height: 1.2;
     white-space: pre-line; min-height: 1.4em;
-    max-height: 2.8em; overflow: hidden;
+    max-height: 52px; overflow-y: auto;
   }
   .mock-label {
-    font-size: 1.15rem; font-weight: 700; color: #e0e0e0;
+    font-size: 1.55rem; font-weight: 700; color: #e0e0e0;
     opacity: 0.95; white-space: pre-line; min-height: 1.2em;
+    max-height: 72px; overflow-y: auto;
     margin-bottom: 3px;
   }
   .mock-end-time-label {
@@ -144,20 +148,17 @@
   #mockCtxEndTimeLabel {
     top: 50%; transform: translateY(-62%);
   }
-  #mockChkEndTime {
-    top: 50%; transform: translateY(-95%);
-  }
   .mock-message {
-    font-size: 0.9rem; color: #bbb; line-height: 1.4;
+    font-size: 1.0rem; color: #bbb; line-height: 1.4;
     white-space: pre-line; min-height: 1.5em; max-width: 100%;
-    overflow: hidden;
+    overflow-y: auto;
   }
   /* Let the message field-wrap grow to fill remaining phone space */
-  .mock-field-wrap:last-child { flex: 1; }
+  .mock-field-wrap:last-child { flex: 1; flex-shrink: 1; min-height: 25px; }
   .mock-field-wrap:last-child .mock-message { height: 100%; }
 
   /* Non-editable elements — scaled to 64% of phone (250/390) */
-  .mock-ring { width: 115px; height: 115px; margin: 3px 0; }
+  .mock-ring { width: 115px; height: 115px; margin: 3px 0; flex-shrink: 0; }
   .mock-ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 5; }
   .mock-ring-fg { fill: none; stroke: var(--green); stroke-width: 5; stroke-linecap: round;
     stroke-dasharray: 327; stroke-dashoffset: 72;
@@ -167,6 +168,7 @@
     font-variant-numeric: tabular-nums; letter-spacing: 2px;
     line-height: 1; margin: 4px 0; cursor: pointer;
     transition: color 0.8s, font-size 0.3s;
+    flex-shrink: 0;
   }
   .mock-digits.has-hours { font-size: 3.2rem; }
   .mock-digits:hover { opacity: 0.8; }
@@ -227,7 +229,7 @@
   .duration-popup-backdrop.open { display: flex; }
   .duration-popup {
     background: rgba(180, 180, 200, 0.2);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
     border: 1px solid rgba(255,255,255,0.35);
     border-radius: 16px; padding: 24px 28px 28px;
     position: absolute; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
@@ -320,12 +322,23 @@
   .mock-ctx-go:hover:not(.disabled) { color: var(--green); border-color: var(--green); background: rgba(78,204,163,0.1); }
   .mock-ctx-go.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 
-  /* Checkbox on left of field */
+  /* Toggle switch below context buttons */
   .mock-chk {
-    display: none; position: absolute; left: -22px; top: 50%; transform: translateY(-50%);
+    margin-top: 4px; text-align: center;
   }
-  .mock-chk.visible { display: block; }
-  .mock-chk input { accent-color: var(--blue); width: 13px; height: 13px; cursor: pointer; }
+  .mock-chk input { display: none; }
+  .mock-chk label {
+    position: relative; display: inline-block; width: 28px; height: 14px;
+    background: rgba(255,255,255,0.15); border-radius: 7px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .mock-chk label::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255,255,255,0.4); transition: all 0.2s;
+  }
+  .mock-chk input:checked + label { background: var(--blue); }
+  .mock-chk input:checked + label::after { left: 16px; background: #fff; }
 
   /* Tabs */
   .tab-bar {
@@ -677,13 +690,13 @@
 
         <!-- Course Title -->
         <div class="mock-field-wrap">
-          <div class="mock-chk" id="mockChkCourse"><input type="checkbox" id="includeCourseTitle" checked title="Include when pushing"></div>
           <div class="mock-editable mock-course-title" contenteditable="true" data-placeholder="Course Title" id="fieldCourseTitle"></div>
           <div class="mock-ctx" id="mockCtxCourseTitle">
             <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldCourseTitle')" title="Push this and start">&#9654;&#xFE0E;</button>
-            <button class="mock-ctx-btn mock-ctx-push" id="btnPushCourseTitle" onclick="pushCourseTitle()">Push</button>
-            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearCourseTitle()">Clear</button>
-            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldCourseTitle')">Revert</button>
+            <button class="mock-ctx-btn mock-ctx-push" id="btnPushCourseTitle" onclick="pushCourseTitle()" title="Push this field to students">Push</button>
+            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearCourseTitle()" title="Clear this field">Clear</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldCourseTitle')" title="Revert to last pushed value">Revert</button>
+            <div class="mock-chk" id="mockChkCourse"><input type="checkbox" id="includeCourseTitle" checked ><label for="includeCourseTitle" title="Include in Push All"></label></div>
           </div>
         </div>
 
@@ -695,13 +708,13 @@
 
         <!-- Label / Title -->
         <div class="mock-field-wrap">
-          <div class="mock-chk" id="mockChkLabel"><input type="checkbox" id="includeTitle" checked title="Include when pushing"></div>
           <div class="mock-editable mock-label" contenteditable="true" data-placeholder="Timer Label" id="fieldLabel"></div>
           <div class="mock-ctx" id="mockCtxLabel">
             <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldLabel')" title="Push this and start">&#9654;&#xFE0E;</button>
-            <button class="mock-ctx-btn mock-ctx-push" onclick="loadTitle()">Push</button>
-            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearTitle()">Clear</button>
-            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldLabel')">Revert</button>
+            <button class="mock-ctx-btn mock-ctx-push" onclick="loadTitle()" title="Push this field to students">Push</button>
+            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearTitle()" title="Clear this field">Clear</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldLabel')" title="Revert to last pushed value">Revert</button>
+            <div class="mock-chk" id="mockChkLabel"><input type="checkbox" id="includeTitle" checked ><label for="includeTitle" title="Include in Push All"></label></div>
           </div>
         </div>
 
@@ -710,26 +723,26 @@
 
         <!-- End Time Label + computed time -->
         <div class="mock-field-wrap">
-          <div class="mock-chk" id="mockChkEndTime"><input type="checkbox" id="includeEndTimeLabel" checked title="Include when pushing"></div>
           <div class="mock-editable mock-end-time-label" contenteditable="true" data-placeholder="End Time Label" id="fieldEndTimeLabel">Class resumes at</div>
           <div class="mock-end-time-computed" id="mockEndTimeComputed"></div>
           <div class="mock-ctx" id="mockCtxEndTimeLabel">
             <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldEndTimeLabel')" title="Push this and start">&#9654;&#xFE0E;</button>
-            <button class="mock-ctx-btn mock-ctx-push" onclick="loadEndTimeLabel()">Push</button>
-            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearEndTimeLabel()">Clear</button>
-            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldEndTimeLabel')">Revert</button>
+            <button class="mock-ctx-btn mock-ctx-push" onclick="loadEndTimeLabel()" title="Push this field to students">Push</button>
+            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearEndTimeLabel()" title="Clear this field">Clear</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldEndTimeLabel')" title="Revert to last pushed value">Revert</button>
+            <div class="mock-chk" id="mockChkEndTime"><input type="checkbox" id="includeEndTimeLabel" checked ><label for="includeEndTimeLabel" title="Include in Push All"></label></div>
           </div>
         </div>
 
         <!-- Message -->
         <div class="mock-field-wrap">
-          <div class="mock-chk" id="mockChkMessage"><input type="checkbox" id="includeMessage" checked title="Include when pushing"></div>
           <div class="mock-editable mock-message" contenteditable="true" data-placeholder="Message to students" id="fieldMessage"></div>
           <div class="mock-ctx" id="mockCtxMessage">
             <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldMessage')" title="Push this and start">&#9654;&#xFE0E;</button>
-            <button class="mock-ctx-btn mock-ctx-push" onclick="loadMessage()">Push</button>
-            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearMessage()">Clear</button>
-            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldMessage')">Revert</button>
+            <button class="mock-ctx-btn mock-ctx-push" onclick="loadMessage()" title="Push this field to students">Push</button>
+            <button class="mock-ctx-btn mock-ctx-clear" onclick="clearMessage()" title="Clear this field">Clear</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldMessage')" title="Revert to last pushed value">Revert</button>
+            <div class="mock-chk" id="mockChkMessage"><input type="checkbox" id="includeMessage" checked ><label for="includeMessage" title="Include in Push All"></label></div>
           </div>
         </div>
       </div>
@@ -1086,32 +1099,77 @@ document.addEventListener('input', (e) => {
   if (e.target.closest('.mock-editable')) markDirtyFields();
 });
 
+// ── Auto-size fields: shrink font to fit within max-height ──
+// Incremental: starts from CURRENT size, shrinks if overflowing, grows back if room.
+// Never resets to max — this prevents oscillation at line-wrap boundaries.
+const autoSizeConfig = {
+  fieldCourseTitle: { max: 1.4,  min: 0.85, step: 0.04 },
+  fieldLabel:       { max: 1.55, min: 0.85, step: 0.04 },
+  fieldMessage:     { max: 1.0,  min: 0.62, step: 0.04 },
+};
+
+function autoSizeField(el) {
+  const config = autoSizeConfig[el.id];
+  if (!config) return;
+  // Start from current inline size, or max if none set
+  let size = parseFloat(el.style.fontSize) || config.max;
+  size = Math.min(config.max, Math.max(config.min, size));
+  el.style.fontSize = size + 'rem';
+
+  // If overflowing, shrink until it fits
+  while (el.scrollHeight > el.clientHeight + 1 && size > config.min) {
+    size = Math.max(config.min, +(size - config.step).toFixed(3));
+    el.style.fontSize = size + 'rem';
+  }
+
+  // If room to spare, try growing back toward max
+  while (size < config.max) {
+    const trySize = Math.min(config.max, +(size + config.step).toFixed(3));
+    el.style.fontSize = trySize + 'rem';
+    if (el.scrollHeight > el.clientHeight + 1) {
+      el.style.fontSize = size + 'rem'; // revert — doesn't fit
+      break;
+    }
+    size = trySize;
+  }
+}
+
+function autoSizeAllFields() {
+  Object.keys(autoSizeConfig).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) autoSizeField(el);
+  });
+}
+
+// Run on every keystroke in editable fields — resize ALL fields since they share
+// vertical space in the phone mockup (e.g. growing course title shrinks message area)
+document.addEventListener('input', (e) => {
+  if (e.target.closest('.mock-editable')) autoSizeAllFields();
+});
+
 // ── Phone mockup: contextual buttons ──
 const mockFieldMap = {
-  fieldCourseTitle: { ctx: 'mockCtxCourseTitle', chk: 'mockChkCourse' },
-  fieldLabel:       { ctx: 'mockCtxLabel',       chk: 'mockChkLabel' },
-  fieldEndTimeLabel:{ ctx: 'mockCtxEndTimeLabel', chk: 'mockChkEndTime' },
-  fieldMessage:     { ctx: 'mockCtxMessage',      chk: 'mockChkMessage' },
+  fieldCourseTitle: { ctx: 'mockCtxCourseTitle' },
+  fieldLabel:       { ctx: 'mockCtxLabel' },
+  fieldEndTimeLabel:{ ctx: 'mockCtxEndTimeLabel' },
+  fieldMessage:     { ctx: 'mockCtxMessage' },
 };
 
 document.addEventListener('focusin', (e) => {
   // Don't hide buttons if focus moved to a contextual button itself
-  if (e.target.closest('.mock-ctx') || e.target.closest('.mock-chk')) return;
+  if (e.target.closest('.mock-ctx')) return;
 
   const el = e.target.closest('.mock-editable');
   // Hide all contextual buttons first
   document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
-  document.querySelectorAll('.mock-chk').forEach(b => b.classList.remove('visible'));
   if (el && mockFieldMap[el.id]) {
     const map = mockFieldMap[el.id];
     document.getElementById(map.ctx).classList.add('visible');
-    document.getElementById(map.chk).classList.add('visible');
   }
 });
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.mock-editable') && !e.target.closest('.mock-ctx') && !e.target.closest('.mock-chk')) {
+  if (!e.target.closest('.mock-editable') && !e.target.closest('.mock-ctx')) {
     document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
-    document.querySelectorAll('.mock-chk').forEach(b => b.classList.remove('visible'));
   }
 });
 
@@ -1197,6 +1255,8 @@ function customAlert(msg) {
 }
 
 async function pushFieldAndStart(fieldId) {
+  const isPaused = timerTotal > 0 && timerRemaining > 0 && timerRemaining < timerTotal && !timerIsRunning;
+
   if (timerIsRunning) {
     if (!await customConfirm('A timer is currently running. Stop it and start a new one?')) return;
     stopAlarmLoop(); warningFired = false; socket.emit('reset');
@@ -1211,7 +1271,21 @@ async function pushFieldAndStart(fieldId) {
     fieldMessage: loadMessage,
   };
   if (pushMap[fieldId]) await pushMap[fieldId]();
-  // Push the current timer duration so there's something to start
+
+  if (isPaused) {
+    // Resume from where we left off — don't reset the clock
+    socket.emit('update-display-modes', {
+      transparent: document.getElementById('fieldTransparent').checked,
+      clockOnly: document.getElementById('fieldClockOnly').checked,
+    });
+    setTimeout(() => {
+      socket.emit('start');
+      lastPushTime = Date.now();
+    }, 150);
+    return;
+  }
+
+  // Not paused — push the current timer duration and start fresh
   const minutes = getTimerMinutes();
   if (minutes <= 0) return;
   const showEndTime = document.getElementById('fieldShowEnd').checked;
@@ -1411,6 +1485,9 @@ socket.on('timer-update', (s) => {
 
   // Sync live state for dirty-field detection
   syncLiveFromServer(s);
+
+  // Auto-size fields based on content
+  autoSizeAllFields();
 
   // Update live mockup
   if (s.running || s.totalSeconds > 0) {
@@ -1703,11 +1780,25 @@ function loadTime() {
 }
 
 async function pushTimeAndStart() {
+  const isPaused = timerTotal > 0 && timerRemaining > 0 && timerRemaining < timerTotal && !timerIsRunning;
+
   if (timerIsRunning) {
     if (!await customConfirm('A timer is currently running. Stop it and start a new one?')) return;
     stopAlarmLoop(); warningFired = false; socket.emit('reset');
     await new Promise(r => setTimeout(r, 150));
   }
+
+  if (isPaused) {
+    // Resume from where we left off — don't reset the clock
+    stopAlarmLoop(); warningFired = false;
+    setTimeout(() => {
+      socket.emit('start');
+      lastPushTime = Date.now();
+      closeDurationPopup();
+    }, 150);
+    return;
+  }
+
   stopAlarmLoop(); warningFired = false;
   const minutes = getTimerMinutes();
   if (minutes <= 0) return;
@@ -2078,9 +2169,8 @@ async function loadAndStart(id) {
   }
   loadLibTimer(id);
 
-  // Hide any contextual buttons/checkboxes that may have appeared during field loading
+  // Hide any contextual buttons that may have appeared during field loading
   document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
-  document.querySelectorAll('.mock-chk').forEach(b => b.classList.remove('visible'));
 
   // Block server sync from overwriting liveText during the push sequence
   lastPushTime = Date.now();
@@ -2153,10 +2243,10 @@ function loadLibTimer(id) {
   updateMockDigitsFromSpinners();
   markDirtyFields();
   updateButtonStates();
+  autoSizeAllFields();
 
-  // Hide contextual buttons/checkboxes that may have appeared during field loading
+  // Hide contextual buttons that may have appeared during field loading
   document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
-  document.querySelectorAll('.mock-chk').forEach(b => b.classList.remove('visible'));
 
   // Navigate to the configured tab
   if (goTo !== 'library') switchTab(goTo);
