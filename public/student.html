@@ -210,16 +210,48 @@
   .checkin-content { display: none; }
   .checkin-content.visible {
     display: flex; flex-direction: column; align-items: center;
-    padding: 24px 20px; text-align: center; gap: 20px; width: 100%;
+    padding: 16px 20px; text-align: center; gap: 16px; width: 100%;
   }
+
+  /* Mini timer at top of Check In tab */
+  .checkin-mini-timer {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; margin-bottom: 8px;
+  }
+  .checkin-mini-label {
+    font-size: 0.85rem; font-weight: 600; opacity: 0.8;
+  }
+  .checkin-mini-digits {
+    font-size: 2.8rem; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: 2px; line-height: 1; transition: color 0.5s;
+  }
+  .checkin-mini-digits.has-hours { font-size: 2.2rem; }
+  .checkin-mini-idle { color: #556; }
+
   .checkin-status {
     font-size: 1.1rem; color: #888; text-transform: uppercase;
-    letter-spacing: 2px; margin-bottom: 8px;
+    letter-spacing: 2px;
   }
+
+  /* Editable name — tap to edit */
   .checkin-name {
     font-size: 1.4rem; font-weight: 700; color: #e0e0e0;
-    margin-bottom: 16px;
+    cursor: pointer; padding: 4px 12px;
+    border: 1px dashed transparent; border-radius: 6px;
+    transition: border-color 0.2s;
   }
+  .checkin-name:hover { border-color: rgba(255,255,255,0.2); }
+  .checkin-name-hint {
+    font-size: 0.7rem; color: #444; margin-top: -8px;
+  }
+  .checkin-name-input {
+    font-size: 1.4rem; font-weight: 700; text-align: center;
+    background: rgba(52,152,219,0.08); color: #e0e0e0;
+    border: 1px solid var(--blue); border-radius: 6px;
+    padding: 4px 12px; font-family: inherit; outline: none;
+    width: 200px;
+  }
+
   .checkin-buttons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
   .checkin-btn {
     padding: 16px 36px; border-radius: 12px; font-size: 1.1rem;
@@ -228,20 +260,20 @@
     min-width: 140px;
   }
   .checkin-btn-working {
-    background: rgba(78,204,163,0.15); color: var(--green);
-    border-color: var(--green);
-  }
-  .checkin-btn-working:hover { background: rgba(78,204,163,0.25); }
-  .checkin-btn-working.active {
-    background: var(--green); color: #1a1a2e;
-  }
-  .checkin-btn-done {
     background: rgba(52,152,219,0.15); color: var(--blue);
     border-color: var(--blue);
   }
-  .checkin-btn-done:hover { background: rgba(52,152,219,0.25); }
-  .checkin-btn-done.active {
+  .checkin-btn-working:hover { background: rgba(52,152,219,0.25); }
+  .checkin-btn-working.active {
     background: var(--blue); color: #fff;
+  }
+  .checkin-btn-done {
+    background: rgba(78,204,163,0.15); color: var(--green);
+    border-color: var(--green);
+  }
+  .checkin-btn-done:hover { background: rgba(78,204,163,0.25); }
+  .checkin-btn-done.active {
+    background: var(--green); color: #1a1a2e;
   }
   .checkin-hint {
     font-size: 0.8rem; color: #555; max-width: 300px; line-height: 1.4;
@@ -318,8 +350,13 @@
 
 <!-- Check In tab content (phones only) -->
 <div class="checkin-content" id="checkinContent">
-  <div class="checkin-name" id="checkinName"></div>
-  <div class="checkin-status" id="checkinStatus">Not checked in</div>
+  <div class="checkin-mini-timer">
+    <div class="checkin-mini-label" id="checkinMiniLabel"></div>
+    <div class="checkin-mini-digits checkin-mini-idle" id="checkinMiniDigits">00:00</div>
+  </div>
+  <div class="checkin-name" id="checkinName" onclick="editCheckinName()" title="Tap to change your name"></div>
+  <div class="checkin-name-hint">tap name to edit</div>
+  <div class="checkin-status" id="checkinStatus">Tap a button to check in</div>
   <div class="checkin-buttons">
     <button class="checkin-btn checkin-btn-working" id="btnWorking" onclick="setCheckinState('working')">Working on it</button>
     <button class="checkin-btn checkin-btn-done" id="btnDone" onclick="setCheckinState('done')">Done</button>
@@ -395,7 +432,68 @@ function updateCheckinUI() {
 
   if (myCheckinState === 'working') statusEl.textContent = 'Working on it...';
   else if (myCheckinState === 'done') statusEl.textContent = 'Done!';
-  else statusEl.textContent = 'Not checked in';
+  else statusEl.textContent = 'Tap a button to check in';
+}
+
+// ── Mini timer on Check In tab ──
+function updateCheckinMiniTimer(s) {
+  const digitsEl = document.getElementById('checkinMiniDigits');
+  const labelEl = document.getElementById('checkinMiniLabel');
+  if (!digitsEl) return;
+
+  digitsEl.textContent = fmt(s.remainingSeconds);
+  const hasHours = Math.abs(s.remainingSeconds) >= 3600;
+  digitsEl.classList.toggle('has-hours', hasHours);
+
+  // Show the timer label if there is one
+  labelEl.textContent = s.label || '';
+
+  // Color the digits to match the timer state
+  const refTotal = s.originalTotal || s.totalSeconds;
+  const { cls } = stateClass(s.remainingSeconds, refTotal, s.running);
+  digitsEl.className = 'checkin-mini-digits';
+  if (hasHours) digitsEl.classList.add('has-hours');
+  if (cls === 'state-green') digitsEl.style.color = 'var(--green)';
+  else if (cls === 'state-yellow') digitsEl.style.color = 'var(--yellow)';
+  else if (cls === 'state-orange') digitsEl.style.color = 'var(--orange)';
+  else if (cls === 'state-done') digitsEl.style.color = 'var(--red)';
+  else digitsEl.style.color = '#556';
+}
+
+// ── Editable name ──
+function editCheckinName() {
+  const nameEl = document.getElementById('checkinName');
+  const currentName = nameEl.textContent;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'checkin-name-input';
+  input.value = currentName;
+  input.maxLength = 30;
+  input.placeholder = 'Your name';
+
+  nameEl.style.display = 'none';
+  nameEl.parentNode.insertBefore(input, nameEl.nextSibling);
+  input.focus();
+  input.select();
+
+  function commit() {
+    const newName = input.value.trim();
+    input.remove();
+    nameEl.style.display = '';
+    if (newName && newName !== currentName) {
+      myDisplayName = newName;
+      setStudentName(newName);
+      nameEl.textContent = newName;
+      // Tell server about the name change
+      socket.emit('student-identify', { id: studentId, name: newName });
+    }
+  }
+
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = currentName; input.blur(); }
+  });
 }
 
 // Track whether student has been validated (survives reconnects)
@@ -613,6 +711,9 @@ socket.on('timer-update', (s) => {
   document.getElementById('label').textContent = s.label || '';
   document.getElementById('message').textContent = s.message || '';
   autoSizeAllFields();
+
+  // Update mini timer on Check In tab
+  updateCheckinMiniTimer(s);
 
   // End time — use server-pushed label instead of hardcoded text
   const etEl = document.getElementById('endTime');
