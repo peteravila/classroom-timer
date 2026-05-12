@@ -433,6 +433,10 @@ io.on('connection', (socket) => {
     timerState.running = false;
     timerState.endTime = null;
     timerState.endTimeFormatted = '';
+    timerState.label = '';
+    timerState.message = '';
+    timerState.endTimeLabel = '';
+    timerState.showEndTime = false;
     stopTick();
     broadcast();
   });

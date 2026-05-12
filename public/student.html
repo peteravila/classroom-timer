@@ -23,7 +23,7 @@
   body.state-yellow  { background: #332b00; color: #e0e0e0; }
   body.state-orange  { background: #3b2010; color: #e0e0e0; }
   body.state-red     { background: #3b1010; color: #e0e0e0; }
-  body.state-paused  { background: #1a1a2e; color: #e0e0e0; }
+  body.paused { color: #444; }
   body.state-done    { background: #4a0e0e; color: #e0e0e0; }
 
   /* Transparent mode — for OBS/display only */
@@ -59,7 +59,7 @@
   .state-yellow .digits { color: var(--yellow); }
   .state-orange .digits { color: var(--orange); }
   .state-done .digits   { color: var(--red); animation: pulse 1s infinite; }
-  .state-paused .digits { color: #888; }
+  .paused .digits { color: #444; }
   .state-idle .digits   { color: #556; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
@@ -70,7 +70,7 @@
   .state-yellow .end-time { color: var(--yellow); }
   .state-orange .end-time { color: var(--orange); }
   .state-done .end-time   { color: var(--red); }
-  .state-paused .end-time { color: #888; }
+  .paused .end-time { color: #444; }
   .state-idle .end-time   { color: #556; }
 
   /* All text follows digit color through state transitions */
@@ -78,14 +78,14 @@
   .state-yellow .label, .state-yellow .course-title  { color: var(--yellow); }
   .state-orange .label, .state-orange .course-title  { color: var(--orange); }
   .state-done .label,   .state-done .course-title    { color: var(--red); }
-  .state-paused .label, .state-paused .course-title  { color: #888; }
+  .paused .label, .paused .course-title  { color: #444; }
   .state-idle .label,   .state-idle .course-title    { color: #e0e0e0; }
 
   .state-green .message  { color: var(--green); }
   .state-yellow .message { color: var(--yellow); }
   .state-orange .message { color: var(--orange); }
   .state-done .message   { color: var(--red); }
-  .state-paused .message { color: #888; }
+  .paused .message { color: #444; }
   .state-idle .message   { color: #bbb; }
 
 
@@ -360,13 +360,14 @@ function fmt(secs) {
 }
 
 function stateClass(rem, total, running) {
-  if (total === 0) return 'state-idle';
-  if (rem <= 0) return 'state-done';
-  if (!running && rem > 0 && rem < total) return 'state-paused';
-  if (!running) return 'state-idle';
+  if (total === 0) return { cls: 'state-idle', paused: false };
+  if (rem <= 0) return { cls: 'state-done', paused: false };
   const orangeAt = Math.min(total * 0.15, 180);  // 3 min cap
   const yellowAt = Math.min(total * 0.35, 600);  // 10 min cap
-  return rem <= orangeAt ? 'state-orange' : rem <= yellowAt ? 'state-yellow' : 'state-green';
+  const colorCls = rem <= orangeAt ? 'state-orange' : rem <= yellowAt ? 'state-yellow' : 'state-green';
+  if (!running && rem > 0 && rem < total) return { cls: colorCls, paused: true };
+  if (!running) return { cls: 'state-idle', paused: false };
+  return { cls: colorCls, paused: false };
 }
 // Note: rem can be negative (overtime). stateClass returns 'state-done' which shows pulsing red.
 
@@ -375,7 +376,6 @@ function strokeColor(cls) {
     case 'state-green':  return 'var(--green)';
     case 'state-yellow': return 'var(--yellow)';
     case 'state-orange': return 'var(--orange)';
-    case 'state-paused': return '#888';
     case 'state-done':   return 'var(--red)';
     default:             return 'rgba(255,255,255,0.15)';
   }
@@ -453,8 +453,9 @@ socket.on('timer-update', (s) => {
   }
 
   // Color state — use originalTotal for thresholds
-  const cls = stateClass(s.remainingSeconds, refTotal, s.running);
+  const { cls, paused } = stateClass(s.remainingSeconds, refTotal, s.running);
   document.body.className = cls;
+  document.body.classList.toggle('paused', paused);
   // Display modes — only apply to display/OBS/preview, not phone students
   // OBS uses only its URL parameters; everyone else uses server flags
   if (isOBS) {
@@ -464,7 +465,7 @@ socket.on('timer-update', (s) => {
     document.body.classList.toggle('mode-transparent', !!s.transparent);
     document.body.classList.toggle('mode-clock-only', !!s.clockOnly);
   }
-  ring.style.stroke = strokeColor(cls);
+  ring.style.stroke = paused ? '#444' : strokeColor(cls);
 
   // Status badge — only show when not running
   const badge = document.getElementById('statusBadge');

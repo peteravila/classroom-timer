@@ -1264,6 +1264,8 @@ function customAlert(msg) {
 }
 
 async function pushFieldAndStart(fieldId) {
+  document.getElementById(fieldId).blur();
+  document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
   const isPaused = timerTotal > 0 && timerRemaining > 0 && timerRemaining < timerTotal && !timerIsRunning;
 
   if (timerIsRunning) {
@@ -1832,10 +1834,13 @@ function pushCourseTitle() {
   ctCapturedVal = null;
   socket.emit('update-course-title', { courseTitle: val });
   markPushed('fieldCourseTitle');
+  document.getElementById('fieldCourseTitle').blur();
+  document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
 }
 function clearCourseTitle() {
   setField('fieldCourseTitle', '');
   markDirtyFields();
+  document.getElementById('fieldCourseTitle').focus();
 }
 
 async function loadTitle() {
@@ -1845,11 +1850,14 @@ async function loadTitle() {
   if (resolved.label !== rawLabel) setField('fieldLabel', resolved.label);
   socket.emit('update-label', { label: resolved.label });
   markPushed('fieldLabel');
+  document.getElementById('fieldLabel').blur();
+  document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
 }
 
 function clearTitle() {
   setField('fieldLabel', '');
   markDirtyFields();
+  document.getElementById('fieldLabel').focus();
 }
 
 function clearTime() {
@@ -1869,23 +1877,29 @@ async function loadMessage() {
   if (resolved.message !== rawMessage) setField('fieldMessage', resolved.message);
   socket.emit('update-message', { message: resolved.message });
   markPushed('fieldMessage');
+  document.getElementById('fieldMessage').blur();
+  document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
 }
 
 function clearMessage() {
   setField('fieldMessage', '');
   markDirtyFields();
+  document.getElementById('fieldMessage').focus();
 }
 
 function loadEndTimeLabel() {
   const etl = getField('fieldEndTimeLabel');
   socket.emit('update-end-time-label', { endTimeLabel: etl });
   markPushed('fieldEndTimeLabel');
+  document.getElementById('fieldEndTimeLabel').blur();
+  document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
 }
 
 function clearEndTimeLabel() {
   setField('fieldEndTimeLabel', '');
   checkDirty();
   markDirtyFields();
+  document.getElementById('fieldEndTimeLabel').focus();
 }
 
 
@@ -1969,7 +1983,15 @@ function doReset() {
 }
 function doStop() {
   if (!document.querySelector('.tb-stop').classList.contains('enabled')) return;
-  stopAlarmLoop(); warningFired = false; socket.emit('stop');
+  stopAlarmLoop(); warningFired = false;
+  // Clear all fields except course title
+  setField('fieldLabel', '');
+  setField('fieldEndTimeLabel', '');
+  setField('fieldMessage', '');
+  markPushed('fieldLabel');
+  markPushed('fieldEndTimeLabel');
+  markPushed('fieldMessage');
+  socket.emit('stop');
 }
 function doRestore() {
   if (!document.querySelector('.tb-restore').classList.contains('enabled')) return;
