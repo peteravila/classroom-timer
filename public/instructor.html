@@ -230,7 +230,7 @@
   .duration-popup-backdrop.open { display: flex; }
   .duration-popup {
     background: rgba(180, 180, 200, 0.2);
-    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
     border: 1px solid rgba(255,255,255,0.35);
     border-radius: 16px; padding: 24px 28px 28px;
     position: absolute; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
@@ -458,10 +458,10 @@
   .spin-btns button {
     width: 20px; flex: 1; border: 1px solid #333; background: var(--card2);
     color: var(--dim); font-size: 0.5rem; cursor: pointer; display: flex;
-    align-items: center; justify-content: center; transition: background 0.15s;
+    align-items: center; justify-content: center; transition: all 0.15s;
     user-select: none; -webkit-user-select: none; padding: 0;
   }
-  .spin-btns button:hover { background: var(--accent); color: var(--text); }
+  .spin-btns button:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
   .spin-btns button:first-child { border-radius: 0 6px 0 0; border-bottom: none; }
   .spin-btns button:last-child { border-radius: 0 0 6px 0; }
   .sync-arrows {
@@ -473,9 +473,10 @@
   .spinner-field .ampm-btn {
     width: 48px; height: 34px; border: 1px solid #333; border-radius: 6px;
     background: var(--bg); color: var(--text); font-size: 0.85rem; font-weight: 600;
-    cursor: pointer; align-self: flex-end; transition: background 0.15s;
+    cursor: pointer; align-self: flex-end; transition: all 0.15s;
   }
-  .spinner-field .ampm-btn:hover { background: var(--accent); }
+  .spinner-field .ampm-btn:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
+  .dur-action-btn:hover { background: rgba(78,204,163,0.08) !important; color: var(--green) !important; border-color: var(--green) !important; }
 
   .row { display: flex; gap: 10px; }
   .row > * { flex: 1; }
@@ -990,7 +991,7 @@
       <!-- Right column: quick set -->
       <div class="spinner-field" style="align-self:stretch;">
         <div class="lbl">Quick Set</div>
-        <div class="quick-times" style="flex:1;">
+        <div class="quick-times" style="flex:1; margin-top:calc(0.7rem + 2px);">
           <button onclick="setQuickTime(5)">5</button>
           <button onclick="setQuickTime(45)">45</button>
           <button onclick="setQuickTime(10)">10</button>
@@ -1005,12 +1006,12 @@
       </div>
     </div>
     <div style="display:flex; gap:8px; margin-top:28px; justify-content:flex-start; align-items:center; padding-left:12px;">
-      <button id="popupStartBtn" onclick="pushTimeAndStart()" title="Push time and start" style="padding:6px 8px; border:1.5px solid var(--green); border-radius:6px; background:transparent; color:var(--green); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">&#9654;</button>
-      <button onclick="addTimerTime()" title="Add time to running timer" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">+Add</button>
-      <button onclick="clearTime()" title="Clear duration" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Clear</button>
+      <button class="dur-action-btn" id="popupStartBtn" onclick="pushTimeAndStart()" title="Push time and start" style="padding:6px 8px; border:1.5px solid var(--green); border-radius:6px; background:transparent; color:var(--green); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">&#9654;</button>
+      <button class="dur-action-btn" onclick="addTimerTime()" title="Add time to running timer" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">+Add</button>
+      <button class="dur-action-btn" onclick="clearTime()" title="Clear duration" style="padding:6px 16px; border:1.5px solid var(--blue); border-radius:6px; background:transparent; color:var(--blue); font-size:0.85rem; font-family:inherit; font-weight:600; cursor:pointer; transition:all 0.15s;">Clear</button>
       <div class="checkbox-row" style="margin:0; margin-left:8px;">
         <input type="checkbox" id="includeTime" class="custom-cb" checked>
-        <label for="includeTime">Include when starting</label>
+        <label for="includeTime">Include when pushing all</label>
       </div>
     </div>
   </div>
@@ -1171,6 +1172,13 @@ document.addEventListener('focusin', (e) => {
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.mock-editable') && !e.target.closest('.mock-ctx')) {
     document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
+  }
+  // Click on empty space → blur active element
+  const tag = e.target.tagName;
+  if (!e.target.closest('button, input, select, textarea, [contenteditable="true"], label, a, .spin-value')) {
+    if (document.activeElement && document.activeElement !== document.body) {
+      document.activeElement.blur();
+    }
   }
 });
 
