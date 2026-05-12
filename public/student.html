@@ -172,6 +172,7 @@
     background: #16213e; color: #e0e0e0; text-transform: uppercase;
     font-family: inherit;
   }
+  .code-gate input::placeholder { color: rgba(255,255,255,0.18); }
   .code-gate input:focus { outline: none; border-color: var(--blue); }
   .code-gate .code-btn {
     font-size: 1rem; padding: 10px 32px; border: none; border-radius: 6px;
@@ -274,6 +275,7 @@
     border: 2px solid #333; border-radius: 8px;
     background: #16213e; color: #e0e0e0; font-family: inherit;
   }
+  .code-gate .name-input::placeholder { color: rgba(255,255,255,0.18); font-weight: 400; font-style: italic; }
   .code-gate .name-input:focus { outline: none; border-color: var(--blue); }
   .code-gate .name-label { font-size: 0.85rem; color: #666; }
 
@@ -478,6 +480,8 @@ if (isPreview) {
   document.getElementById('codeInput').focus();
 }
 
+let manualSubmit = false; // true when user clicked Join — suppresses error on silent auto-validate
+
 // Re-identify on every connect/reconnect so the server knows our role
 socket.on('connect', () => {
   if (isPreview) {
@@ -505,8 +509,8 @@ function submitCode() {
   }
   if (!socket.connected) {
     errEl.textContent = 'Reconnecting...';
+    manualSubmit = true;
     socket.connect();
-    // Wait for connection, then auto-retry
     socket.once('connect', () => {
       errEl.textContent = '';
       socket.emit('validate-code', code);
@@ -514,6 +518,7 @@ function submitCode() {
     return;
   }
   errEl.textContent = 'Validating...';
+  manualSubmit = true;
   socket.emit('validate-code', code);
   // If no response within 3 seconds, show a diagnostic message
   setTimeout(() => {
@@ -530,6 +535,7 @@ document.getElementById('codeInput').addEventListener('keydown', (e) => {
 
 socket.on('code-accepted', () => {
   codeExpired = false;
+  manualSubmit = false;
   studentValidated = document.getElementById('codeInput').value.trim().toUpperCase() || (urlCode ? urlCode.toUpperCase() : '');
   document.getElementById('codeGate').style.display = 'none';
   document.getElementById('timerContent').classList.add('visible');
@@ -553,7 +559,11 @@ socket.on('code-accepted', () => {
 });
 
 socket.on('code-rejected', () => {
-  document.getElementById('codeError').textContent = 'Invalid code. Please try again.';
+  const errEl = document.getElementById('codeError');
+  // Only show error if the student manually submitted — not from silent auto-validate (QR/reconnect)
+  if (manualSubmit) {
+    errEl.textContent = 'Invalid code. Please try again.';
+  }
   // Ensure gate is visible (may have been hidden on QR-code arrival)
   document.getElementById('codeGate').style.display = 'flex';
 });
