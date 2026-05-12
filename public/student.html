@@ -244,13 +244,23 @@
   .checkin-name-hint {
     font-size: 0.7rem; color: #444; margin-top: -8px;
   }
+  .checkin-name-edit {
+    display: flex; align-items: center; gap: 8px;
+  }
   .checkin-name-input {
     font-size: 1.4rem; font-weight: 700; text-align: center;
     background: rgba(52,152,219,0.08); color: #e0e0e0;
     border: 1px solid var(--blue); border-radius: 6px;
     padding: 4px 12px; font-family: inherit; outline: none;
-    width: 200px;
+    width: 180px;
   }
+  .checkin-name-ok {
+    padding: 6px 14px; border: 2px solid var(--blue); border-radius: 6px;
+    background: var(--blue); color: #fff; font-size: 0.9rem;
+    font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .checkin-name-ok:hover { opacity: 0.85; }
 
   .checkin-buttons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
   .checkin-btn {
@@ -413,10 +423,7 @@ function switchStudentTab(tab) {
 }
 
 function setCheckinState(state) {
-  if (state === myCheckinState) {
-    // Toggle off — go back to idle
-    state = 'idle';
-  }
+  if (state === myCheckinState) return; // already in this state, do nothing
   myCheckinState = state;
   socket.emit('student-status', { state });
   updateCheckinUI();
@@ -463,7 +470,13 @@ function updateCheckinMiniTimer(s) {
 // ── Editable name ──
 function editCheckinName() {
   const nameEl = document.getElementById('checkinName');
+  const hintEl = document.querySelector('.checkin-name-hint');
   const currentName = nameEl.textContent;
+
+  // Build the edit row: input + OK button
+  const wrap = document.createElement('div');
+  wrap.className = 'checkin-name-edit';
+
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'checkin-name-input';
@@ -471,15 +484,27 @@ function editCheckinName() {
   input.maxLength = 30;
   input.placeholder = 'Your name';
 
+  const okBtn = document.createElement('button');
+  okBtn.className = 'checkin-name-ok';
+  okBtn.textContent = 'OK';
+
+  wrap.appendChild(input);
+  wrap.appendChild(okBtn);
+
   nameEl.style.display = 'none';
-  nameEl.parentNode.insertBefore(input, nameEl.nextSibling);
+  if (hintEl) hintEl.style.display = 'none';
+  nameEl.parentNode.insertBefore(wrap, nameEl.nextSibling);
   input.focus();
   input.select();
 
+  let committed = false;
   function commit() {
+    if (committed) return;
+    committed = true;
     const newName = input.value.trim();
-    input.remove();
+    wrap.remove();
     nameEl.style.display = '';
+    if (hintEl) hintEl.style.display = '';
     if (newName && newName !== currentName) {
       myDisplayName = newName;
       setStudentName(newName);
@@ -489,10 +514,10 @@ function editCheckinName() {
     }
   }
 
-  input.addEventListener('blur', commit);
+  okBtn.addEventListener('click', (e) => { e.stopPropagation(); commit(); });
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-    if (e.key === 'Escape') { input.value = currentName; input.blur(); }
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { input.value = currentName; commit(); }
   });
 }
 

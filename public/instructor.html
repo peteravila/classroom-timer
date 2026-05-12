@@ -940,8 +940,8 @@
     <div class="tab-bar">
       <button class="tab-btn active" onclick="switchTab('library')">Library</button>
       <button class="tab-btn" onclick="switchTab('options')">Options</button>
-      <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
       <button class="tab-btn" onclick="switchTab('students')">Students<span class="tab-badge badge-empty" id="studentsBadge"></span></button>
+      <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
     </div>
 
     <!-- Tab: Library -->
@@ -1231,7 +1231,7 @@ let lastTimerData = null;
 let justLoadedId = null;  // suppress dirty check right after loadAndStart
 
 // ── Tab switching ──
-const TAB_NAMES = ['library', 'options', 'settings', 'students'];
+const TAB_NAMES = ['library', 'options', 'students', 'settings'];
 function switchTab(name) {
   // Map legacy tab names to valid tabs
   if (!TAB_NAMES.includes(name)) name = 'library';
