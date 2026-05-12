@@ -489,7 +489,7 @@ io.on('connection', (socket) => {
     timerState.endTimeFormatted = formatEndTime(newEndTime);
     stopTick();
     // Start ticking from the restored end time
-    let doneFired = remaining <= 0;
+    let doneFired = timerState.remainingSeconds <= 0;
     tickInterval = setInterval(() => {
       const left = Math.round((timerState.endTime - Date.now()) / 1000);
       timerState.remainingSeconds = left;
