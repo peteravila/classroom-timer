@@ -1069,10 +1069,14 @@ function markDirtyFields() {
     el.classList.toggle('field-dirty', isDirty);
   }
   // Clock dirty: compare mockup digits to what students currently see
-  const mockDigits = document.getElementById('mockDigits');
-  const serverDigits = document.getElementById('timerDigits').textContent;
-  const mockText = mockDigits.textContent;
-  mockDigits.classList.toggle('field-dirty', mockText !== serverDigits);
+  // Skip during live countdown — mockup updates separately and will always match
+  if (!timerIsRunning) {
+    const mockDigits = document.getElementById('mockDigits');
+    const serverDigits = document.getElementById('timerDigits').textContent;
+    mockDigits.classList.toggle('field-dirty', mockDigits.textContent !== serverDigits);
+  } else {
+    document.getElementById('mockDigits').classList.remove('field-dirty');
+  }
 }
 
 // Record what's live after a push (use raw field text — no conversion needed)
