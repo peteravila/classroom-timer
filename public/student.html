@@ -245,8 +245,8 @@
     background: #e67e22; color: #1a1a2e;
   }
   .checkin-btn-clear {
-    background: rgba(255,255,255,0.05); color: #666;
-    border-color: #555;
+    background: rgba(255,255,255,0.05); color: #aaa;
+    border-color: #888;
   }
   .checkin-btn-clear:hover { background: rgba(255,255,255,0.1); }
 
@@ -268,6 +268,13 @@
     transition: all 0.15s; white-space: nowrap;
   }
   .checkin-name-ok:hover { opacity: 0.85; }
+  .checkin-name-cancel {
+    padding: 4px 12px; border: 2px solid #666; border-radius: 6px;
+    background: transparent; color: #aaa; font-size: 0.8rem;
+    font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .checkin-name-cancel:hover { border-color: #999; color: #ddd; }
 
   /* Name input on code gate */
   .code-gate .name-input {
@@ -428,18 +435,23 @@ function editCheckinName() {
   okBtn.className = 'checkin-name-ok';
   okBtn.textContent = 'OK';
 
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'checkin-name-cancel';
+  cancelBtn.textContent = 'Cancel';
+
   wrap.appendChild(input);
   wrap.appendChild(okBtn);
+  wrap.appendChild(cancelBtn);
 
   nameEl.style.display = 'none';
   nameEl.parentNode.insertBefore(wrap, nameEl.nextSibling);
   input.focus();
   input.select();
 
-  let committed = false;
+  let done = false;
   function commit() {
-    if (committed) return;
-    committed = true;
+    if (done) return;
+    done = true;
     const newName = input.value.trim();
     wrap.remove();
     nameEl.style.display = '';
@@ -450,11 +462,18 @@ function editCheckinName() {
       socket.emit('student-identify', { id: studentId, name: newName });
     }
   }
+  function cancel() {
+    if (done) return;
+    done = true;
+    wrap.remove();
+    nameEl.style.display = '';
+  }
 
   okBtn.addEventListener('click', (e) => { e.stopPropagation(); commit(); });
+  cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); cancel(); });
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); commit(); }
-    if (e.key === 'Escape') { input.value = currentName; commit(); }
+    if (e.key === 'Escape') { cancel(); }
   });
 }
 
