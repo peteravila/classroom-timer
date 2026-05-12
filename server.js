@@ -89,6 +89,33 @@ async function saveLibrary(lib) {
 }
 
 let library = [];
+let savedOrders = [];
+
+async function loadSavedOrders() {
+  if (db) {
+    try {
+      const doc = await db.collection('settings').findOne({ _id: 'savedOrders' });
+      if (doc && doc.orders) return doc.orders;
+    } catch (e) {
+      console.error('  MongoDB loadSavedOrders failed:', e.message);
+    }
+  }
+  return [];
+}
+
+async function saveSavedOrders(orders) {
+  if (db) {
+    try {
+      await db.collection('settings').updateOne(
+        { _id: 'savedOrders' },
+        { $set: { orders, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    } catch (e) {
+      console.error('  MongoDB saveSavedOrders failed:', e.message);
+    }
+  }
+}
 
 // ── Class code & mute ───────────────────────────────────────
 function generateCode() {
@@ -254,6 +281,27 @@ app.post('/api/library/import', async (req, res) => {
   library = imported;
   await saveLibrary(library);
   res.json(library);
+});
+
+// Saved orders REST endpoints
+app.get('/api/orders', (req, res) => res.json(savedOrders));
+
+app.post('/api/orders', async (req, res) => {
+  const { name, ids } = req.body;
+  if (!name || !Array.isArray(ids)) return res.status(400).json({ error: 'name and ids required' });
+  const id = req.body.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const idx = savedOrders.findIndex(o => o.id === id);
+  const order = { id, name, ids };
+  if (idx >= 0) savedOrders[idx] = order;
+  else savedOrders.push(order);
+  await saveSavedOrders(savedOrders);
+  res.json(savedOrders);
+});
+
+app.delete('/api/orders/:id', async (req, res) => {
+  savedOrders = savedOrders.filter(o => o.id !== req.params.id);
+  await saveSavedOrders(savedOrders);
+  res.json(savedOrders);
 });
 
 // QR code — includes class code in URL
@@ -514,6 +562,7 @@ const PORT = process.env.PORT || 3000;
 (async () => {
   await connectMongo();
   library = await loadLibrary();
+  savedOrders = await loadSavedOrders();
   classCode = await loadClassCode() || generateCode();
   await saveClassCode(classCode);  // persist if newly generated
   server.listen(PORT, () => {

@@ -12,6 +12,13 @@
     --green: #4ecca3; --yellow: #f0c24b; --red: #e74c3c; --blue: #3498db;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Dark scrollbars for the whole page */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #444; }
+  html { scrollbar-color: #333 var(--bg); }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg); color: var(--text);
@@ -82,13 +89,13 @@
     background: transparent; color: var(--blue); font-size: 0.85rem; font-weight: 600;
     cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit;
   }
-  .btn-push-all:hover { background: rgba(52,152,219,0.15); }
+  .btn-push-all:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
   .btn-pull-all {
-    padding: 10px 16px; border: 2px solid var(--dim); border-radius: 8px;
-    background: transparent; color: var(--dim); font-size: 0.85rem; font-weight: 600;
+    padding: 10px 16px; border: 2px solid var(--blue); border-radius: 8px;
+    background: transparent; color: var(--blue); font-size: 0.85rem; font-weight: 600;
     cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit;
   }
-  .btn-pull-all:hover { background: rgba(136,136,136,0.15); color: var(--text); border-color: var(--text); }
+  .btn-pull-all:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
   .push-all-hint { font-size: 0.6rem; color: #555; line-height: 1.3; text-align: center; }
 
   /* Phone mockup frame */
@@ -122,8 +129,16 @@
     text-align: center; width: 100%; transition: border-color 0.2s, background 0.2s;
     cursor: text;
   }
-  .mock-editable::-webkit-scrollbar { width: 3px; }
-  .mock-editable::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+  .mock-editable::-webkit-scrollbar { display: none; }
+  .mock-editable { scrollbar-width: none; }
+  @keyframes overflow-flash {
+    0%, 100% { border-color: transparent; }
+    50% { border-color: #e74c3c; }
+  }
+  .mock-editable.field-overflow {
+    animation: overflow-flash 1.2s ease-in-out infinite;
+    border-style: solid;
+  }
   .mock-editable:hover { border-color: rgba(255,255,255,0.15); }
   .mock-editable:focus { border-color: var(--blue); background: rgba(52,152,219,0.08); }
   .mock-editable.field-dirty { border-color: var(--yellow); border-style: dotted; }
@@ -251,6 +266,55 @@
   }
   .duration-popup-close:hover { color: var(--text); }
 
+  /* Save-to-library multi-select overlay */
+  .save-lib-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.4); justify-content: center; align-items: center;
+  }
+  .save-lib-backdrop.open { display: flex; }
+  .save-lib-box {
+    background: rgba(180, 180, 200, 0.2);
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 16px; padding: 24px 28px 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    max-width: 420px; width: 90vw; text-align: center;
+    position: absolute;
+  }
+  .save-lib-title {
+    font-size: 0.95rem; color: var(--text); margin-bottom: 6px; font-weight: 600;
+    cursor: grab; user-select: none;
+  }
+  .save-lib-title:active { cursor: grabbing; }
+  .save-lib-value {
+    font-size: 0.75rem; color: var(--dim); margin-bottom: 16px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .save-lib-list {
+    max-height: 280px; overflow-y: auto; overflow-x: hidden; text-align: left;
+    margin-bottom: 16px;
+  }
+  .save-lib-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px; border-radius: 6px; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .save-lib-item:hover { background: rgba(255,255,255,0.06); }
+  .save-lib-item input[type="checkbox"] { accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+  .save-lib-item-name {
+    font-size: 0.85rem; color: var(--text); width: 110px; flex-shrink: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .save-lib-item-detail {
+    font-size: 0.7rem; color: var(--dim); flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .save-lib-buttons { display: flex; gap: 12px; justify-content: center; }
+  .save-lib-none {
+    font-size: 0.8rem; color: #666; padding: 20px 0; text-align: center;
+  }
+
   /* Custom confirm dialog */
   .confirm-backdrop {
     display: none; position: fixed; inset: 0; z-index: 2000;
@@ -334,6 +398,7 @@
   .mock-ctx-go:hover:not(.disabled) { color: var(--green); border-color: var(--green); background: rgba(78,204,163,0.1); }
   .mock-ctx-go.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
   .mock-ctx-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+  .mock-ctx-save { border-color: var(--green); color: var(--green); }
   .mock-ctx-toggle { }
   .mock-ctx-toggle.is-on { border-color: var(--green); color: var(--green); }
   .mock-ctx-toggle.is-off { border-color: #666; color: #666; }
@@ -510,7 +575,8 @@
   .transport-btn.enabled { color: var(--blue); border-color: var(--blue); }
   .transport-btn.enabled svg { stroke: var(--blue); }
   .transport-btn:not(.enabled) svg { stroke: #666; }
-  .transport-btn.enabled:hover { background: rgba(52,152,219,0.15); }
+  .transport-btn.enabled:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
+  .transport-btn.enabled:hover svg { stroke: var(--green); }
   .transport-btn:not(.enabled) { cursor: default; opacity: 0.7; color: #666; border-color: #666; }
   .transport-btn.tb-start { font-size: 1.0rem; }
   .transport-btn.tb-pause { font-size: 1.3rem; padding-bottom: 2px; }
@@ -595,7 +661,7 @@
     text-align: center; width: 40px; box-sizing: border-box;
     display: inline-flex; align-items: center; justify-content: center;
   }
-  .lib-row-btn:hover { background: rgba(52,152,219,0.15); }
+  .lib-row-btn:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
   .lib-row-btn.btn-loaded {
     border-color: var(--green); color: var(--green);
   }
@@ -617,7 +683,7 @@
   .lib-icon-btn.btn-dup {
     color: #555; border-color: #333; font-size: 0.7rem;
   }
-  .lib-icon-btn.btn-dup:hover { color: var(--blue); border-color: var(--blue); }
+  .lib-icon-btn.btn-dup:hover { color: var(--green); border-color: var(--green); background: rgba(78,204,163,0.08); }
   .lib-icon-btn.btn-del {
     color: #555; border-color: #333;
   }
@@ -629,6 +695,33 @@
     margin-top: 6px;
   }
   .btn-new-timer:hover { border-color: var(--green); color: var(--green); }
+
+  /* Library toolbar: search + saved orders */
+  .lib-toolbar {
+    display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .lib-search {
+    flex: 1; min-width: 120px; padding: 6px 10px;
+    border: 1px solid #333; border-radius: 6px;
+    background: var(--bg); color: var(--text); font-size: 0.8rem;
+    font-family: inherit;
+  }
+  .lib-search::placeholder { color: #555; }
+  .lib-search:focus { outline: none; border-color: var(--blue); }
+  .lib-orders-select {
+    padding: 6px 10px; border: 1px solid #333; border-radius: 6px;
+    background: var(--bg); color: var(--text); font-size: 0.8rem;
+    font-family: inherit; max-width: 160px;
+  }
+  .lib-orders-select:focus { outline: none; border-color: var(--blue); }
+  .lib-toolbar-btn {
+    padding: 5px 10px; border: 1px solid #444; border-radius: 6px;
+    background: transparent; color: var(--dim); font-size: 0.75rem;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .lib-toolbar-btn:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
+  .lib-toolbar-btn.btn-danger:hover { background: rgba(231,76,60,0.08); color: var(--red); border-color: var(--red); }
 
   /* QR section */
   .qr-section { text-align: center; }
@@ -698,12 +791,12 @@
         <div class="mock-field-wrap">
           <div class="mock-editable mock-course-title" contenteditable="true" data-placeholder="Course Title" id="fieldCourseTitle"></div>
           <div class="mock-ctx" id="mockCtxCourseTitle">
-            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldCourseTitle')" title="Push this and start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldCourseTitle')" title="Push this field and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" id="btnPushCourseTitle" onclick="pushCourseTitle()" title="Push this field to students">Push</button>
-            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldCourseTitle')" title="Load from student view">Pull</button>
+            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldCourseTitle')" title="Load this field from student view">Pull</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearCourseTitle()" title="Clear this field">Clear</button>
-            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldCourseTitle')" title="Revert to last pushed value">Revert</button>
-            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleCourseTitle" onclick="togglePushAll('includeCourseTitle', this)" title="Include in Push All">On</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldCourseTitle')" title="Revert this field to its previous value (Esc)">Revert</button>
+            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleCourseTitle" onclick="togglePushAll('includeCourseTitle', this)" title="Include this field in Push All">On</button>
           </div>
         </div>
 
@@ -717,12 +810,13 @@
         <div class="mock-field-wrap">
           <div class="mock-editable mock-label" contenteditable="true" data-placeholder="Timer Label" id="fieldLabel"></div>
           <div class="mock-ctx" id="mockCtxLabel">
-            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldLabel')" title="Push this and start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldLabel')" title="Push this field and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" onclick="loadTitle()" title="Push this field to students">Push</button>
-            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldLabel')" title="Load from student view">Pull</button>
+            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldLabel')" title="Load this field from student view">Pull</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearTitle()" title="Clear this field">Clear</button>
-            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldLabel')" title="Revert to last pushed value">Revert</button>
-            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleTitle" onclick="togglePushAll('includeTitle', this)" title="Include in Push All">On</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldLabel')" title="Revert this field to its previous value (Esc)">Revert</button>
+            <button class="mock-ctx-btn mock-ctx-save" onclick="saveFieldToLibrary('fieldLabel')" title="Save this field to one or more library items">Save</button>
+            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleTitle" onclick="togglePushAll('includeTitle', this)" title="Include this field in Push All">On</button>
           </div>
         </div>
 
@@ -734,12 +828,13 @@
           <div class="mock-editable mock-end-time-label" contenteditable="true" data-placeholder="End Time Label" id="fieldEndTimeLabel">Class resumes at</div>
           <div class="mock-end-time-computed" id="mockEndTimeComputed"></div>
           <div class="mock-ctx" id="mockCtxEndTimeLabel">
-            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldEndTimeLabel')" title="Push this and start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldEndTimeLabel')" title="Push this field and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" onclick="loadEndTimeLabel()" title="Push this field to students">Push</button>
-            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldEndTimeLabel')" title="Load from student view">Pull</button>
+            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldEndTimeLabel')" title="Load this field from student view">Pull</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearEndTimeLabel()" title="Clear this field">Clear</button>
-            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldEndTimeLabel')" title="Revert to last pushed value">Revert</button>
-            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleEndTimeLabel" onclick="togglePushAll('includeEndTimeLabel', this)" title="Include in Push All">On</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldEndTimeLabel')" title="Revert this field to its previous value (Esc)">Revert</button>
+            <button class="mock-ctx-btn mock-ctx-save" onclick="saveFieldToLibrary('fieldEndTimeLabel')" title="Save this field to one or more library items">Save</button>
+            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleEndTimeLabel" onclick="togglePushAll('includeEndTimeLabel', this)" title="Include this field in Push All">On</button>
           </div>
         </div>
 
@@ -747,12 +842,13 @@
         <div class="mock-field-wrap">
           <div class="mock-editable mock-message" contenteditable="true" data-placeholder="Message to students" id="fieldMessage"></div>
           <div class="mock-ctx" id="mockCtxMessage">
-            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldMessage')" title="Push this and start">&#9654;&#xFE0E;</button>
+            <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldMessage')" title="Push this field and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" onclick="loadMessage()" title="Push this field to students">Push</button>
-            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldMessage')" title="Load from student view">Pull</button>
+            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldMessage')" title="Load this field from student view">Pull</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearMessage()" title="Clear this field">Clear</button>
-            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldMessage')" title="Revert to last pushed value">Revert</button>
-            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleMessage" onclick="togglePushAll('includeMessage', this)" title="Include in Push All">On</button>
+            <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldMessage')" title="Revert this field to its previous value (Esc)">Revert</button>
+            <button class="mock-ctx-btn mock-ctx-save" onclick="saveFieldToLibrary('fieldMessage')" title="Save this field to one or more library items">Save</button>
+            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleMessage" onclick="togglePushAll('includeMessage', this)" title="Include this field in Push All">On</button>
           </div>
         </div>
       </div>
@@ -771,6 +867,14 @@
 
     <!-- Tab: Library -->
     <div class="tab-content active" id="tab-library">
+      <div class="lib-toolbar">
+        <input type="text" class="lib-search" id="libSearch" placeholder="Search timers..." oninput="filterLibrary()">
+        <select class="lib-orders-select" id="savedOrderSelect" onchange="applySavedOrder()">
+          <option value="">— Saved Orders —</option>
+        </select>
+        <button class="lib-toolbar-btn" onclick="saveCurrentOrder()" title="Save current order">Save</button>
+        <button class="lib-toolbar-btn btn-danger" id="btnDeleteOrder" onclick="deleteCurrentOrder()" title="Delete selected order" style="display:none;">✕</button>
+      </div>
       <div id="libraryList" style="max-height:460px; overflow-y:auto;"></div>
       <button class="btn-new-timer" onclick="newTimerToFields()">+ New Timer</button>
     </div>
@@ -778,7 +882,7 @@
     <!-- Tab: Options (per-timer, saved with library items) -->
     <div class="tab-content" id="tab-options">
       <div class="section-title" style="margin-bottom:18px;">Timer Options</div>
-      <div style="font-size:0.75rem; color:#555; margin-bottom:18px;">These options are saved with each library item.</div>
+      <div style="font-size:0.75rem; color:var(--dim); margin-bottom:18px;">These options are saved with each library item.</div>
 
       <div class="checkbox-row" style="margin-bottom:10px;">
         <input type="checkbox" id="fieldShowEnd" class="custom-cb" checked onchange="socket.emit('update-show-end-time', { showEndTime: this.checked })">
@@ -816,8 +920,8 @@
           <div style="margin-bottom:20px;">
             <label style="font-size:0.85rem; color:#aaa;">Class Code</label>
             <div style="margin-top:8px; margin-left:103px;">
-              <button onclick="generateNewCode()" style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Disconnect All Students</button>
-              <div style="font-size:0.75rem; color:#555; margin-top:4px;">Generates a new code and disconnects all current students.</div>
+              <button onclick="generateNewCode()" style="padding:5px 12px; border:1.5px solid #666; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Disconnect All Students</button>
+              <div style="font-size:0.75rem; color:var(--dim); margin-top:4px;">Generates a new code and disconnects all current students.</div>
               <div style="margin-top:8px;">
                 <span style="font-size:0.8rem; color:#888;">Current code:</span>
                 <span id="classCodeDisplay" style="font-size:1.4rem; font-weight:800; letter-spacing:4px; color:var(--green); font-family:monospace; margin-left:6px;"></span>
@@ -825,7 +929,7 @@
             </div>
           </div>
 
-          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.08); margin:20px 0;">
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px;">
             <label for="optStartTab" style="font-size:0.85rem; color:#aaa;">After starting, go to tab:</label>
@@ -836,7 +940,7 @@
             </select>
           </div>
 
-          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.08); margin:20px 0;">
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <label for="alarmSound" style="font-size:0.85rem; color:#aaa; white-space:nowrap; min-width:95px;">Alarm sound:</label>
@@ -862,7 +966,7 @@
             </div>
           </div>
 
-          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.08); margin:20px 0;">
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <label for="warningSound" style="font-size:0.85rem; color:#aaa; white-space:nowrap; min-width:95px;">Warning alert:</label>
@@ -881,17 +985,17 @@
             <span style="font-size:0.85rem; color:#aaa;">min before end</span>
           </div>
 
-          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.08); margin:20px 0;">
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
           <div style="margin-bottom:20px;">
             <div class="checkbox-row">
               <input type="checkbox" id="muteStudents" class="custom-cb">
               <label for="muteStudents" style="font-size:0.85rem; color:#aaa;">Mute student updates</label>
             </div>
-            <div style="font-size:0.75rem; color:#555; margin-top:4px;">When muted, timer changes only appear in the preview — not on student screens.</div>
+            <div style="font-size:0.75rem; color:var(--dim); margin-top:4px; margin-left:103px;">When muted, timer changes only appear in the preview — not on student screens.</div>
           </div>
 
-          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.08); margin:20px 0;">
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
           <div>
             <label style="font-size:0.85rem; color:#aaa;">Library Backup</label>
@@ -904,7 +1008,7 @@
             </div>
           </div>
 
-          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.08); margin:20px 0;">
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
           <div>
             <label style="font-size:0.85rem; color:#aaa;">Student URL</label>
@@ -1117,6 +1221,10 @@ function markDirtyFields() {
     // Push: enabled when field has content or is dirty (allow pushing empty to clear student view)
     const pushBtn = ctx.querySelector('.mock-ctx-push');
     if (pushBtn) pushBtn.classList.toggle('disabled', !isDirty);
+
+    // Save: enabled when library has items (only present on label, endTimeLabel, message)
+    const saveBtn = ctx.querySelector('.mock-ctx-save');
+    if (saveBtn) saveBtn.classList.toggle('disabled', library.length === 0);
   }
 
   // Pull All button: enabled when any field differs from student view
@@ -1130,10 +1238,11 @@ function markDirtyFields() {
 
 // Record what's live after a push (use raw field text — no conversion needed)
 function revertField(fieldId) {
-  const el = document.getElementById(fieldId);
-  el.textContent = liveText[fieldId];
+  const val = fieldSnapshot[fieldId] !== undefined ? fieldSnapshot[fieldId] : liveText[fieldId];
+  setField(fieldId, val);
   markDirtyFields();
-  el.focus();
+  autoSizeAllFields();
+  document.getElementById(fieldId).focus();
 }
 
 let lastPushTime = 0;
@@ -1194,6 +1303,10 @@ function autoSizeField(el) {
     }
     size = trySize;
   }
+
+  // Flash red border if still overflowing at minimum font size
+  const stillOverflow = el.scrollHeight > el.clientHeight + 1;
+  el.classList.toggle('field-overflow', stillOverflow);
 }
 
 function autoSizeAllFields() {
@@ -1207,6 +1320,25 @@ function autoSizeAllFields() {
 // vertical space in the phone mockup (e.g. growing course title shrinks message area)
 document.addEventListener('input', (e) => {
   if (e.target.closest('.mock-editable')) autoSizeAllFields();
+});
+
+// ── Escape key: revert field to value when editing began ──
+const fieldSnapshot = {};
+document.addEventListener('focusin', (e) => {
+  const el = e.target.closest('.mock-editable');
+  if (el && el.id) fieldSnapshot[el.id] = (el.textContent || '').trim();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const el = e.target.closest('.mock-editable');
+  if (!el || !el.id || !(el.id in fieldSnapshot)) return;
+  e.preventDefault();
+  setField(el.id, fieldSnapshot[el.id]);
+  delete fieldSnapshot[el.id];
+  markDirtyFields();
+  autoSizeAllFields();
+  el.blur();
+  document.querySelectorAll('.mock-ctx').forEach(b => b.classList.remove('visible'));
 });
 
 // ── Phone mockup: contextual buttons ──
@@ -1263,6 +1395,79 @@ function pullAllFields() {
   if (document.getElementById('includeTitle').checked) pullField('fieldLabel');
   if (document.getElementById('includeEndTimeLabel').checked) pullField('fieldEndTimeLabel');
   if (document.getElementById('includeMessage').checked) pullField('fieldMessage');
+}
+
+// ── Save field to multiple library items ──
+const fieldToLibProp = {
+  fieldLabel: 'label',
+  fieldEndTimeLabel: 'endTimeLabel',
+  fieldMessage: 'message'
+};
+const fieldDisplayName = {
+  fieldLabel: 'Title',
+  fieldEndTimeLabel: 'End Time Label',
+  fieldMessage: 'Message'
+};
+
+function saveFieldToLibrary(fieldId) {
+  const prop = fieldToLibProp[fieldId];
+  if (!prop || library.length === 0) return;
+
+  const value = getField(fieldId);
+  const displayName = fieldDisplayName[fieldId] || fieldId;
+  const backdrop = document.getElementById('saveLibBackdrop');
+  const titleEl = document.getElementById('saveLibTitle');
+  const valueEl = document.getElementById('saveLibValue');
+  const listEl = document.getElementById('saveLibList');
+
+  titleEl.textContent = `Save ${displayName} to library items`;
+  valueEl.textContent = value ? `"${value}"` : '(empty)';
+
+  // Build checklist of library items
+  listEl.innerHTML = library.map(t => `
+    <label class="save-lib-item" data-id="${t.id}">
+      <input type="checkbox" value="${t.id}">
+      <span class="save-lib-item-name">${esc(t.name)}</span>
+      <span class="save-lib-item-detail">${esc(t[prop] || '—')}</span>
+    </label>
+  `).join('');
+
+  backdrop.classList.add('open');
+
+  // Wire up buttons
+  const applyBtn = document.getElementById('saveLibApply');
+  const cancelBtn = document.getElementById('saveLibCancel');
+
+  function cleanup() {
+    backdrop.classList.remove('open');
+    applyBtn.removeEventListener('click', onApply);
+    cancelBtn.removeEventListener('click', onCancel);
+  }
+
+  async function onApply() {
+    const checked = [...listEl.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
+    cleanup();
+    if (checked.length === 0) return;
+
+    // Update each selected library item
+    for (const id of checked) {
+      const t = library.find(x => x.id === id);
+      if (!t) continue;
+      t[prop] = value;
+      await fetch('/api/library', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(t)
+      });
+    }
+    await fetchLibrary();
+    await customAlert(`Updated ${checked.length} library item${checked.length > 1 ? 's' : ''}.`);
+  }
+
+  function onCancel() { cleanup(); }
+
+  applyBtn.addEventListener('click', onApply);
+  cancelBtn.addEventListener('click', onCancel);
 }
 
 function togglePushAll(checkboxId, btn) {
@@ -1442,6 +1647,41 @@ document.addEventListener('keydown', (e) => {
   });
   document.addEventListener('mouseup', () => { dragging = false; });
 })();
+
+// ── Draggable save-to-library popup (modal) ──
+document.addEventListener('DOMContentLoaded', () => {
+  const box = document.querySelector('.save-lib-box');
+  const backdrop = document.getElementById('saveLibBackdrop');
+  if (!box || !backdrop) return;
+  let dragging = false, offsetX = 0, offsetY = 0;
+
+  // Center when opened
+  const observer = new MutationObserver(() => {
+    if (backdrop.classList.contains('open')) {
+      box.style.left = '';
+      box.style.top = '';
+      const rect = box.getBoundingClientRect();
+      box.style.left = ((window.innerWidth - rect.width) / 2) + 'px';
+      box.style.top = ((window.innerHeight - rect.height) / 2) + 'px';
+    }
+  });
+  observer.observe(backdrop, { attributes: true, attributeFilter: ['class'] });
+
+  box.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button, input, label, .save-lib-list')) return;
+    dragging = true;
+    const rect = box.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    box.style.left = (e.clientX - offsetX) + 'px';
+    box.style.top = (e.clientY - offsetY) + 'px';
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+});
 
 function updateMockDigitsFromSpinners() {
   if (timerIsRunning || timerRemaining > 0) return; // don't overwrite live countdown
@@ -2210,6 +2450,8 @@ function renderLibrary() {
 
   // Wire up drag-and-drop
   initLibDragDrop();
+  // Re-apply search filter if active
+  filterLibrary();
 }
 
 let draggedId = null;
@@ -2527,6 +2769,119 @@ async function importLibrary(input) {
   input.value = ''; // reset so same file can be re-imported
 }
 
+// ── Library search ──
+function filterLibrary() {
+  const query = (document.getElementById('libSearch').value || '').toLowerCase().trim();
+  const rows = document.querySelectorAll('#libraryList .lib-row');
+  rows.forEach(row => {
+    if (!query) { row.style.display = ''; return; }
+    const text = row.textContent.toLowerCase();
+    row.style.display = text.includes(query) ? '' : 'none';
+  });
+}
+
+// ── Saved orders ──
+let savedOrdersList = [];
+
+async function fetchSavedOrders() {
+  try {
+    const res = await fetch('/api/orders');
+    savedOrdersList = await res.json();
+  } catch (e) { savedOrdersList = []; }
+  renderSavedOrdersDropdown();
+}
+
+function renderSavedOrdersDropdown() {
+  const sel = document.getElementById('savedOrderSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Saved Orders —</option>' +
+    savedOrdersList.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join('');
+  // Restore selection if still valid
+  if (current && savedOrdersList.find(o => o.id === current)) sel.value = current;
+  else sel.value = '';
+  updateDeleteOrderBtn();
+}
+
+function updateDeleteOrderBtn() {
+  const btn = document.getElementById('btnDeleteOrder');
+  btn.style.display = document.getElementById('savedOrderSelect').value ? '' : 'none';
+}
+
+async function applySavedOrder() {
+  updateDeleteOrderBtn();
+  const sel = document.getElementById('savedOrderSelect');
+  const orderId = sel.value;
+  if (!orderId) return;
+  const order = savedOrdersList.find(o => o.id === orderId);
+  if (!order) return;
+
+  // Clear any column sort
+  libSortCol = null;
+  libSortAsc = true;
+
+  // Reorder library to match saved order; new timers appended at end
+  const map = Object.fromEntries(library.map(t => [t.id, t]));
+  const ordered = order.ids.map(id => map[id]).filter(Boolean);
+  const remaining = library.filter(t => !order.ids.includes(t.id));
+  library = [...ordered, ...remaining];
+
+  // Persist the new order
+  await fetch('/api/library/reorder', {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ ids: library.map(t => t.id) })
+  });
+  saveLibraryLocal();
+  renderLibrary();
+}
+
+async function saveCurrentOrder() {
+  const sel = document.getElementById('savedOrderSelect');
+  const existingId = sel.value;
+  let name, id;
+
+  if (existingId) {
+    const existing = savedOrdersList.find(o => o.id === existingId);
+    if (!await customConfirm(`Update "${existing.name}" with the current order?`)) return;
+    name = existing.name;
+    id = existingId;
+  } else {
+    name = await customPrompt('Name for this order:');
+    if (!name) return;
+    id = undefined; // server will generate
+  }
+
+  const ids = library.map(t => t.id);
+  const body = id ? { id, name, ids } : { name, ids };
+  const res = await fetch('/api/orders', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  savedOrdersList = await res.json();
+  renderSavedOrdersDropdown();
+  // Select the one we just saved
+  if (!id) {
+    const newest = savedOrdersList[savedOrdersList.length - 1];
+    if (newest) document.getElementById('savedOrderSelect').value = newest.id;
+  } else {
+    document.getElementById('savedOrderSelect').value = id;
+  }
+  updateDeleteOrderBtn();
+}
+
+async function deleteCurrentOrder() {
+  const sel = document.getElementById('savedOrderSelect');
+  const orderId = sel.value;
+  if (!orderId) return;
+  const order = savedOrdersList.find(o => o.id === orderId);
+  if (!order) return;
+  if (!await customConfirm(`Delete saved order "${order.name}"?`)) return;
+  const res = await fetch('/api/orders/' + orderId, { method: 'DELETE' });
+  savedOrdersList = await res.json();
+  renderSavedOrdersDropdown();
+}
+
 // ── Keep-alive ping (prevents Render free tier from sleeping) ──
 setInterval(() => { fetch('/api/library').catch(() => {}); }, 5 * 60 * 1000);
 
@@ -2747,9 +3102,10 @@ document.getElementById('includeEndTimeLabel').addEventListener('change', update
 document.getElementById('includeTime').addEventListener('change', updateButtonStates);
 document.getElementById('includeMessage').addEventListener('change', updateButtonStates);
 
-// Init — fetch library from server (MongoDB is the source of truth)
+// Init — fetch library and saved orders from server (MongoDB is the source of truth)
 (async () => {
   await fetchLibrary();
+  await fetchSavedOrders();
   updateButtonStates();
 })();
 
@@ -2772,6 +3128,17 @@ if (startTab) document.getElementById('optStartTab').value = startTab;
     <div class="prompt-buttons">
       <button class="confirm-btn confirm-btn-yes" id="promptOk">OK</button>
       <button class="confirm-btn confirm-btn-no" id="promptCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="save-lib-backdrop" id="saveLibBackdrop">
+  <div class="save-lib-box">
+    <div class="save-lib-title" id="saveLibTitle">Save field to library items</div>
+    <div class="save-lib-value" id="saveLibValue"></div>
+    <div class="save-lib-list" id="saveLibList"></div>
+    <div class="save-lib-buttons">
+      <button class="confirm-btn confirm-btn-yes" id="saveLibApply">Apply</button>
+      <button class="confirm-btn confirm-btn-no" id="saveLibCancel">Cancel</button>
     </div>
   </div>
 </div>
