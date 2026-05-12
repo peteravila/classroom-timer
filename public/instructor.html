@@ -83,6 +83,12 @@
     cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit;
   }
   .btn-push-all:hover { background: rgba(52,152,219,0.15); }
+  .btn-pull-all {
+    padding: 10px 16px; border: 2px solid var(--dim); border-radius: 8px;
+    background: transparent; color: var(--dim); font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit;
+  }
+  .btn-pull-all:hover { background: rgba(136,136,136,0.15); color: var(--text); border-color: var(--text); }
   .push-all-hint { font-size: 0.6rem; color: #555; line-height: 1.3; text-align: center; }
 
   /* Phone mockup frame */
@@ -315,33 +321,22 @@
   }
   .mock-ctx.visible { display: flex; }
   .mock-ctx-btn {
-    font-size: 0.55rem; padding: 2px 5px; border-radius: 4px; cursor: pointer;
+    font-size: 0.55rem; padding: 0; border-radius: 4px; cursor: pointer;
     font-family: inherit; font-weight: 600; white-space: nowrap;
     border: 1.5px solid var(--blue); background: transparent; color: var(--blue);
     transition: all 0.15s;
+    width: 38px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    box-sizing: border-box;
   }
   .mock-ctx-btn:hover { background: rgba(52,152,219,0.15); }
   .mock-ctx-go { font-size: 0.7rem; }
   .mock-ctx-go:hover:not(.disabled) { color: var(--green); border-color: var(--green); background: rgba(78,204,163,0.1); }
   .mock-ctx-go.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
-
-  /* Toggle switch below context buttons */
-  .mock-chk {
-    margin-top: 4px; text-align: center;
-  }
-  .mock-chk input { display: none; }
-  .mock-chk label {
-    position: relative; display: inline-block; width: 28px; height: 14px;
-    background: rgba(255,255,255,0.15); border-radius: 7px; cursor: pointer;
-    transition: background 0.2s;
-  }
-  .mock-chk label::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 10px; height: 10px; border-radius: 50%;
-    background: rgba(255,255,255,0.4); transition: all 0.2s;
-  }
-  .mock-chk input:checked + label { background: var(--blue); }
-  .mock-chk input:checked + label::after { left: 16px; background: #fff; }
+  .mock-ctx-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+  .mock-ctx-toggle { }
+  .mock-ctx-toggle.is-on { border-color: var(--green); color: var(--green); }
+  .mock-ctx-toggle.is-off { border-color: #666; color: #666; }
 
   /* Tabs */
   .tab-bar {
@@ -672,6 +667,7 @@
         <div class="text-side-hint">Library only — not shown to students.</div>
         <hr style="border:none; border-top:1px solid #888; margin:8px 0;">
         <button class="btn-push-all" onclick="pushAllFields()" title="Pushes all checked fields">Push All</button>
+        <button class="btn-pull-all" onclick="pullAllFields()" title="Load student-visible values into mockup">Pull All</button>
         <hr style="border:none; border-top:1px solid #888; margin:8px 0;">
         <div class="transport-grid">
           <button class="transport-btn tb-start" onclick="doStart()" title="Push all and start">&#9654;&#xFE0E;</button>
@@ -688,6 +684,12 @@
         </div>
       </div>
 
+      <!-- Hidden checkboxes for Push All inclusion -->
+      <input type="checkbox" id="includeCourseTitle" checked style="display:none;">
+      <input type="checkbox" id="includeTitle" checked style="display:none;">
+      <input type="checkbox" id="includeEndTimeLabel" checked style="display:none;">
+      <input type="checkbox" id="includeMessage" checked style="display:none;">
+
       <!-- Phone mockup -->
       <div class="phone-mockup" id="phoneMockup">
         <div class="phone-mockup-notch"></div>
@@ -698,9 +700,10 @@
           <div class="mock-ctx" id="mockCtxCourseTitle">
             <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldCourseTitle')" title="Push this and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" id="btnPushCourseTitle" onclick="pushCourseTitle()" title="Push this field to students">Push</button>
+            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldCourseTitle')" title="Load from student view">Pull</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearCourseTitle()" title="Clear this field">Clear</button>
             <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldCourseTitle')" title="Revert to last pushed value">Revert</button>
-            <div class="mock-chk" id="mockChkCourse"><input type="checkbox" id="includeCourseTitle" checked ><label for="includeCourseTitle" title="Include in Push All"></label></div>
+            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleCourseTitle" onclick="togglePushAll('includeCourseTitle', this)" title="Include in Push All">On</button>
           </div>
         </div>
 
@@ -716,9 +719,10 @@
           <div class="mock-ctx" id="mockCtxLabel">
             <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldLabel')" title="Push this and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" onclick="loadTitle()" title="Push this field to students">Push</button>
+            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldLabel')" title="Load from student view">Pull</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearTitle()" title="Clear this field">Clear</button>
             <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldLabel')" title="Revert to last pushed value">Revert</button>
-            <div class="mock-chk" id="mockChkLabel"><input type="checkbox" id="includeTitle" checked ><label for="includeTitle" title="Include in Push All"></label></div>
+            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleTitle" onclick="togglePushAll('includeTitle', this)" title="Include in Push All">On</button>
           </div>
         </div>
 
@@ -732,9 +736,10 @@
           <div class="mock-ctx" id="mockCtxEndTimeLabel">
             <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldEndTimeLabel')" title="Push this and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" onclick="loadEndTimeLabel()" title="Push this field to students">Push</button>
+            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldEndTimeLabel')" title="Load from student view">Pull</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearEndTimeLabel()" title="Clear this field">Clear</button>
             <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldEndTimeLabel')" title="Revert to last pushed value">Revert</button>
-            <div class="mock-chk" id="mockChkEndTime"><input type="checkbox" id="includeEndTimeLabel" checked ><label for="includeEndTimeLabel" title="Include in Push All"></label></div>
+            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleEndTimeLabel" onclick="togglePushAll('includeEndTimeLabel', this)" title="Include in Push All">On</button>
           </div>
         </div>
 
@@ -744,9 +749,10 @@
           <div class="mock-ctx" id="mockCtxMessage">
             <button class="mock-ctx-btn mock-ctx-go" onclick="pushFieldAndStart('fieldMessage')" title="Push this and start">&#9654;&#xFE0E;</button>
             <button class="mock-ctx-btn mock-ctx-push" onclick="loadMessage()" title="Push this field to students">Push</button>
+            <button class="mock-ctx-btn mock-ctx-pull" onclick="pullField('fieldMessage')" title="Load from student view">Pull</button>
             <button class="mock-ctx-btn mock-ctx-clear" onclick="clearMessage()" title="Clear this field">Clear</button>
             <button class="mock-ctx-btn mock-ctx-revert" onclick="revertField('fieldMessage')" title="Revert to last pushed value">Revert</button>
-            <div class="mock-chk" id="mockChkMessage"><input type="checkbox" id="includeMessage" checked ><label for="includeMessage" title="Include in Push All"></label></div>
+            <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleMessage" onclick="togglePushAll('includeMessage', this)" title="Include in Push All">On</button>
           </div>
         </div>
       </div>
@@ -775,17 +781,17 @@
       <div style="font-size:0.75rem; color:#555; margin-bottom:18px;">These options are saved with each library item.</div>
 
       <div class="checkbox-row" style="margin-bottom:10px;">
-        <input type="checkbox" id="fieldShowEnd" class="custom-cb" checked>
+        <input type="checkbox" id="fieldShowEnd" class="custom-cb" checked onchange="socket.emit('update-show-end-time', { showEndTime: this.checked })">
         <label for="fieldShowEnd">Show end time to students</label>
       </div>
 
       <div class="checkbox-row" style="margin-bottom:10px;">
-        <input type="checkbox" id="fieldTransparent" class="custom-cb">
+        <input type="checkbox" id="fieldTransparent" class="custom-cb" onchange="socket.emit('update-display-modes', { transparent: this.checked, clockOnly: document.getElementById('fieldClockOnly').checked })">
         <label for="fieldTransparent">Transparent background</label>
       </div>
 
       <div class="checkbox-row" style="margin-bottom:10px;">
-        <input type="checkbox" id="fieldClockOnly" class="custom-cb">
+        <input type="checkbox" id="fieldClockOnly" class="custom-cb" onchange="socket.emit('update-display-modes', { transparent: document.getElementById('fieldTransparent').checked, clockOnly: this.checked })">
         <label for="fieldClockOnly">Clock only — hide text and ring</label>
       </div>
 
@@ -1077,6 +1083,49 @@ function markDirtyFields() {
   } else {
     document.getElementById('mockDigits').classList.remove('field-dirty');
   }
+
+  // Update context button states for each field
+  const ctxMap = {
+    fieldCourseTitle: 'mockCtxCourseTitle',
+    fieldLabel: 'mockCtxLabel',
+    fieldEndTimeLabel: 'mockCtxEndTimeLabel',
+    fieldMessage: 'mockCtxMessage',
+  };
+  let anyDirty = false;
+  for (const [fieldId, ctxId] of Object.entries(ctxMap)) {
+    const el = document.getElementById(fieldId);
+    const ctx = document.getElementById(ctxId);
+    if (!ctx) continue;
+    const content = (el.textContent || '').trim();
+    const live = liveText[fieldId] || '';
+    const isDirty = content !== live;
+    const isEmpty = content === '';
+    if (isDirty) anyDirty = true;
+
+    // Pull: enabled when field differs from student view
+    const pullBtn = ctx.querySelector('.mock-ctx-pull');
+    if (pullBtn) pullBtn.classList.toggle('disabled', !isDirty);
+
+    // Revert: enabled when field differs from student view
+    const revertBtn = ctx.querySelector('.mock-ctx-revert');
+    if (revertBtn) revertBtn.classList.toggle('disabled', !isDirty);
+
+    // Clear: enabled when field has content
+    const clearBtn = ctx.querySelector('.mock-ctx-clear');
+    if (clearBtn) clearBtn.classList.toggle('disabled', isEmpty);
+
+    // Push: enabled when field has content or is dirty (allow pushing empty to clear student view)
+    const pushBtn = ctx.querySelector('.mock-ctx-push');
+    if (pushBtn) pushBtn.classList.toggle('disabled', !isDirty);
+  }
+
+  // Pull All button: enabled when any field differs from student view
+  const pullAllBtn = document.querySelector('.btn-pull-all');
+  if (pullAllBtn) {
+    pullAllBtn.disabled = !anyDirty;
+    pullAllBtn.style.opacity = anyDirty ? '1' : '0.4';
+    pullAllBtn.style.pointerEvents = anyDirty ? 'auto' : 'none';
+  }
 }
 
 // Record what's live after a push (use raw field text — no conversion needed)
@@ -1199,6 +1248,29 @@ function pushAllFields() {
   if (document.getElementById('includeTitle').checked) loadTitle();
   if (document.getElementById('includeEndTimeLabel').checked) loadEndTimeLabel();
   if (document.getElementById('includeMessage').checked) loadMessage();
+}
+
+// ── Pull — load student-visible values back into mockup ──
+function pullField(fieldId) {
+  setField(fieldId, liveText[fieldId] || '');
+  markDirtyFields();
+  autoSizeAllFields();
+  document.getElementById(fieldId).focus();
+}
+
+function pullAllFields() {
+  if (document.getElementById('includeCourseTitle').checked) pullField('fieldCourseTitle');
+  if (document.getElementById('includeTitle').checked) pullField('fieldLabel');
+  if (document.getElementById('includeEndTimeLabel').checked) pullField('fieldEndTimeLabel');
+  if (document.getElementById('includeMessage').checked) pullField('fieldMessage');
+}
+
+function togglePushAll(checkboxId, btn) {
+  const cb = document.getElementById(checkboxId);
+  cb.checked = !cb.checked;
+  btn.textContent = cb.checked ? 'On' : 'Off';
+  btn.classList.toggle('is-on', cb.checked);
+  btn.classList.toggle('is-off', !cb.checked);
 }
 
 function pushAllAndStart() {
@@ -2649,10 +2721,11 @@ function updateButtonStates() {
                           getField('fieldEndTimeLabel') !== 'Class resumes at';
   clearBtn.classList.toggle('enabled', hasLabel || hasMessage || hasDuration || hasName || hasEndTimeLabel);
 
-  // Field play buttons: disabled when no duration set
+  // Field play buttons: disabled when no duration set and not paused
+  const canStart = hasDuration || paused;
   document.querySelectorAll('.mock-ctx-go').forEach(btn => {
-    btn.classList.toggle('disabled', !hasDuration);
-    btn.disabled = !hasDuration;
+    btn.classList.toggle('disabled', !canStart);
+    btn.disabled = !canStart;
   });
 
   // Popup start button: disabled when no duration set
