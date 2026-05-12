@@ -170,7 +170,9 @@
     line-height: 1; margin: 4px 0; cursor: pointer;
     transition: color 0.8s, font-size 0.3s;
     flex-shrink: 0;
+    border: 1.5px solid transparent; border-radius: 6px; padding: 2px 6px;
   }
+  .mock-digits.field-dirty { border-color: var(--yellow); border-style: dotted; }
   .mock-digits.has-hours { font-size: 3.2rem; }
   .mock-digits:hover { opacity: 0.8; }
 
@@ -1066,6 +1068,11 @@ function markDirtyFields() {
     const isDirty = current !== liveText[id];
     el.classList.toggle('field-dirty', isDirty);
   }
+  // Clock dirty: compare mockup digits to what students currently see
+  const mockDigits = document.getElementById('mockDigits');
+  const serverDigits = document.getElementById('timerDigits').textContent;
+  const mockText = mockDigits.textContent;
+  mockDigits.classList.toggle('field-dirty', mockText !== serverDigits);
 }
 
 // Record what's live after a push (use raw field text — no conversion needed)
@@ -1369,6 +1376,7 @@ function updateMockDigitsFromSpinners() {
   mockD.classList.toggle('has-hours', totalSecs >= 3600);
   // Update computed end time
   updateMockEndTime(mins);
+  markDirtyFields();
 }
 
 function updateMockEndTime(mins) {
