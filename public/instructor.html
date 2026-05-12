@@ -282,7 +282,8 @@
     position: absolute;
   }
   .save-lib-title {
-    font-size: 0.95rem; color: var(--text); margin-bottom: 6px; font-weight: 600;
+    font-size: 1.6rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--dim); margin-bottom: 6px;
     cursor: grab; user-select: none;
   }
   .save-lib-title:active { cursor: grabbing; }
@@ -700,8 +701,15 @@
   .lib-toolbar {
     display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;
   }
+  .lib-search-wrap {
+    flex: 1; min-width: 120px; position: relative;
+  }
+  .lib-search-icon {
+    position: absolute; left: 7px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px; pointer-events: none;
+  }
   .lib-search {
-    flex: 1; min-width: 120px; padding: 6px 10px;
+    width: 100%; padding: 6px 10px 6px 50px;
     border: 1px solid #333; border-radius: 6px;
     background: var(--bg); color: var(--text); font-size: 0.8rem;
     font-family: inherit;
@@ -710,7 +718,7 @@
   .lib-search:focus { outline: none; border-color: var(--blue); }
   .lib-orders-select {
     padding: 6px 10px; border: 1px solid #333; border-radius: 6px;
-    background: var(--bg); color: var(--text); font-size: 0.8rem;
+    background: var(--bg); color: var(--dim); font-size: 0.8rem;
     font-family: inherit; max-width: 160px;
   }
   .lib-orders-select:focus { outline: none; border-color: var(--blue); }
@@ -722,6 +730,76 @@
   }
   .lib-toolbar-btn:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
   .lib-toolbar-btn.btn-danger:hover { background: rgba(231,76,60,0.08); color: var(--red); border-color: var(--red); }
+
+  /* Students tab — status board */
+  .students-summary {
+    display: flex; gap: 16px; align-items: center; margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .students-summary-item {
+    font-size: 0.85rem; color: var(--dim);
+  }
+  .students-summary-count {
+    font-size: 1.4rem; font-weight: 700; margin-right: 4px;
+  }
+  .students-summary-count.count-working { color: var(--green); }
+  .students-summary-count.count-done { color: var(--blue); }
+  .students-summary-count.count-idle { color: #666; }
+  .students-list {
+    max-height: 400px; overflow-y: auto;
+  }
+  .student-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+  .student-row:last-child { border-bottom: none; }
+  .student-row:hover { background: rgba(255,255,255,0.03); }
+  .student-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .student-dot.dot-idle { background: #444; }
+  .student-dot.dot-working { background: var(--green); }
+  .student-dot.dot-done { background: var(--blue); }
+  .student-name {
+    font-size: 0.9rem; color: var(--text); flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .student-state {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+    min-width: 70px; text-align: right;
+  }
+  .student-state.state-idle { color: #555; }
+  .student-state.state-working { color: var(--green); }
+  .student-state.state-done { color: var(--blue); }
+  .student-time {
+    font-size: 0.7rem; color: #555; min-width: 50px; text-align: right;
+  }
+  .students-empty {
+    font-size: 0.85rem; color: #555; text-align: center; padding: 24px 0;
+  }
+  .students-toolbar {
+    display: flex; gap: 10px; align-items: center; margin-bottom: 12px;
+  }
+  .students-toolbar button {
+    padding: 5px 12px; border: 1px solid #444; border-radius: 6px;
+    background: transparent; color: var(--dim); font-size: 0.75rem;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .students-toolbar button:hover {
+    background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green);
+  }
+
+  /* Tab badge */
+  .tab-badge {
+    display: inline-block; min-width: 18px; height: 18px;
+    line-height: 18px; border-radius: 9px; font-size: 0.65rem;
+    font-weight: 700; text-align: center; margin-left: 6px;
+    padding: 0 5px;
+  }
+  .tab-badge.badge-working { background: var(--green); color: #1a1a2e; }
+  .tab-badge.badge-done { background: var(--blue); color: #fff; }
+  .tab-badge.badge-empty { display: none; }
 
   /* QR section */
   .qr-section { text-align: center; }
@@ -863,14 +941,15 @@
       <button class="tab-btn active" onclick="switchTab('library')">Library</button>
       <button class="tab-btn" onclick="switchTab('options')">Options</button>
       <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+      <button class="tab-btn" onclick="switchTab('students')">Students<span class="tab-badge badge-empty" id="studentsBadge"></span></button>
     </div>
 
     <!-- Tab: Library -->
     <div class="tab-content active" id="tab-library">
       <div class="lib-toolbar">
-        <input type="text" class="lib-search" id="libSearch" placeholder="⌕ Search timers..." oninput="filterLibrary()">
+        <div class="lib-search-wrap"><svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="21" y1="21" x2="16" y2="16"/></svg><input type="text" class="lib-search" id="libSearch" placeholder="Search timers..." oninput="filterLibrary()" style="padding-left:25px;"></div>
         <select class="lib-orders-select" id="savedOrderSelect" onchange="applySavedOrder()">
-          <option value="">— Saved Orders —</option>
+          <option value="">Saved Orders</option>
         </select>
         <button class="lib-toolbar-btn" onclick="saveCurrentOrder()" title="Save current order">Save</button>
         <button class="lib-toolbar-btn btn-danger" id="btnDeleteOrder" onclick="deleteCurrentOrder()" title="Delete selected order" style="display:none;">✕</button>
@@ -906,6 +985,17 @@
           <option value="options">Options</option>
           <option value="settings">Settings</option>
         </select>
+      </div>
+    </div>
+
+    <!-- Tab: Students (check-in status board) -->
+    <div class="tab-content" id="tab-students">
+      <div class="students-toolbar">
+        <button onclick="resetStudentStates()" title="Reset all students to idle">Reset All</button>
+      </div>
+      <div class="students-summary" id="studentsSummary"></div>
+      <div class="students-list" id="studentsList">
+        <div class="students-empty">No students connected yet.</div>
       </div>
     </div>
 
@@ -1141,7 +1231,7 @@ let lastTimerData = null;
 let justLoadedId = null;  // suppress dirty check right after loadAndStart
 
 // ── Tab switching ──
-const TAB_NAMES = ['library', 'options', 'settings'];
+const TAB_NAMES = ['library', 'options', 'settings', 'students'];
 function switchTab(name) {
   // Map legacy tab names to valid tabs
   if (!TAB_NAMES.includes(name)) name = 'library';
@@ -1432,7 +1522,11 @@ function saveFieldToLibrary(fieldId) {
     </label>
   `).join('');
 
+  // Clear and focus the filter
+  const saveSearch = document.getElementById('saveLibSearch');
+  saveSearch.value = '';
   backdrop.classList.add('open');
+  saveSearch.focus();
 
   // Wire up buttons
   const applyBtn = document.getElementById('saveLibApply');
@@ -2780,6 +2874,16 @@ function filterLibrary() {
   });
 }
 
+function filterSaveLib() {
+  const query = (document.getElementById('saveLibSearch').value || '').toLowerCase().trim();
+  const items = document.querySelectorAll('#saveLibList .save-lib-item');
+  items.forEach(item => {
+    if (!query) { item.style.display = ''; return; }
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(query) ? '' : 'none';
+  });
+}
+
 // ── Saved orders ──
 let savedOrdersList = [];
 
@@ -2794,7 +2898,7 @@ async function fetchSavedOrders() {
 function renderSavedOrdersDropdown() {
   const sel = document.getElementById('savedOrderSelect');
   const current = sel.value;
-  sel.innerHTML = '<option value="">— Saved Orders —</option>' +
+  sel.innerHTML = '<option value="">Saved Orders</option>' +
     savedOrdersList.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join('');
   // Restore selection if still valid
   if (current && savedOrdersList.find(o => o.id === current)) sel.value = current;
@@ -3120,6 +3224,88 @@ document.getElementById('optStartTab').addEventListener('change', () => {
 
 // Load saved startup tab into dropdown
 if (startTab) document.getElementById('optStartTab').value = startTab;
+
+// ── Students tab: check-in status board ──
+let studentList = [];
+
+socket.on('student-list', (list) => {
+  studentList = list;
+  renderStudentBoard();
+  updateStudentBadge();
+});
+
+function renderStudentBoard() {
+  const summaryEl = document.getElementById('studentsSummary');
+  const listEl = document.getElementById('studentsList');
+
+  if (studentList.length === 0) {
+    summaryEl.innerHTML = '';
+    listEl.innerHTML = '<div class="students-empty">No students connected yet.</div>';
+    return;
+  }
+
+  const working = studentList.filter(s => s.state === 'working').length;
+  const done = studentList.filter(s => s.state === 'done').length;
+  const idle = studentList.filter(s => s.state === 'idle').length;
+
+  summaryEl.innerHTML =
+    `<span class="students-summary-item"><span class="students-summary-count count-working">${working}</span> working</span>` +
+    `<span class="students-summary-item" style="color:#555;">·</span>` +
+    `<span class="students-summary-item"><span class="students-summary-count count-done">${done}</span> done</span>` +
+    `<span class="students-summary-item" style="color:#555;">·</span>` +
+    `<span class="students-summary-item"><span class="students-summary-count count-idle">${idle}</span> idle</span>`;
+
+  // Sort: working first, then done, then idle; within each group, by timestamp (most recent first)
+  const stateOrder = { working: 0, done: 1, idle: 2 };
+  const sorted = studentList.slice().sort((a, b) => {
+    const orderDiff = (stateOrder[a.state] || 2) - (stateOrder[b.state] || 2);
+    if (orderDiff !== 0) return orderDiff;
+    // Within same state, most recent change first
+    return (b.timestamp || 0) - (a.timestamp || 0);
+  });
+
+  listEl.innerHTML = sorted.map(s => {
+    const timeAgo = s.timestamp ? formatTimeAgo(s.timestamp) : '';
+    return `<div class="student-row">
+      <div class="student-dot dot-${s.state}"></div>
+      <span class="student-name">${esc(s.name)}</span>
+      <span class="student-state state-${s.state}">${s.state}</span>
+      <span class="student-time">${timeAgo}</span>
+    </div>`;
+  }).join('');
+}
+
+function formatTimeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 5) return 'now';
+  if (diff < 60) return diff + 's ago';
+  const mins = Math.floor(diff / 60);
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  return hrs + 'h ago';
+}
+
+function updateStudentBadge() {
+  const badge = document.getElementById('studentsBadge');
+  const active = studentList.filter(s => s.state === 'working' || s.state === 'done').length;
+  if (active === 0) {
+    badge.className = 'tab-badge badge-empty';
+    badge.textContent = '';
+  } else {
+    const allDone = studentList.filter(s => s.state === 'working').length === 0;
+    badge.className = 'tab-badge ' + (allDone ? 'badge-done' : 'badge-working');
+    badge.textContent = active;
+  }
+}
+
+function resetStudentStates() {
+  socket.emit('reset-student-states');
+}
+
+// Refresh relative timestamps every 30 seconds
+setInterval(() => {
+  if (studentList.length > 0) renderStudentBoard();
+}, 30000);
 </script>
 <div class="prompt-backdrop" id="promptBackdrop">
   <div class="prompt-box">
@@ -3135,6 +3321,7 @@ if (startTab) document.getElementById('optStartTab').value = startTab;
   <div class="save-lib-box">
     <div class="save-lib-title" id="saveLibTitle">Save field to library items</div>
     <div class="save-lib-value" id="saveLibValue"></div>
+    <input type="text" class="lib-search" id="saveLibSearch" placeholder="Filter..." oninput="filterSaveLib()" style="padding-left:10px; margin-bottom:10px; width:100%;">
     <div class="save-lib-list" id="saveLibList"></div>
     <div class="save-lib-buttons">
       <button class="confirm-btn confirm-btn-yes" id="saveLibApply">Apply</button>

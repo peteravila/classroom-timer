@@ -151,7 +151,7 @@
   },
   {
     "name": "Hot Lab 10",
-    "label": "Join the Customer and SalesOrderHeader tables",
+    "label": "{Instructions}",
     "minutes": 10,
     "endTimeLabel": "Class resumes at",
     "message": "You don't have to get it right to succeed; the important thing is the attempt. It will show you where your roadblocks are.",

@@ -188,9 +188,78 @@
     display: flex; flex-direction: column; align-items: center;
   }
 
-  /* Large screens: always show timer, hide code gate */
+  /* Student tabs (Timer | Check In) — phones only */
+  .student-tabs {
+    display: none; width: 100%; max-width: 400px; margin-bottom: 16px;
+  }
+  .student-tabs.visible { display: flex; }
+  .student-tab-bar {
+    display: flex; width: 100%; border-bottom: 2px solid rgba(255,255,255,0.1);
+    margin-bottom: 0;
+  }
+  .student-tab-btn {
+    flex: 1; padding: 10px 6px; border: none; background: transparent;
+    color: #666; font-size: 0.9rem; font-weight: 600; font-family: inherit;
+    cursor: pointer; border-bottom: 3px solid transparent;
+    margin-bottom: -2px; transition: all 0.2s;
+  }
+  .student-tab-btn:hover { color: #aaa; }
+  .student-tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+
+  /* Check In tab content */
+  .checkin-content { display: none; }
+  .checkin-content.visible {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 20px; text-align: center; gap: 20px; width: 100%;
+  }
+  .checkin-status {
+    font-size: 1.1rem; color: #888; text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 8px;
+  }
+  .checkin-name {
+    font-size: 1.4rem; font-weight: 700; color: #e0e0e0;
+    margin-bottom: 16px;
+  }
+  .checkin-buttons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .checkin-btn {
+    padding: 16px 36px; border-radius: 12px; font-size: 1.1rem;
+    font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: all 0.2s; border: 2px solid transparent;
+    min-width: 140px;
+  }
+  .checkin-btn-working {
+    background: rgba(78,204,163,0.15); color: var(--green);
+    border-color: var(--green);
+  }
+  .checkin-btn-working:hover { background: rgba(78,204,163,0.25); }
+  .checkin-btn-working.active {
+    background: var(--green); color: #1a1a2e;
+  }
+  .checkin-btn-done {
+    background: rgba(52,152,219,0.15); color: var(--blue);
+    border-color: var(--blue);
+  }
+  .checkin-btn-done:hover { background: rgba(52,152,219,0.25); }
+  .checkin-btn-done.active {
+    background: var(--blue); color: #fff;
+  }
+  .checkin-hint {
+    font-size: 0.8rem; color: #555; max-width: 300px; line-height: 1.4;
+  }
+
+  /* Name input on code gate */
+  .code-gate .name-input {
+    font-size: 1.1rem; text-align: center; width: 240px; padding: 8px;
+    border: 2px solid #333; border-radius: 8px;
+    background: #16213e; color: #e0e0e0; font-family: inherit;
+  }
+  .code-gate .name-input:focus { outline: none; border-color: var(--blue); }
+  .code-gate .name-label { font-size: 0.85rem; color: #666; }
+
+  /* Large screens: always show timer, hide code gate, hide student tabs */
   @media (min-width: 800px) {
     .code-gate { display: none !important; }
+    .student-tabs { display: none !important; }
     .timer-content {
       display: flex !important; flex-direction: column; align-items: center;
     }
@@ -204,8 +273,18 @@
   <h2>Enter Class Code</h2>
   <p>Ask your instructor for the 4-character code, or scan the QR code from the main screen.</p>
   <input type="text" id="codeInput" maxlength="4" placeholder="----" autocomplete="off">
+  <div class="name-label">Your name (optional)</div>
+  <input type="text" id="nameInput" class="name-input" placeholder="e.g. Alex" autocomplete="off" maxlength="30">
   <button class="code-btn" id="codeBtn" onclick="submitCode()">Join</button>
   <div class="code-error" id="codeError"></div>
+</div>
+
+<!-- Student tabs: Timer | Check In (phones only, after validation) -->
+<div class="student-tabs" id="studentTabs">
+  <div class="student-tab-bar">
+    <button class="student-tab-btn active" id="tabBtnTimer" onclick="switchStudentTab('timer')">Timer</button>
+    <button class="student-tab-btn" id="tabBtnCheckin" onclick="switchStudentTab('checkin')">Check In</button>
+  </div>
 </div>
 
 <!-- Timer content (hidden until code is validated) -->
@@ -237,6 +316,17 @@
   <div class="qr-class-code" id="qrClassCode"></div>
 </div>
 
+<!-- Check In tab content (phones only) -->
+<div class="checkin-content" id="checkinContent">
+  <div class="checkin-name" id="checkinName"></div>
+  <div class="checkin-status" id="checkinStatus">Not checked in</div>
+  <div class="checkin-buttons">
+    <button class="checkin-btn checkin-btn-working" id="btnWorking" onclick="setCheckinState('working')">Working on it</button>
+    <button class="checkin-btn checkin-btn-done" id="btnDone" onclick="setCheckinState('done')">Done</button>
+  </div>
+  <div class="checkin-hint">Let your instructor know your progress.</div>
+</div>
+
 <script>
 const socket = io();
 const CIRCUMFERENCE = 2 * Math.PI * 80; // 502.65
@@ -249,6 +339,64 @@ const urlClockOnly = params.get('clockonly') === 'true';
 
 const isLargeScreen = window.innerWidth >= 800;
 const isDisplayViewer = isPreview || isOBS || isLargeScreen;
+
+// ── Persistent student identity ──
+function getStudentId() {
+  let id = localStorage.getItem('studentUUID');
+  if (!id) {
+    id = crypto.randomUUID ? crypto.randomUUID() :
+         'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+           const r = Math.random() * 16 | 0;
+           return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+         });
+    localStorage.setItem('studentUUID', id);
+  }
+  return id;
+}
+function getStudentName() {
+  return localStorage.getItem('studentName') || '';
+}
+function setStudentName(name) {
+  if (name) localStorage.setItem('studentName', name);
+}
+
+const studentId = getStudentId();
+let myCheckinState = 'idle'; // idle | working | done
+let myDisplayName = getStudentName();
+
+// ── Student tab switching ──
+let activeStudentTab = 'timer';
+
+function switchStudentTab(tab) {
+  activeStudentTab = tab;
+  document.getElementById('tabBtnTimer').classList.toggle('active', tab === 'timer');
+  document.getElementById('tabBtnCheckin').classList.toggle('active', tab === 'checkin');
+  document.getElementById('timerContent').classList.toggle('visible', tab === 'timer');
+  document.getElementById('checkinContent').classList.toggle('visible', tab === 'checkin');
+}
+
+function setCheckinState(state) {
+  if (state === myCheckinState) {
+    // Toggle off — go back to idle
+    state = 'idle';
+  }
+  myCheckinState = state;
+  socket.emit('student-status', { state });
+  updateCheckinUI();
+}
+
+function updateCheckinUI() {
+  const btnW = document.getElementById('btnWorking');
+  const btnD = document.getElementById('btnDone');
+  const statusEl = document.getElementById('checkinStatus');
+
+  btnW.classList.toggle('active', myCheckinState === 'working');
+  btnD.classList.toggle('active', myCheckinState === 'done');
+
+  if (myCheckinState === 'working') statusEl.textContent = 'Working on it...';
+  else if (myCheckinState === 'done') statusEl.textContent = 'Done!';
+  else statusEl.textContent = 'Not checked in';
+}
 
 // Track whether student has been validated (survives reconnects)
 let studentValidated = false;
@@ -267,6 +415,8 @@ if (isPreview) {
   document.getElementById('qrCorner').style.display = 'none';
 } else if (!urlCode && !isLargeScreen) {
   // Phone without code — show code entry gate
+  const savedName = getStudentName();
+  if (savedName) document.getElementById('nameInput').value = savedName;
   document.getElementById('codeInput').focus();
 }
 
@@ -279,6 +429,7 @@ socket.on('connect', () => {
   } else if (studentValidated) {
     // Already validated — re-validate with the code we used
     socket.emit('validate-code', studentValidated);
+    // Note: student-identify is sent in code-accepted handler after re-validation
   } else if (urlCode && !codeExpired) {
     // First connect with QR code — auto-validate (skip if code was expired by disconnect-all)
     socket.emit('validate-code', urlCode.toUpperCase());
@@ -324,7 +475,28 @@ socket.on('code-accepted', () => {
   codeExpired = false;
   studentValidated = document.getElementById('codeInput').value.trim().toUpperCase() || (urlCode ? urlCode.toUpperCase() : '');
   document.getElementById('codeGate').style.display = 'none';
-  document.getElementById('timerContent').classList.add('visible');
+
+  // Show student tabs on phones (not display viewers)
+  if (!isDisplayViewer) {
+    document.getElementById('studentTabs').classList.add('visible');
+    switchStudentTab('timer'); // this also makes timerContent visible
+  } else {
+    document.getElementById('timerContent').classList.add('visible');
+  }
+
+  // Capture name from input (if provided) and save
+  const nameVal = (document.getElementById('nameInput').value || '').trim();
+  if (nameVal) {
+    setStudentName(nameVal);
+    myDisplayName = nameVal;
+  }
+
+  // Identify to server with persistent UUID and optional name
+  socket.emit('student-identify', { id: studentId, name: myDisplayName || '' });
+
+  // Restore check-in state
+  updateCheckinUI();
+  document.getElementById('checkinName').textContent = myDisplayName || '';
 });
 
 socket.on('code-rejected', () => {
@@ -338,13 +510,33 @@ socket.on('code-expired', () => {
   studentValidated = false;
   codeExpired = true;
   document.getElementById('timerContent').classList.remove('visible');
+  document.getElementById('checkinContent').classList.remove('visible');
+  document.getElementById('studentTabs').classList.remove('visible');
   document.getElementById('codeGate').style.display = 'flex';
   document.getElementById('codeInput').value = '';
   document.getElementById('codeError').textContent = 'This class session has ended.';
+  // Reset check-in state
+  myCheckinState = 'idle';
+  updateCheckinUI();
   // Server will force-disconnect us next — ensure we reconnect
   setTimeout(() => {
     if (!socket.connected) socket.connect();
   }, 1000);
+});
+
+// Server tells us our display name (auto-assigned if we didn't provide one)
+socket.on('student-name', (name) => {
+  myDisplayName = name;
+  setStudentName(name);
+  document.getElementById('checkinName').textContent = name;
+});
+
+// Server restores our check-in state after reconnect
+socket.on('student-state-restore', (state) => {
+  if (['idle', 'working', 'done'].includes(state)) {
+    myCheckinState = state;
+    updateCheckinUI();
+  }
 });
 
 function fmt(secs) {

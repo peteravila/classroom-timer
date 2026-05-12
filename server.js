@@ -168,6 +168,30 @@ async function saveClassCode(code) {
   } catch (e) { /* ignore on read-only filesystems */ }
 }
 
+// ── Student check-in tracking ────────────────────────────────
+// Map of persistent student UUID → { id, name, state, socketId, timestamp }
+// state: 'idle' | 'working' | 'done'
+const students = new Map();
+let studentCounter = 0; // for auto-assigning "Student N"
+
+function broadcastStudentList() {
+  const list = Array.from(students.values()).map(s => ({
+    id: s.id,
+    name: s.name,
+    state: s.state,
+    timestamp: s.timestamp,
+  }));
+  io.to('instructor').emit('student-list', list);
+}
+
+function resetAllStudentStates() {
+  for (const s of students.values()) {
+    s.state = 'idle';
+    s.timestamp = null;
+  }
+  broadcastStudentList();
+}
+
 // ── Timer state ──────────────────────────────────────────────
 let timerState = {
   courseTitle: '',      // persistent course title — survives stop/reset
@@ -323,6 +347,7 @@ let connectedStudents = 0;
 io.on('connection', (socket) => {
   let role = 'pending'; // pending | student | instructor | preview
   let validated = false;
+  let studentPersistentId = null; // UUID from student's localStorage
 
   socket.on('identify', (r) => {
     if (r === 'instructor') {
@@ -335,6 +360,7 @@ io.on('connection', (socket) => {
       socket.emit('class-code', classCode);
       socket.emit('mute-state', muted);
       io.to('instructor').emit('client-count', connectedStudents);
+      broadcastStudentList();
     } else if (r === 'preview' || r === 'display') {
       role = r;
       validated = true;
@@ -358,10 +384,53 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Student identifies with persistent UUID and optional name
+  socket.on('student-identify', ({ id, name }) => {
+    if (role !== 'student') return;
+    studentPersistentId = id;
+    let student = students.get(id);
+    if (student) {
+      // Returning student — update socket and name if provided
+      student.socketId = socket.id;
+      if (name) student.name = name;
+    } else {
+      // New student
+      studentCounter++;
+      student = {
+        id,
+        name: name || `Student ${studentCounter}`,
+        state: 'idle',
+        socketId: socket.id,
+        timestamp: null,
+      };
+      students.set(id, student);
+    }
+    // Tell the student their assigned name and current state
+    socket.emit('student-name', student.name);
+    socket.emit('student-state-restore', student.state);
+    broadcastStudentList();
+  });
+
+  // Student changes check-in status
+  socket.on('student-status', ({ state }) => {
+    if (role !== 'student' || !studentPersistentId) return;
+    const student = students.get(studentPersistentId);
+    if (!student) return;
+    if (!['idle', 'working', 'done'].includes(state)) return;
+    student.state = state;
+    student.timestamp = Date.now();
+    broadcastStudentList();
+  });
+
   socket.on('disconnect', () => {
     if (role === 'student' && validated) {
       connectedStudents--;
       io.to('instructor').emit('client-count', connectedStudents);
+      // Don't remove from students map — they may reconnect.
+      // Just clear the socketId so instructor can see they're disconnected if needed.
+      if (studentPersistentId && students.has(studentPersistentId)) {
+        students.get(studentPersistentId).socketId = null;
+      }
     }
   });
 
@@ -374,9 +443,19 @@ io.on('connection', (socket) => {
     io.to('students').emit('code-expired');
     io.in('students').disconnectSockets(true);
     connectedStudents = 0;
+    // Clear student tracking
+    students.clear();
+    studentCounter = 0;
     // Notify instructor
     io.to('instructor').emit('class-code', classCode);
     io.to('instructor').emit('client-count', connectedStudents);
+    broadcastStudentList();
+  });
+
+  // ── Instructor-only: reset student check-in states ──
+  socket.on('reset-student-states', () => {
+    if (role !== 'instructor') return;
+    resetAllStudentStates();
   });
 
   // ── Instructor-only: mute/unmute student updates ──
