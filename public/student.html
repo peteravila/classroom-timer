@@ -196,6 +196,13 @@
   .student-tab-bar {
     display: flex; width: 100%; border-bottom: 2px solid rgba(255,255,255,0.1);
     margin-bottom: 0;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: inherit; padding-top: env(safe-area-inset-top, 0);
+  }
+  /* Push content below the fixed tab bar */
+  .student-tabs.visible ~ .timer-content,
+  .student-tabs.visible ~ .checkin-content {
+    margin-top: 46px;
   }
   .student-tab-btn {
     flex: 1; padding: 10px 6px; border: none; background: transparent;
@@ -222,10 +229,10 @@
     font-size: 0.85rem; font-weight: 600; opacity: 0.8;
   }
   .checkin-mini-digits {
-    font-size: 2.8rem; font-weight: 800; font-variant-numeric: tabular-nums;
-    letter-spacing: 2px; line-height: 1; transition: color 0.5s;
+    font-size: min(20vw, 12vh, 6rem); font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: 3px; line-height: 1; transition: color 0.5s;
   }
-  .checkin-mini-digits.has-hours { font-size: 2.2rem; }
+  .checkin-mini-digits.has-hours { font-size: min(16vw, 10vh, 5rem); }
   .checkin-mini-idle { color: #556; }
 
   .checkin-status {
@@ -284,6 +291,14 @@
   .checkin-btn-done:hover { background: rgba(78,204,163,0.25); }
   .checkin-btn-done.active {
     background: var(--green); color: #1a1a2e;
+  }
+  .checkin-btn-idle {
+    background: rgba(255,255,255,0.05); color: #666;
+    border-color: #555;
+  }
+  .checkin-btn-idle:hover { background: rgba(255,255,255,0.1); }
+  .checkin-btn-idle.active {
+    background: #444; color: #e0e0e0;
   }
   .checkin-hint {
     font-size: 0.8rem; color: #555; max-width: 300px; line-height: 1.4;
@@ -370,6 +385,7 @@
   <div class="checkin-buttons">
     <button class="checkin-btn checkin-btn-working" id="btnWorking" onclick="setCheckinState('working')">Working on it</button>
     <button class="checkin-btn checkin-btn-done" id="btnDone" onclick="setCheckinState('done')">Done</button>
+    <button class="checkin-btn checkin-btn-idle" id="btnIdle" onclick="setCheckinState('idle')">No Status</button>
   </div>
   <div class="checkin-hint">Let your instructor know your progress.</div>
 </div>
@@ -432,10 +448,12 @@ function setCheckinState(state) {
 function updateCheckinUI() {
   const btnW = document.getElementById('btnWorking');
   const btnD = document.getElementById('btnDone');
+  const btnI = document.getElementById('btnIdle');
   const statusEl = document.getElementById('checkinStatus');
 
   btnW.classList.toggle('active', myCheckinState === 'working');
   btnD.classList.toggle('active', myCheckinState === 'done');
+  btnI.classList.toggle('active', myCheckinState === 'idle');
 
   if (myCheckinState === 'working') statusEl.textContent = 'Working on it...';
   else if (myCheckinState === 'done') statusEl.textContent = 'Done!';
