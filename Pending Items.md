@@ -42,30 +42,4 @@ The viewport meta tag was removed in a previous session to fix the instructor pa
 
 ### 5. Progress Ring Scaling for Long Timers
 
-The progress ring drains by percentage, so on multi-hour timers the visible change is tiny by the time color transitions kick in. Options discussed: rescale the ring in the capped zone, freeze at a minimum %, or leave as-is. Peter said "let me think about it."
-
-**Status:** Awaiting Peter's decision
-
----
-
-### 6. Persist Timer State to MongoDB
-
-Currently, a server restart (e.g., Render redeploy) kills any running timer. The plan is to save timer state (endTime, label, etc.) to MongoDB so the server can recover after a restart. The keep-alive ping is the first defense; MongoDB persistence is the safety net.
-
-**Status:** Agreed upon, not implemented
-
----
-
-### 7. Clean Up Debug Code in student.html
-
-The `submitCode()` function has diagnostic timeout/feedback code (e.g., "Validating...", "No response from server. Connected: ...") that was added during debugging of the reconnection flow. Should be simplified to just "Connecting..." or removed once the flow is confirmed stable in production.
-
-**Status:** Low priority, cosmetic
-
----
-
-### 8. LiveTimer Brochure
-
-Marketing brochure (v10) has been generated as both PDF and DOCX. Current layout uses mixed left/right alignment, text wrapping around images, reduced word count, and larger fonts. Peter may have further feedback on the layout and content.
-
-**Status:** Awaiting Peter's review
+The progress ring drains by percentage, so on multi-hour timers the visible change is tiny by the time color transitions kick in. Option
