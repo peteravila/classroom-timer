@@ -176,8 +176,8 @@
     overflow-y: auto;
   }
   /* Let the message field-wrap grow to fill remaining phone space */
-  .mock-field-wrap:last-child { flex: 1; flex-shrink: 1; min-height: 25px; }
-  .mock-field-wrap:last-child .mock-message { height: 100%; }
+  .mock-field-wrap:last-of-type { flex: 1; flex-shrink: 1; min-height: 25px; }
+  .mock-field-wrap:last-of-type .mock-message { height: 100%; }
 
   /* Non-editable elements — scaled to 64% of phone (250/390) */
   .mock-ring { width: 115px; height: 115px; margin: 3px 0; flex-shrink: 0; }
@@ -790,6 +790,47 @@
     background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green);
   }
 
+  /* Checkin toggle in students toolbar */
+  .checkin-toggle-wrap {
+    display: flex; align-items: center; gap: 8px; margin-right: auto;
+  }
+  .checkin-toggle-label { font-size: 0.75rem; color: var(--dim); }
+  .checkin-toggle {
+    position: relative; width: 38px; height: 20px; cursor: pointer;
+    -webkit-appearance: none; appearance: none; background: #444;
+    border-radius: 10px; border: none; outline: none; transition: background 0.2s;
+  }
+  .checkin-toggle:checked { background: var(--green); }
+  .checkin-toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; transition: transform 0.2s;
+  }
+  .checkin-toggle:checked::after { transform: translateX(18px); }
+
+  /* Mockup check-in footer */
+  .mock-checkin-footer {
+    display: none; /* hidden until toggle is on */
+    width: 100%; padding: 6px 6px 4px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    flex-direction: column; align-items: center; gap: 4px;
+    margin-top: auto; flex-shrink: 0;
+  }
+  .mock-checkin-footer.visible { display: flex; }
+  .mock-checkin-name {
+    font-size: 0.55rem; color: #888; font-weight: 600;
+  }
+  .mock-checkin-buttons {
+    display: flex; gap: 4px; width: 100%;
+  }
+  .mock-checkin-btn {
+    flex: 1; padding: 4px 2px; border-radius: 5px; font-size: 0.5rem;
+    font-weight: 700; text-align: center; border: 1.5px solid transparent;
+  }
+  .mock-checkin-btn-working { background: rgba(52,152,219,0.15); color: var(--blue); border-color: var(--blue); }
+  .mock-checkin-btn-done { background: rgba(78,204,163,0.15); color: var(--green); border-color: var(--green); }
+  .mock-checkin-btn-idle { background: rgba(255,255,255,0.05); color: #666; border-color: #555; max-width: 28px; }
+
   /* Tab badge */
   .tab-badge {
     display: inline-block; min-width: 18px; height: 18px;
@@ -929,6 +970,16 @@
             <button class="mock-ctx-btn mock-ctx-toggle is-on" id="toggleMessage" onclick="togglePushAll('includeMessage', this)" title="Include this field in Push All">On</button>
           </div>
         </div>
+
+        <!-- Check-in footer (mirrors student phone, toggled by instructor) -->
+        <div class="mock-checkin-footer" id="mockCheckinFooter">
+          <div class="mock-checkin-name">Student</div>
+          <div class="mock-checkin-buttons">
+            <div class="mock-checkin-btn mock-checkin-btn-working">Working on it</div>
+            <div class="mock-checkin-btn mock-checkin-btn-done">Done</div>
+            <div class="mock-checkin-btn mock-checkin-btn-idle">&#x2298;</div>
+          </div>
+        </div>
       </div>
     </div>
   </div><!-- /col-left -->
@@ -991,6 +1042,10 @@
     <!-- Tab: Students (check-in status board) -->
     <div class="tab-content" id="tab-students">
       <div class="students-toolbar">
+        <div class="checkin-toggle-wrap">
+          <input type="checkbox" class="checkin-toggle" id="checkinToggle" onchange="toggleCheckin(this.checked)">
+          <label class="checkin-toggle-label" for="checkinToggle">Check-in buttons</label>
+        </div>
         <button onclick="resetStudentStates()" title="Reset all students to idle">Reset All</button>
       </div>
       <div class="students-summary" id="studentsSummary"></div>
@@ -3301,6 +3356,17 @@ function updateStudentBadge() {
 function resetStudentStates() {
   socket.emit('reset-student-states');
 }
+
+// ── Check-in toggle ──
+function toggleCheckin(enabled) {
+  socket.emit('set-checkin-enabled', enabled);
+}
+
+// Server confirms the toggle state (also sent on connect)
+socket.on('checkin-enabled', (enabled) => {
+  document.getElementById('checkinToggle').checked = !!enabled;
+  document.getElementById('mockCheckinFooter').classList.toggle('visible', !!enabled);
+});
 
 // Refresh relative timestamps every 30 seconds
 setInterval(() => {

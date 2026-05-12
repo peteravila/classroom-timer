@@ -188,93 +188,36 @@
     display: flex; flex-direction: column; align-items: center;
   }
 
-  /* Student tabs (Timer | Check In) — phones only */
-  .student-tabs {
-    display: none; width: 100%; max-width: 400px; margin-bottom: 16px;
+  /* ── Check-in footer (docked at bottom of phone view) ── */
+  .checkin-footer {
+    display: none; /* hidden until checkin-enabled */
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    padding: 10px 12px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
+    background: rgba(26, 26, 46, 0.92);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    flex-direction: column; align-items: center; gap: 6px;
+    transition: opacity 0.3s, transform 0.3s;
   }
-  .student-tabs.visible { display: flex; }
-  .student-tab-bar {
-    display: flex; width: 100%; border-bottom: 2px solid rgba(255,255,255,0.1);
-    margin-bottom: 0;
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: inherit; padding-top: env(safe-area-inset-top, 0);
-  }
-  /* Push content below the fixed tab bar */
-  .student-tabs.visible ~ .timer-content,
-  .student-tabs.visible ~ .checkin-content {
-    margin-top: 46px;
-  }
-  .student-tab-btn {
-    flex: 1; padding: 10px 6px; border: none; background: transparent;
-    color: #666; font-size: 0.9rem; font-weight: 600; font-family: inherit;
-    cursor: pointer; border-bottom: 3px solid transparent;
-    margin-bottom: -2px; transition: all 0.2s;
-  }
-  .student-tab-btn:hover { color: #aaa; }
-  .student-tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+  .checkin-footer.visible { display: flex; }
 
-  /* Check In tab content */
-  .checkin-content { display: none; }
-  .checkin-content.visible {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 16px 20px; text-align: center; gap: 16px; width: 100%;
-  }
+  /* When footer is visible, give timer content bottom padding so nothing is hidden behind it */
+  body.checkin-active { padding-bottom: 120px; }
 
-  /* Mini timer at top of Check In tab */
-  .checkin-mini-timer {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 2px; margin-bottom: 8px;
-  }
-  .checkin-mini-label {
-    font-size: 0.85rem; font-weight: 600; opacity: 0.8;
-  }
-  .checkin-mini-digits {
-    font-size: min(20vw, 12vh, 6rem); font-weight: 800; font-variant-numeric: tabular-nums;
-    letter-spacing: 3px; line-height: 1; transition: color 0.5s;
-  }
-  .checkin-mini-digits.has-hours { font-size: min(16vw, 10vh, 5rem); }
-  .checkin-mini-idle { color: #556; }
-
-  .checkin-status {
-    font-size: 1.1rem; color: #888; text-transform: uppercase;
-    letter-spacing: 2px;
-  }
-
-  /* Editable name — tap to edit */
-  .checkin-name {
-    font-size: 1.4rem; font-weight: 700; color: #e0e0e0;
-    cursor: pointer; padding: 4px 12px;
-    border: 1px dashed transparent; border-radius: 6px;
+  .checkin-footer-name {
+    font-size: 0.85rem; font-weight: 600; color: #aaa;
+    cursor: pointer; padding: 2px 8px;
+    border: 1px dashed transparent; border-radius: 4px;
     transition: border-color 0.2s;
   }
-  .checkin-name:hover { border-color: rgba(255,255,255,0.2); }
-  .checkin-name-hint {
-    font-size: 0.7rem; color: #444; margin-top: -8px;
-  }
-  .checkin-name-edit {
-    display: flex; align-items: center; gap: 8px;
-  }
-  .checkin-name-input {
-    font-size: 1.4rem; font-weight: 700; text-align: center;
-    background: rgba(52,152,219,0.08); color: #e0e0e0;
-    border: 1px solid var(--blue); border-radius: 6px;
-    padding: 4px 12px; font-family: inherit; outline: none;
-    width: 180px;
-  }
-  .checkin-name-ok {
-    padding: 6px 14px; border: 2px solid var(--blue); border-radius: 6px;
-    background: var(--blue); color: #fff; font-size: 0.9rem;
-    font-weight: 700; font-family: inherit; cursor: pointer;
-    transition: all 0.15s; white-space: nowrap;
-  }
-  .checkin-name-ok:hover { opacity: 0.85; }
+  .checkin-footer-name:hover { border-color: rgba(255,255,255,0.2); }
 
-  .checkin-buttons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .checkin-buttons { display: flex; gap: 10px; justify-content: center; width: 100%; }
   .checkin-btn {
-    padding: 16px 36px; border-radius: 12px; font-size: 1.1rem;
+    flex: 1; max-width: 140px; padding: 12px 8px; border-radius: 10px; font-size: 0.95rem;
     font-weight: 700; font-family: inherit; cursor: pointer;
     transition: all 0.2s; border: 2px solid transparent;
-    min-width: 140px;
+    text-align: center;
   }
   .checkin-btn-working {
     background: rgba(52,152,219,0.15); color: var(--blue);
@@ -295,14 +238,32 @@
   .checkin-btn-idle {
     background: rgba(255,255,255,0.05); color: #666;
     border-color: #555;
+    max-width: 56px; padding: 12px;
   }
   .checkin-btn-idle:hover { background: rgba(255,255,255,0.1); }
   .checkin-btn-idle.active {
     background: #444; color: #e0e0e0;
   }
-  .checkin-hint {
-    font-size: 0.8rem; color: #555; max-width: 300px; line-height: 1.4;
+  .checkin-btn-idle svg { display: block; margin: 0 auto; }
+
+  /* Name editing inline in footer */
+  .checkin-name-edit {
+    display: flex; align-items: center; gap: 8px;
   }
+  .checkin-name-input {
+    font-size: 0.95rem; font-weight: 600; text-align: center;
+    background: rgba(52,152,219,0.08); color: #e0e0e0;
+    border: 1px solid var(--blue); border-radius: 6px;
+    padding: 4px 10px; font-family: inherit; outline: none;
+    width: 150px;
+  }
+  .checkin-name-ok {
+    padding: 4px 12px; border: 2px solid var(--blue); border-radius: 6px;
+    background: var(--blue); color: #fff; font-size: 0.8rem;
+    font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .checkin-name-ok:hover { opacity: 0.85; }
 
   /* Name input on code gate */
   .code-gate .name-input {
@@ -313,10 +274,11 @@
   .code-gate .name-input:focus { outline: none; border-color: var(--blue); }
   .code-gate .name-label { font-size: 0.85rem; color: #666; }
 
-  /* Large screens: always show timer, hide code gate, hide student tabs */
+  /* Large screens: always show timer, hide code gate, hide check-in footer */
   @media (min-width: 800px) {
     .code-gate { display: none !important; }
-    .student-tabs { display: none !important; }
+    .checkin-footer { display: none !important; }
+    body.checkin-active { padding-bottom: 24px; }
     .timer-content {
       display: flex !important; flex-direction: column; align-items: center;
     }
@@ -334,14 +296,6 @@
   <input type="text" id="nameInput" class="name-input" placeholder="e.g. Alex" autocomplete="off" maxlength="30">
   <button class="code-btn" id="codeBtn" onclick="submitCode()">Join</button>
   <div class="code-error" id="codeError"></div>
-</div>
-
-<!-- Student tabs: Timer | Check In (phones only, after validation) -->
-<div class="student-tabs" id="studentTabs">
-  <div class="student-tab-bar">
-    <button class="student-tab-btn active" id="tabBtnTimer" onclick="switchStudentTab('timer')">Timer</button>
-    <button class="student-tab-btn" id="tabBtnCheckin" onclick="switchStudentTab('checkin')">Check In</button>
-  </div>
 </div>
 
 <!-- Timer content (hidden until code is validated) -->
@@ -373,21 +327,14 @@
   <div class="qr-class-code" id="qrClassCode"></div>
 </div>
 
-<!-- Check In tab content (phones only) -->
-<div class="checkin-content" id="checkinContent">
-  <div class="checkin-mini-timer">
-    <div class="checkin-mini-label" id="checkinMiniLabel"></div>
-    <div class="checkin-mini-digits checkin-mini-idle" id="checkinMiniDigits">00:00</div>
-  </div>
-  <div class="checkin-name" id="checkinName" onclick="editCheckinName()" title="Tap to change your name"></div>
-  <div class="checkin-name-hint">tap name to edit</div>
-  <div class="checkin-status" id="checkinStatus">Tap a button to check in</div>
+<!-- Check-in footer (docked at bottom of phone view, toggled by instructor) -->
+<div class="checkin-footer" id="checkinFooter">
+  <div class="checkin-footer-name" id="checkinName" onclick="editCheckinName()" title="Tap to change your name"></div>
   <div class="checkin-buttons">
     <button class="checkin-btn checkin-btn-working" id="btnWorking" onclick="setCheckinState('working')">Working on it</button>
     <button class="checkin-btn checkin-btn-done" id="btnDone" onclick="setCheckinState('done')">Done</button>
-    <button class="checkin-btn checkin-btn-idle" id="btnIdle" onclick="setCheckinState('idle')">No Status</button>
+    <button class="checkin-btn checkin-btn-idle" id="btnIdle" onclick="setCheckinState('idle')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><line x1="5" y1="5" x2="15" y2="15"/></svg></button>
   </div>
-  <div class="checkin-hint">Let your instructor know your progress.</div>
 </div>
 
 <script>
@@ -427,15 +374,19 @@ const studentId = getStudentId();
 let myCheckinState = 'idle'; // idle | working | done
 let myDisplayName = getStudentName();
 
-// ── Student tab switching ──
-let activeStudentTab = 'timer';
+// ── Check-in footer visibility (controlled by instructor) ──
+let checkinEnabled = false;
 
-function switchStudentTab(tab) {
-  activeStudentTab = tab;
-  document.getElementById('tabBtnTimer').classList.toggle('active', tab === 'timer');
-  document.getElementById('tabBtnCheckin').classList.toggle('active', tab === 'checkin');
-  document.getElementById('timerContent').classList.toggle('visible', tab === 'timer');
-  document.getElementById('checkinContent').classList.toggle('visible', tab === 'checkin');
+function showCheckinFooter(show) {
+  checkinEnabled = show;
+  const footer = document.getElementById('checkinFooter');
+  if (show && !isDisplayViewer) {
+    footer.classList.add('visible');
+    document.body.classList.add('checkin-active');
+  } else {
+    footer.classList.remove('visible');
+    document.body.classList.remove('checkin-active');
+  }
 }
 
 function setCheckinState(state) {
@@ -449,49 +400,17 @@ function updateCheckinUI() {
   const btnW = document.getElementById('btnWorking');
   const btnD = document.getElementById('btnDone');
   const btnI = document.getElementById('btnIdle');
-  const statusEl = document.getElementById('checkinStatus');
 
   btnW.classList.toggle('active', myCheckinState === 'working');
   btnD.classList.toggle('active', myCheckinState === 'done');
   btnI.classList.toggle('active', myCheckinState === 'idle');
-
-  if (myCheckinState === 'working') statusEl.textContent = 'Working on it...';
-  else if (myCheckinState === 'done') statusEl.textContent = 'Done!';
-  else statusEl.textContent = 'Tap a button to check in';
 }
 
-// ── Mini timer on Check In tab ──
-function updateCheckinMiniTimer(s) {
-  const digitsEl = document.getElementById('checkinMiniDigits');
-  const labelEl = document.getElementById('checkinMiniLabel');
-  if (!digitsEl) return;
-
-  digitsEl.textContent = fmt(s.remainingSeconds);
-  const hasHours = Math.abs(s.remainingSeconds) >= 3600;
-  digitsEl.classList.toggle('has-hours', hasHours);
-
-  // Show the timer label if there is one
-  labelEl.textContent = s.label || '';
-
-  // Color the digits to match the timer state
-  const refTotal = s.originalTotal || s.totalSeconds;
-  const { cls } = stateClass(s.remainingSeconds, refTotal, s.running);
-  digitsEl.className = 'checkin-mini-digits';
-  if (hasHours) digitsEl.classList.add('has-hours');
-  if (cls === 'state-green') digitsEl.style.color = 'var(--green)';
-  else if (cls === 'state-yellow') digitsEl.style.color = 'var(--yellow)';
-  else if (cls === 'state-orange') digitsEl.style.color = 'var(--orange)';
-  else if (cls === 'state-done') digitsEl.style.color = 'var(--red)';
-  else digitsEl.style.color = '#556';
-}
-
-// ── Editable name ──
+// ── Editable name (in footer) ──
 function editCheckinName() {
   const nameEl = document.getElementById('checkinName');
-  const hintEl = document.querySelector('.checkin-name-hint');
   const currentName = nameEl.textContent;
 
-  // Build the edit row: input + OK button
   const wrap = document.createElement('div');
   wrap.className = 'checkin-name-edit';
 
@@ -510,7 +429,6 @@ function editCheckinName() {
   wrap.appendChild(okBtn);
 
   nameEl.style.display = 'none';
-  if (hintEl) hintEl.style.display = 'none';
   nameEl.parentNode.insertBefore(wrap, nameEl.nextSibling);
   input.focus();
   input.select();
@@ -522,12 +440,10 @@ function editCheckinName() {
     const newName = input.value.trim();
     wrap.remove();
     nameEl.style.display = '';
-    if (hintEl) hintEl.style.display = '';
     if (newName && newName !== currentName) {
       myDisplayName = newName;
       setStudentName(newName);
       nameEl.textContent = newName;
-      // Tell server about the name change
       socket.emit('student-identify', { id: studentId, name: newName });
     }
   }
@@ -612,18 +528,13 @@ document.getElementById('codeInput').addEventListener('keydown', (e) => {
 });
 
 socket.on('code-accepted', () => {
-  // Remember the code so we can re-validate on reconnect
   codeExpired = false;
   studentValidated = document.getElementById('codeInput').value.trim().toUpperCase() || (urlCode ? urlCode.toUpperCase() : '');
   document.getElementById('codeGate').style.display = 'none';
+  document.getElementById('timerContent').classList.add('visible');
 
-  // Show student tabs on phones (not display viewers)
-  if (!isDisplayViewer) {
-    document.getElementById('studentTabs').classList.add('visible');
-    switchStudentTab('timer'); // this also makes timerContent visible
-  } else {
-    document.getElementById('timerContent').classList.add('visible');
-  }
+  // Show check-in footer if already enabled by instructor
+  if (checkinEnabled) showCheckinFooter(true);
 
   // Capture name from input (if provided) and save
   const nameVal = (document.getElementById('nameInput').value || '').trim();
@@ -647,19 +558,15 @@ socket.on('code-rejected', () => {
 });
 
 socket.on('code-expired', () => {
-  // Class code was changed — clear old validation so reconnect doesn't retry stale code
   studentValidated = false;
   codeExpired = true;
   document.getElementById('timerContent').classList.remove('visible');
-  document.getElementById('checkinContent').classList.remove('visible');
-  document.getElementById('studentTabs').classList.remove('visible');
+  showCheckinFooter(false);
   document.getElementById('codeGate').style.display = 'flex';
   document.getElementById('codeInput').value = '';
   document.getElementById('codeError').textContent = 'This class session has ended.';
-  // Reset check-in state
   myCheckinState = 'idle';
   updateCheckinUI();
-  // Server will force-disconnect us next — ensure we reconnect
   setTimeout(() => {
     if (!socket.connected) socket.connect();
   }, 1000);
@@ -677,6 +584,16 @@ socket.on('student-state-restore', (state) => {
   if (['idle', 'working', 'done'].includes(state)) {
     myCheckinState = state;
     updateCheckinUI();
+  }
+});
+
+// Instructor toggles check-in button visibility
+socket.on('checkin-enabled', (enabled) => {
+  if (studentValidated) {
+    showCheckinFooter(enabled);
+  } else {
+    // Remember state for when student validates
+    checkinEnabled = !!enabled;
   }
 });
 
@@ -754,9 +671,6 @@ socket.on('timer-update', (s) => {
   document.getElementById('label').textContent = s.label || '';
   document.getElementById('message').textContent = s.message || '';
   autoSizeAllFields();
-
-  // Update mini timer on Check In tab
-  updateCheckinMiniTimer(s);
 
   // End time — use server-pushed label instead of hardcoded text
   const etEl = document.getElementById('endTime');

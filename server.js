@@ -173,6 +173,7 @@ async function saveClassCode(code) {
 // state: 'idle' | 'working' | 'done'
 const students = new Map();
 let studentCounter = 0; // for auto-assigning "Student N"
+let checkinEnabled = false; // instructor toggle: show/hide check-in buttons on student phones
 
 function broadcastStudentList() {
   const list = Array.from(students.values()).map(s => ({
@@ -359,6 +360,7 @@ io.on('connection', (socket) => {
       socket.emit('last-timer', lastTimer);
       socket.emit('class-code', classCode);
       socket.emit('mute-state', muted);
+      socket.emit('checkin-enabled', checkinEnabled);
       io.to('instructor').emit('client-count', connectedStudents);
       broadcastStudentList();
     } else if (r === 'preview' || r === 'display') {
@@ -378,6 +380,7 @@ io.on('connection', (socket) => {
       connectedStudents++;
       socket.emit('code-accepted');
       socket.emit('timer-update', timerState);
+      socket.emit('checkin-enabled', checkinEnabled);
       io.to('instructor').emit('client-count', connectedStudents);
     } else {
       socket.emit('code-rejected');
@@ -456,6 +459,14 @@ io.on('connection', (socket) => {
   socket.on('reset-student-states', () => {
     if (role !== 'instructor') return;
     resetAllStudentStates();
+  });
+
+  // ── Instructor-only: toggle check-in buttons on student phones ──
+  socket.on('set-checkin-enabled', (enabled) => {
+    if (role !== 'instructor') return;
+    checkinEnabled = !!enabled;
+    io.to('instructor').emit('checkin-enabled', checkinEnabled);
+    io.to('students').emit('checkin-enabled', checkinEnabled);
   });
 
   // ── Instructor-only: mute/unmute student updates ──
