@@ -235,16 +235,19 @@
   .checkin-btn-done.active {
     background: var(--green); color: #1a1a2e;
   }
-  .checkin-btn-idle {
+  .checkin-btn-away {
+    background: rgba(230,126,34,0.15); color: #e67e22;
+    border-color: #e67e22;
+  }
+  .checkin-btn-away:hover { background: rgba(230,126,34,0.25); }
+  .checkin-btn-away.active {
+    background: #e67e22; color: #1a1a2e;
+  }
+  .checkin-btn-clear {
     background: rgba(255,255,255,0.05); color: #666;
     border-color: #555;
-    max-width: 56px; padding: 12px;
   }
-  .checkin-btn-idle:hover { background: rgba(255,255,255,0.1); }
-  .checkin-btn-idle.active {
-    background: #444; color: #e0e0e0;
-  }
-  .checkin-btn-idle svg { display: block; margin: 0 auto; }
+  .checkin-btn-clear:hover { background: rgba(255,255,255,0.1); }
 
   /* Name editing inline in footer */
   .checkin-name-edit {
@@ -331,9 +334,10 @@
 <div class="checkin-footer" id="checkinFooter">
   <div class="checkin-footer-name" id="checkinName" onclick="editCheckinName()" title="Tap to change your name"></div>
   <div class="checkin-buttons">
-    <button class="checkin-btn checkin-btn-working" id="btnWorking" onclick="setCheckinState('working')">Working on it</button>
+    <button class="checkin-btn checkin-btn-working" id="btnWorking" onclick="setCheckinState('working')">Working</button>
     <button class="checkin-btn checkin-btn-done" id="btnDone" onclick="setCheckinState('done')">Done</button>
-    <button class="checkin-btn checkin-btn-idle" id="btnIdle" onclick="setCheckinState('idle')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><line x1="5" y1="5" x2="15" y2="15"/></svg></button>
+    <button class="checkin-btn checkin-btn-away" id="btnAway" onclick="setCheckinState('away')">Away</button>
+    <button class="checkin-btn checkin-btn-clear" id="btnClear" onclick="setCheckinState('idle')">Clear</button>
   </div>
 </div>
 
@@ -397,13 +401,10 @@ function setCheckinState(state) {
 }
 
 function updateCheckinUI() {
-  const btnW = document.getElementById('btnWorking');
-  const btnD = document.getElementById('btnDone');
-  const btnI = document.getElementById('btnIdle');
-
-  btnW.classList.toggle('active', myCheckinState === 'working');
-  btnD.classList.toggle('active', myCheckinState === 'done');
-  btnI.classList.toggle('active', myCheckinState === 'idle');
+  document.getElementById('btnWorking').classList.toggle('active', myCheckinState === 'working');
+  document.getElementById('btnDone').classList.toggle('active', myCheckinState === 'done');
+  document.getElementById('btnAway').classList.toggle('active', myCheckinState === 'away');
+  // Clear button doesn't stay active — it just resets to idle
 }
 
 // ── Editable name (in footer) ──
@@ -581,7 +582,7 @@ socket.on('student-name', (name) => {
 
 // Server restores our check-in state after reconnect
 socket.on('student-state-restore', (state) => {
-  if (['idle', 'working', 'done'].includes(state)) {
+  if (['idle', 'working', 'done', 'away'].includes(state)) {
     myCheckinState = state;
     updateCheckinUI();
   }

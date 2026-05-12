@@ -419,7 +419,7 @@ io.on('connection', (socket) => {
     if (role !== 'student' || !studentPersistentId) return;
     const student = students.get(studentPersistentId);
     if (!student) return;
-    if (!['idle', 'working', 'done'].includes(state)) return;
+    if (!['idle', 'working', 'done', 'away'].includes(state)) return;
     student.state = state;
     student.timestamp = Date.now();
     broadcastStudentList();
