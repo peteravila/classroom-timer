@@ -739,9 +739,13 @@
   .seq-list { display: flex; flex-direction: column; gap: 6px; }
   .seq-card {
     padding: 10px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
-    background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.15s;
+    background: rgba(255,255,255,0.02); transition: all 0.15s;
   }
-  .seq-card:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.15); }
+  .seq-card-play {
+    color: var(--green) !important; border-color: var(--green) !important;
+    font-size: 0.75rem !important; padding: 4px 10px !important; margin-right: 4px;
+  }
+  .seq-card-play:hover { background: rgba(78,204,163,0.15) !important; }
   .seq-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
   .seq-card-name { font-weight: 600; font-size: 0.85rem; }
   .seq-card-meta { font-size: 0.7rem; color: var(--dim); }
@@ -806,29 +810,32 @@
     cursor: pointer; font-family: inherit; transition: all 0.15s;
   }
   .seq-builder-footer button.btn-save { border-color: var(--green); color: var(--green); }
-  .seq-builder-footer button.btn-save:hover { background: rgba(78,204,163,0.1); }
+  .seq-builder-footer button.btn-save:hover:not(:disabled) { background: rgba(78,204,163,0.1); }
+  .seq-builder-footer button.btn-save:disabled { border-color: #333; color: #444; cursor: default; }
   .seq-builder-footer button:hover { background: rgba(255,255,255,0.04); }
   .seq-auto-advance { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
   .seq-auto-advance label { font-size: 0.8rem; color: #aaa; }
 
   /* Sequence progress badge (shown during playback) */
   .seq-progress-badge {
-    display: none; align-items: center; gap: 6px;
-    padding: 4px 10px; border-radius: 6px;
+    display: none; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 10px; border-radius: 6px;
     background: rgba(52,152,219,0.12); border: 1px solid rgba(52,152,219,0.3);
     font-size: 0.75rem; color: var(--blue); margin-top: 4px;
+    max-width: 100%; box-sizing: border-box; text-align: center;
   }
   .seq-progress-badge.visible { display: flex; }
-  .seq-progress-badge .seq-name { font-weight: 600; }
-  .seq-progress-badge .seq-step-count { color: var(--dim); }
+  .seq-progress-badge .seq-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .seq-progress-badge .seq-step-count { color: var(--dim); font-size: 0.7rem; }
+  .seq-progress-badge .seq-btns { display: flex; gap: 6px; margin-top: 2px; }
   .seq-skip-btn {
-    padding: 2px 8px; border: 1px solid rgba(52,152,219,0.4); border-radius: 4px;
+    padding: 3px 12px; border: 1px solid rgba(52,152,219,0.4); border-radius: 4px;
     background: transparent; color: var(--blue); font-size: 0.7rem;
-    cursor: pointer; margin-left: auto; font-family: inherit;
+    cursor: pointer; font-family: inherit;
   }
   .seq-skip-btn:hover { background: rgba(52,152,219,0.12); }
   .seq-stop-btn {
-    padding: 2px 8px; border: 1px solid rgba(231,76,60,0.4); border-radius: 4px;
+    padding: 3px 12px; border: 1px solid rgba(231,76,60,0.4); border-radius: 4px;
     background: transparent; color: var(--red); font-size: 0.7rem;
     cursor: pointer; font-family: inherit;
   }
@@ -1009,8 +1016,10 @@
         <div class="seq-progress-badge" id="seqProgressBadge">
           <span class="seq-name" id="seqProgressName"></span>
           <span class="seq-step-count" id="seqProgressCount"></span>
-          <button class="seq-skip-btn" onclick="skipSequenceStep()" title="Skip to next timer">Skip &#9654;</button>
-          <button class="seq-stop-btn" onclick="stopSequence()" title="End sequence">End</button>
+          <span class="seq-btns">
+            <button class="seq-skip-btn" onclick="skipSequenceStep()" title="Skip to next timer">Skip &#9654;</button>
+            <button class="seq-stop-btn" onclick="stopSequence()" title="End sequence">End</button>
+          </span>
         </div>
         <hr style="border:none; border-top:1px solid #888; margin:8px 0;">
         <div class="connected-badge">
@@ -1149,7 +1158,7 @@
 
         <div class="seq-builder" id="seqBuilder">
           <div class="seq-builder-header">
-            <input type="text" class="seq-builder-name" id="seqName" placeholder="Sequence name...">
+            <input type="text" class="seq-builder-name" id="seqName" placeholder="Sequence name..." oninput="updateSeqSaveBtn()">
           </div>
           <div class="seq-auto-advance">
             <input type="checkbox" id="seqAutoAdvance" class="custom-cb" checked>
@@ -1159,7 +1168,7 @@
           <button class="seq-add-timer" onclick="showSeqTimerPicker()">+ Add Timer</button>
           <div class="seq-timer-picker" id="seqTimerPicker"></div>
           <div class="seq-builder-footer">
-            <button class="btn-save" onclick="saveSequence()">Save</button>
+            <button class="btn-save" id="seqSaveBtn" onclick="saveSequence()" disabled>Save</button>
             <button onclick="cancelSequenceEdit()">Cancel</button>
           </div>
         </div>
@@ -3610,12 +3619,13 @@ function renderSequenceList() {
       const lib = library.find(t => t.id === step.timerId);
       return lib ? lib.name : '?';
     }).join(' → ');
-    return `<div class="seq-card" onclick="startSequence('${seq.id}')">
+    return `<div class="seq-card">
       <div class="seq-card-header">
+        <button class="seq-card-btn seq-card-play" onclick="startSequence('${seq.id}')" title="Start this sequence">&#9654;&#xFE0E;</button>
         <span class="seq-card-name">${esc(seq.name || 'Untitled')}</span>
         <div class="seq-card-actions">
-          <button class="seq-card-btn" onclick="event.stopPropagation(); editSequence('${seq.id}')" title="Edit">Edit</button>
-          <button class="seq-card-btn btn-del" onclick="event.stopPropagation(); deleteSequence('${seq.id}')" title="Delete">✕</button>
+          <button class="seq-card-btn" onclick="editSequence('${seq.id}')" title="Edit">Edit</button>
+          <button class="seq-card-btn btn-del" onclick="deleteSequence('${seq.id}')" title="Delete">✕</button>
         </div>
       </div>
       <div class="seq-card-steps">${esc(stepNames)}</div>
@@ -3661,10 +3671,18 @@ function cancelSequenceEdit() {
   document.getElementById('seqTimerPicker').classList.remove('visible');
 }
 
+function updateSeqSaveBtn() {
+  const btn = document.getElementById('seqSaveBtn');
+  const hasName = document.getElementById('seqName').value.trim().length > 0;
+  const hasSteps = seqBuilderSteps.length > 0;
+  btn.disabled = !hasName || !hasSteps;
+}
+
 function renderSeqSteps() {
   const el = document.getElementById('seqStepList');
   if (seqBuilderSteps.length === 0) {
     el.innerHTML = '<div style="text-align:center; color:var(--dim); font-size:0.75rem; padding:12px;">Add timers from your library to build a sequence.</div>';
+    updateSeqSaveBtn();
     return;
   }
   el.innerHTML = seqBuilderSteps.map((step, i) => `
@@ -3677,6 +3695,7 @@ function renderSeqSteps() {
       <button class="seq-step-remove" onclick="removeSeqStep(${i})" title="Remove">✕</button>
     </div>
   `).join('');
+  updateSeqSaveBtn();
 }
 
 function removeSeqStep(idx) {
