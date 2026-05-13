@@ -536,20 +536,20 @@ app.get('/qr-only', (req, res) => {
   }
   .hint {
     font-size: 0.85rem;
-    color: rgba(255,255,255,0.4);
-    margin-top: 40px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 14px;
     max-width: 220px;
     line-height: 1.4;
     text-align: center;
   }
-  .hint b { color: rgba(255,255,255,0.55); }
+  .hint b { color: rgba(255,255,255,0.75); }
   .class-code {
     font-size: 1.6rem;
     font-weight: 800;
     letter-spacing: 4px;
-    color: rgba(255,255,255,0.7);
+    color: rgba(255,255,255,0.8);
     font-family: monospace;
-    margin-top: 40px;
+    margin-top: 14px;
     text-align: center;
   }
 </style>

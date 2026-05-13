@@ -992,15 +992,6 @@
   /* QR section */
   .qr-section { text-align: center; }
   .qr-section img { border-radius: 8px; background: #fff; padding: 6px; margin: 8px 0; }
-  .student-url {
-    display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--bg);
-    padding: 8px 12px; border-radius: 8px; margin-top: 6px;
-  }
-  .student-url code { flex: 1; font-size: 0.85rem; color: var(--blue); word-break: break-all; }
-  .student-url button {
-    padding: 5px 12px; border: none; border-radius: 6px;
-    background: var(--blue); color: #fff; font-size: 0.78rem; cursor: pointer;
-  }
   .connected-count { font-size: 2rem; font-weight: 700; color: var(--green); margin-top: 2px; }
 
 </style>
@@ -1356,45 +1347,94 @@
 
           <div>
             <label style="font-size:0.85rem; color:#aaa;">OBS Browser Source URLs</label>
-            <div style="font-size:0.7rem; color:#555; margin:4px 0 10px;">Click to copy. Paste into OBS as a Browser Source.</div>
-            <div style="display:flex; flex-direction:column; gap:6px;">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <button class="obs-copy-btn" onclick="copyOBSUrl('')">Copy</button>
-                <span style="font-size:0.75rem; color:var(--dim);">Default background</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <button class="obs-copy-btn" onclick="copyOBSUrl('&transparent=true')">Copy</button>
-                <span style="font-size:0.75rem; color:var(--dim);">Transparent background</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <button class="obs-copy-btn" onclick="copyOBSUrl('&black=true')">Copy</button>
-                <span style="font-size:0.75rem; color:var(--dim);">Black background</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <button class="obs-copy-btn" onclick="copyOBSUrl('&clockonly=true')">Copy</button>
-                <span style="font-size:0.75rem; color:var(--dim);">Clock only (digits only)</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <button class="obs-copy-btn" onclick="copyOBSUrl('&transparent=true&clockonly=true')">Copy</button>
-                <span style="font-size:0.75rem; color:var(--dim);">Transparent + clock only</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <button class="obs-copy-btn" onclick="copyOBSUrl('&black=true&clockonly=true')">Copy</button>
-                <span style="font-size:0.75rem; color:var(--dim);">Black + clock only</span>
-              </div>
+            <div style="font-size:0.7rem; color:#555; margin:4px 0 10px;">Click Copy to copy a URL. Paste into OBS as a Browser Source.</div>
+            <table style="border-collapse:collapse; font-size:0.75rem; margin-top:6px;">
+              <thead>
+                <tr>
+                  <th colspan="2" style="text-align:center; color:var(--dim); padding:3px 1px; border-bottom:1px solid rgba(255,255,255,0.15); border-right:1px solid rgba(255,255,255,0.15); font-weight:600;">Display</th>
+                  <th colspan="3" style="text-align:center; color:var(--dim); padding:3px 1px; border-bottom:1px solid rgba(255,255,255,0.15); font-weight:600;">Background</th>
+                  <th style="border-bottom:1px solid rgba(255,255,255,0.15);"></th>
+                  <th style="border-bottom:1px solid rgba(255,255,255,0.15);"></th>
+                </tr>
+                <tr>
+                  <th style="text-align:center; color:var(--dim); padding:3px 4px; border-bottom:1px solid rgba(255,255,255,0.1); font-weight:normal;">Full</th>
+                  <th style="text-align:center; color:var(--dim); padding:3px 4px; border-bottom:1px solid rgba(255,255,255,0.1); font-weight:normal; border-right:1px solid rgba(255,255,255,0.15);">Clock Only</th>
+                  <th style="text-align:center; color:var(--dim); padding:3px 4px; border-bottom:1px solid rgba(255,255,255,0.1); font-weight:normal;">Default</th>
+                  <th style="text-align:center; color:var(--dim); padding:3px 4px; border-bottom:1px solid rgba(255,255,255,0.1); font-weight:normal;">Transparent</th>
+                  <th style="text-align:center; color:var(--dim); padding:3px 4px; border-bottom:1px solid rgba(255,255,255,0.1); font-weight:normal;">Black</th>
+                  <th style="border-bottom:1px solid rgba(255,255,255,0.1);"></th>
+                  <th style="border-bottom:1px solid rgba(255,255,255,0.1);"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green);">✓</td>
+                  <td style="text-align:center; padding:4px 4px; border-right:1px solid rgba(255,255,255,0.15);"></td>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green);">✓</td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="padding:4px 6px; color:var(--dim);">Full display, default background</td>
+                  <td style="padding:4px 1px;"><button class="obs-copy-btn" onclick="copyOBSUrl('')">Copy</button></td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green);">✓</td>
+                  <td style="text-align:center; padding:4px 4px; border-right:1px solid rgba(255,255,255,0.15);"></td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green);">✓</td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="padding:4px 6px; color:var(--dim);">Full display, transparent background</td>
+                  <td style="padding:4px 1px;"><button class="obs-copy-btn" onclick="copyOBSUrl('&transparent=true')">Copy</button></td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green);">✓</td>
+                  <td style="text-align:center; padding:4px 4px; border-right:1px solid rgba(255,255,255,0.15);"></td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green);">✓</td>
+                  <td style="padding:4px 6px; color:var(--dim);">Full display, black background</td>
+                  <td style="padding:4px 1px;"><button class="obs-copy-btn" onclick="copyOBSUrl('&black=true')">Copy</button></td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green); border-right:1px solid rgba(255,255,255,0.15);">✓</td>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green);">✓</td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="padding:4px 6px; color:var(--dim);">Clock only, default background</td>
+                  <td style="padding:4px 1px;"><button class="obs-copy-btn" onclick="copyOBSUrl('&clockonly=true')">Copy</button></td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green); border-right:1px solid rgba(255,255,255,0.15);">✓</td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green);">✓</td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="padding:4px 6px; color:var(--dim);">Clock only, transparent background</td>
+                  <td style="padding:4px 1px;"><button class="obs-copy-btn" onclick="copyOBSUrl('&transparent=true&clockonly=true')">Copy</button></td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green); border-right:1px solid rgba(255,255,255,0.15);">✓</td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px;"></td>
+                  <td style="text-align:center; padding:4px 4px; color:var(--green);">✓</td>
+                  <td style="padding:4px 6px; color:var(--dim);">Clock only, black background</td>
+                  <td style="padding:4px 1px;"><button class="obs-copy-btn" onclick="copyOBSUrl('&black=true&clockonly=true')">Copy</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+              <button class="obs-copy-btn" onclick="copyQROnlyUrl()">Copy</button>
+              <span style="font-size:0.75rem; color:var(--dim);">QR code overlay</span>
             </div>
           </div>
 
           <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
           <div>
-            <label style="font-size:0.85rem; color:#aaa;">Student URL</label>
+            <label style="font-size:0.85rem; color:#aaa;">Student QR Code</label>
             <div class="qr-section" style="text-align:left; margin-top:8px;">
               <div id="qrContainer">Loading QR code...</div>
-              <div class="student-url" id="urlContainer" style="display:none">
-                <code id="studentUrl"></code>
-                <button onclick="copyUrl()">Copy</button>
-              </div>
             </div>
           </div>
         </div>
@@ -3280,19 +3320,9 @@ async function deleteCurrentOrder() {
 setInterval(() => { fetch('/api/library').catch(() => {}); }, 5 * 60 * 1000);
 
 // ── QR code ──
-function copyUrl() {
-  const url = document.getElementById('studentUrl').textContent;
-  navigator.clipboard.writeText(url).then(() => {
-    const btn = document.querySelector('.student-url button');
-    btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = 'Copy', 1500);
-  });
-}
 function loadQRCode() {
   fetch('/qr').then(r => r.json()).then(data => {
     document.getElementById('qrContainer').innerHTML = `<img src="${data.qr}" alt="QR" width="180">`;
-    document.getElementById('studentUrl').textContent = data.url;
-    document.getElementById('urlContainer').style.display = 'flex';
   }).catch(() => {
     document.getElementById('qrContainer').textContent = 'QR code unavailable';
   });
@@ -3888,6 +3918,17 @@ function copyOBSUrl(extraParams) {
         setTimeout(() => btn.textContent = 'Copy', 1500);
       }
     });
+  });
+}
+
+function copyQROnlyUrl() {
+  const url = window.location.origin + '/qr-only';
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.querySelector('button[onclick="copyQROnlyUrl()"]');
+    if (btn) {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    }
   });
 }
 
