@@ -273,6 +273,22 @@ function loadSequenceStep(index) {
   return true;
 }
 
+function autoStartTimer() {
+  timerState.running = true;
+  lastTimer = {
+    label: timerState.label,
+    message: timerState.message,
+    originalTotal: timerState.originalTotal,
+    remainingSeconds: timerState.remainingSeconds,
+    showEndTime: timerState.showEndTime,
+    endTimeLabel: timerState.endTimeLabel,
+    endTime: Date.now() + timerState.remainingSeconds * 1000,
+  };
+  startTick();
+  broadcast();
+  io.to('instructor').emit('last-timer', lastTimer);
+}
+
 function advanceSequence() {
   if (!activeSequence) return;
   const nextIndex = activeSequence.currentIndex + 1;
@@ -282,12 +298,12 @@ function advanceSequence() {
     broadcastSequenceState();
     return;
   }
-  if (activeSequence.autoAdvance) {
-    // Stop the old timer tick so it doesn't keep broadcasting negative values
-    stopTick();
-    timerState.running = false;
+  const nextStep = activeSequence.steps[nextIndex];
+  // Stop the old timer tick so it doesn't keep broadcasting negative values
+  stopTick();
+  timerState.running = false;
+  if (nextStep.autoStart !== false) {
     // Notify clients of upcoming timer
-    const nextStep = activeSequence.steps[nextIndex];
     const preview = { label: nextStep.label, index: nextIndex, total: activeSequence.steps.length };
     if (muted) {
       io.to('instructor').emit('sequence-next-preview', preview);
@@ -298,24 +314,11 @@ function advanceSequence() {
     sequenceAdvanceTimeout = setTimeout(() => {
       sequenceAdvanceTimeout = null;
       if (loadSequenceStep(nextIndex)) {
-        // Auto-start the timer
-        timerState.running = true;
-        lastTimer = {
-          label: timerState.label,
-          message: timerState.message,
-          originalTotal: timerState.originalTotal,
-          remainingSeconds: timerState.remainingSeconds,
-          showEndTime: timerState.showEndTime,
-          endTimeLabel: timerState.endTimeLabel,
-          endTime: Date.now() + timerState.remainingSeconds * 1000,
-        };
-        startTick();
-        broadcast();
-        io.to('instructor').emit('last-timer', lastTimer);
+        autoStartTimer();
       }
     }, 3000);
   } else {
-    // Manual advance — load but don't start
+    // Manual — load but don't start
     loadSequenceStep(nextIndex);
   }
 }
@@ -815,6 +818,7 @@ io.on('connection', (socket) => {
         message: libItem.message || '',
         totalSeconds: Math.max(0, Math.round((libItem.minutes || 0) * 60)),
         showEndTime: libItem.showEndTime !== false,
+        autoStart: step.autoStart !== false,
       };
     }).filter(Boolean);
     if (resolvedSteps.length === 0) return;
@@ -822,12 +826,15 @@ io.on('connection', (socket) => {
     activeSequence = {
       id: seq.id,
       name: seq.name,
-      autoAdvance: seq.autoAdvance !== false,
       steps: resolvedSteps,
       currentIndex: 0,
     };
-    // Load first step (but don't auto-start — instructor hits play)
+    // Load first step
     loadSequenceStep(0);
+    // Auto-start if the first step says so
+    if (resolvedSteps[0].autoStart !== false) {
+      autoStartTimer();
+    }
   });
 
   socket.on('skip-sequence-step', () => {
