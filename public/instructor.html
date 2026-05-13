@@ -163,9 +163,9 @@
     top: 50%; transform: translateY(-62%);
   }
   .mock-message {
-    font-size: 0.85rem; color: #bbb; line-height: 1.3;
+    font-size: 1.4rem; color: #bbb; line-height: 1.3;
     white-space: pre-line; max-width: 100%;
-    height: 2.3rem; /* locked to ~2 lines at starting font */
+    height: 3.7rem; /* locked to ~2 lines at starting font */
     overflow: hidden;
   }
   /* Message field-wrap: fixed size, no flex-grow */
@@ -803,6 +803,15 @@
   }
   .checkin-toggle:checked::after { transform: translateX(18px); }
 
+  /* OBS copy buttons */
+  .obs-copy-btn {
+    padding: 4px 12px; font-size: 0.7rem; font-weight: 600;
+    background: var(--accent); color: var(--text); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px; cursor: pointer; white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .obs-copy-btn:hover { background: var(--card2); }
+
   /* Mockup check-in footer */
   .mock-checkin-footer {
     display: none; /* hidden until toggle is on */
@@ -1017,13 +1026,24 @@
         <label for="fieldShowEnd">Show end time to students</label>
       </div>
 
-      <div class="checkbox-row" style="margin-bottom:10px;">
-        <input type="checkbox" id="fieldTransparent" class="custom-cb" onchange="socket.emit('update-display-modes', { transparent: this.checked, clockOnly: document.getElementById('fieldClockOnly').checked })">
-        <label for="fieldTransparent">Transparent background</label>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:0.8rem; color:#888; margin-bottom:8px; font-weight:600;">Background</div>
+        <div class="checkbox-row" style="margin-bottom:6px;">
+          <input type="radio" name="bgMode" id="fieldBgDefault" class="custom-cb" value="default" checked onchange="updateBgMode()">
+          <label for="fieldBgDefault">Default</label>
+        </div>
+        <div class="checkbox-row" style="margin-bottom:6px;">
+          <input type="radio" name="bgMode" id="fieldBgTransparent" class="custom-cb" value="transparent" onchange="updateBgMode()">
+          <label for="fieldBgTransparent">Transparent</label>
+        </div>
+        <div class="checkbox-row" style="margin-bottom:6px;">
+          <input type="radio" name="bgMode" id="fieldBgBlack" class="custom-cb" value="black" onchange="updateBgMode()">
+          <label for="fieldBgBlack">Black</label>
+        </div>
       </div>
 
       <div class="checkbox-row" style="margin-bottom:10px;">
-        <input type="checkbox" id="fieldClockOnly" class="custom-cb" onchange="socket.emit('update-display-modes', { transparent: document.getElementById('fieldTransparent').checked, clockOnly: this.checked })">
+        <input type="checkbox" id="fieldClockOnly" class="custom-cb" onchange="updateDisplayModes()">
         <label for="fieldClockOnly">Clock only — hide text and ring</label>
       </div>
 
@@ -1160,6 +1180,39 @@
               <div class="student-url" id="urlContainer" style="display:none">
                 <code id="studentUrl"></code>
                 <button onclick="copyUrl()">Copy</button>
+              </div>
+            </div>
+          </div>
+
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
+
+          <div>
+            <label style="font-size:0.85rem; color:#aaa;">OBS Browser Source URLs</label>
+            <div style="font-size:0.7rem; color:#555; margin:4px 0 10px;">Click to copy. Paste into OBS as a Browser Source.</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="obs-copy-btn" onclick="copyOBSUrl('')">Copy</button>
+                <span style="font-size:0.75rem; color:var(--dim);">Default background</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="obs-copy-btn" onclick="copyOBSUrl('&transparent=true')">Copy</button>
+                <span style="font-size:0.75rem; color:var(--dim);">Transparent background</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="obs-copy-btn" onclick="copyOBSUrl('&black=true')">Copy</button>
+                <span style="font-size:0.75rem; color:var(--dim);">Black background</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="obs-copy-btn" onclick="copyOBSUrl('&clockonly=true')">Copy</button>
+                <span style="font-size:0.75rem; color:var(--dim);">Clock only (digits only)</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="obs-copy-btn" onclick="copyOBSUrl('&transparent=true&clockonly=true')">Copy</button>
+                <span style="font-size:0.75rem; color:var(--dim);">Transparent + clock only</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="obs-copy-btn" onclick="copyOBSUrl('&black=true&clockonly=true')">Copy</button>
+                <span style="font-size:0.75rem; color:var(--dim);">Black + clock only</span>
               </div>
             </div>
           </div>
@@ -1419,7 +1472,7 @@ document.addEventListener('input', (e) => {
 const autoSizeConfig = {
   fieldCourseTitle: { max: 1.4,  min: 0.7,  step: 0.04 },
   fieldLabel:       { max: 1.6,  min: 0.7,  step: 0.04 },
-  fieldMessage:     { max: 0.85, min: 0.5,  step: 0.03 },
+  fieldMessage:     { max: 1.4,  min: 0.7,  step: 0.04 },
 };
 
 function autoSizeField(el) {
@@ -1515,6 +1568,32 @@ document.addEventListener('click', (e) => {
 });
 
 // ── Push All — push all checked fields at once ──
+// ── Background mode helpers ──
+function getBgMode() {
+  if (document.getElementById('fieldBgTransparent').checked) return 'transparent';
+  if (document.getElementById('fieldBgBlack').checked) return 'black';
+  return 'default';
+}
+function getDisplayModePayload() {
+  const bg = getBgMode();
+  return {
+    transparent: bg === 'transparent',
+    blackBg: bg === 'black',
+    clockOnly: document.getElementById('fieldClockOnly').checked,
+  };
+}
+function updateBgMode() {
+  socket.emit('update-display-modes', getDisplayModePayload());
+}
+function updateDisplayModes() {
+  socket.emit('update-display-modes', getDisplayModePayload());
+}
+function setBgModeFromFlags(transparent, blackBg) {
+  document.getElementById('fieldBgDefault').checked = !transparent && !blackBg;
+  document.getElementById('fieldBgTransparent').checked = !!transparent;
+  document.getElementById('fieldBgBlack').checked = !!blackBg;
+}
+
 function pushAllFields() {
   if (document.getElementById('includeCourseTitle').checked) pushCourseTitle();
   if (document.getElementById('includeTitle').checked) loadTitle();
@@ -1717,10 +1796,7 @@ async function pushFieldAndStart(fieldId) {
 
   if (isPaused) {
     // Resume from where we left off — don't reset the clock
-    socket.emit('update-display-modes', {
-      transparent: document.getElementById('fieldTransparent').checked,
-      clockOnly: document.getElementById('fieldClockOnly').checked,
-    });
+    socket.emit('update-display-modes', getDisplayModePayload());
     setTimeout(() => {
       socket.emit('start');
       lastPushTime = Date.now();
@@ -1733,10 +1809,7 @@ async function pushFieldAndStart(fieldId) {
   if (minutes <= 0) return;
   const showEndTime = document.getElementById('fieldShowEnd').checked;
   socket.emit('set-timer-only', { minutes, showEndTime });
-  socket.emit('update-display-modes', {
-    transparent: document.getElementById('fieldTransparent').checked,
-    clockOnly: document.getElementById('fieldClockOnly').checked,
-  });
+  socket.emit('update-display-modes', getDisplayModePayload());
   setTimeout(() => {
     socket.emit('start');
     lastPushTime = Date.now();
@@ -2018,20 +2091,9 @@ document.getElementById('btnPushCourseTitle').addEventListener('mousedown', () =
   ctPushTime = Date.now();
 });
 
-document.getElementById('fieldTransparent').addEventListener('change', () => {
-  checkDirty();
-  socket.emit('update-display-modes', {
-    transparent: document.getElementById('fieldTransparent').checked,
-    clockOnly: document.getElementById('fieldClockOnly').checked,
-  });
-});
-document.getElementById('fieldClockOnly').addEventListener('change', () => {
-  checkDirty();
-  socket.emit('update-display-modes', {
-    transparent: document.getElementById('fieldTransparent').checked,
-    clockOnly: document.getElementById('fieldClockOnly').checked,
-  });
-});
+// Bg mode and clock-only radios/checkboxes call updateBgMode()/updateDisplayModes() via onchange in HTML
+document.querySelectorAll('input[name="bgMode"]').forEach(r => r.addEventListener('change', checkDirty));
+document.getElementById('fieldClockOnly').addEventListener('change', checkDirty);
 document.getElementById('optGoToTab').addEventListener('change', () => checkDirty());
 
 // ── Sync mirrored push checkboxes ──
@@ -2252,10 +2314,7 @@ function loadTime() {
   const showEndTime = document.getElementById('fieldShowEnd').checked;
   if (minutes <= 0) return;
   socket.emit('set-timer-only', { minutes, showEndTime });
-  socket.emit('update-display-modes', {
-    transparent: document.getElementById('fieldTransparent').checked,
-    clockOnly: document.getElementById('fieldClockOnly').checked,
-  });
+  socket.emit('update-display-modes', getDisplayModePayload());
 }
 
 async function pushTimeAndStart() {
@@ -2284,10 +2343,7 @@ async function pushTimeAndStart() {
   lastPushTime = Date.now();
   const showEndTime = document.getElementById('fieldShowEnd').checked;
   socket.emit('set-timer-only', { minutes, showEndTime });
-  socket.emit('update-display-modes', {
-    transparent: document.getElementById('fieldTransparent').checked,
-    clockOnly: document.getElementById('fieldClockOnly').checked,
-  });
+  socket.emit('update-display-modes', getDisplayModePayload());
   setTimeout(() => {
     socket.emit('start');
     lastPushTime = Date.now();
@@ -2412,10 +2468,7 @@ async function doStart() {
     }
   }
   // Always push display modes
-  socket.emit('update-display-modes', {
-    transparent: document.getElementById('fieldTransparent').checked,
-    clockOnly: document.getElementById('fieldClockOnly').checked,
-  });
+  socket.emit('update-display-modes', getDisplayModePayload());
   if (useTitle) socket.emit('update-label', { label: resolved.label });
   if (useMessage) socket.emit('update-message', { message: resolved.message });
   if (useEndTimeLabel) {
@@ -2476,7 +2529,7 @@ function doClearAll() {
   setField('fieldEndTimeLabel', '');
   setField('fieldMessage', '');
   document.getElementById('fieldShowEnd').checked = true;
-  document.getElementById('fieldTransparent').checked = false;
+  setBgModeFromFlags(false, false);
   document.getElementById('fieldClockOnly').checked = false;
   document.getElementById('optGoToTab').value = 'library';
   renderLibrary();
@@ -2693,10 +2746,7 @@ async function loadAndStart(id) {
   if (minutes <= 0) return;
   const showEndTime = document.getElementById('fieldShowEnd').checked;
   socket.emit('set-timer-only', { minutes, showEndTime });
-  socket.emit('update-display-modes', {
-    transparent: document.getElementById('fieldTransparent').checked,
-    clockOnly: document.getElementById('fieldClockOnly').checked,
-  });
+  socket.emit('update-display-modes', getDisplayModePayload());
 
   // Mark all fields as pushed
   markPushed('fieldCourseTitle');
@@ -2727,7 +2777,7 @@ function loadLibTimer(id) {
   setField('fieldEndTimeLabel', t.endTimeLabel || 'Class resumes at');
   setField('fieldMessage', t.message || '');
   document.getElementById('fieldShowEnd').checked = t.showEndTime !== false;
-  document.getElementById('fieldTransparent').checked = !!t.transparent;
+  setBgModeFromFlags(t.transparent, t.blackBg);
   document.getElementById('fieldClockOnly').checked = !!t.clockOnly;
 
   // Per-item options — map legacy tab names (text/timer tabs removed)
@@ -2766,8 +2816,7 @@ function isLibDirty(id) {
   const endTimeLabel = getField('fieldEndTimeLabel');
   const message = getField('fieldMessage');
   const showEnd = document.getElementById('fieldShowEnd').checked;
-  const transparent = document.getElementById('fieldTransparent').checked;
-  const clockOnly = document.getElementById('fieldClockOnly').checked;
+  const { transparent, blackBg, clockOnly } = getDisplayModePayload();
   const goToTab = document.getElementById('optGoToTab').value;
   return (name !== (t.name || '')) ||
          (norm(label) !== norm(t.label)) ||
@@ -2776,6 +2825,7 @@ function isLibDirty(id) {
          (norm(message) !== norm(t.message)) ||
          (showEnd !== (t.showEndTime !== false)) ||
          (transparent !== !!t.transparent) ||
+         (blackBg !== !!t.blackBg) ||
          (clockOnly !== !!t.clockOnly) ||
          (goToTab !== (t.goToTab || 'library'));
 }
@@ -2817,8 +2867,10 @@ async function saveOverTimer(id) {
   t.endTimeLabel = getField('fieldEndTimeLabel') || 'Class resumes at';
   t.message = getField('fieldMessage');
   t.showEndTime = document.getElementById('fieldShowEnd').checked;
-  t.transparent = document.getElementById('fieldTransparent').checked;
-  t.clockOnly = document.getElementById('fieldClockOnly').checked;
+  const modes = getDisplayModePayload();
+  t.transparent = modes.transparent;
+  t.blackBg = modes.blackBg;
+  t.clockOnly = modes.clockOnly;
   t.goToTab = document.getElementById('optGoToTab').value;
   await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(t) });
   await fetchLibrary();
@@ -2847,7 +2899,7 @@ async function duplicateTimer(id) {
   setField('fieldEndTimeLabel', newest.endTimeLabel || 'Class resumes at');
   setField('fieldMessage', newest.message || '');
   document.getElementById('fieldShowEnd').checked = newest.showEndTime !== false;
-  document.getElementById('fieldTransparent').checked = !!newest.transparent;
+  setBgModeFromFlags(newest.transparent, newest.blackBg);
   document.getElementById('fieldClockOnly').checked = !!newest.clockOnly;
   let newGoTo = newest.goToTab || 'library';
   if (newGoTo === 'identity' || newGoTo === 'setup' || newGoTo === 'text') newGoTo = 'library';
@@ -3217,9 +3269,9 @@ function updateButtonStates() {
   const resetBtn = document.querySelector('.tb-reset');
   resetBtn.classList.toggle('enabled', hasTimer && timerRemaining !== timerTotal);
 
-  // Restore: enabled when there's a last timer to restore
+  // Restore: enabled when not running and there's a last timer with time left
   const restoreBtn = document.querySelector('.tb-restore');
-  restoreBtn.classList.toggle('enabled', !!lastTimerData);
+  restoreBtn.classList.toggle('enabled', !running && !!lastTimerData && (lastTimerData.remainingSeconds > 0));
 
   // Clear-all: enabled when any field has content
   const clearBtn = document.querySelector('.tb-clear');
@@ -3357,6 +3409,22 @@ function updateStudentBadge() {
 
 function resetStudentStates() {
   socket.emit('reset-student-states');
+}
+
+// ── OBS URL copy ──
+function copyOBSUrl(extraParams) {
+  const base = window.location.origin + '/?obs=true';
+  const url = base + extraParams;
+  navigator.clipboard.writeText(url).then(() => {
+    // Find the button that was clicked (by matching the onclick param)
+    const btns = document.querySelectorAll('.obs-copy-btn');
+    btns.forEach(btn => {
+      if (btn.getAttribute('onclick') === `copyOBSUrl('${extraParams}')`) {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      }
+    });
+  });
 }
 
 // ── Check-in toggle ──

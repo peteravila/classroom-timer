@@ -207,6 +207,7 @@ let timerState = {
   endTimeFormatted: '',
   endTimeLabel: 'Class resumes at',
   transparent: false,  // transparent background (for OBS/display)
+  blackBg: false,      // solid black background (for OBS/display)
   clockOnly: false,    // show only countdown digits (for OBS/display)
 };
 
@@ -480,7 +481,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('set-timer', ({ minutes, label, message, showEndTime, transparent, clockOnly }) => {
+  socket.on('set-timer', ({ minutes, label, message, showEndTime, transparent, blackBg, clockOnly }) => {
     const secs = Math.max(0, Math.round(minutes * 60));
     timerState.totalSeconds = secs;
     timerState.originalTotal = secs;
@@ -489,6 +490,7 @@ io.on('connection', (socket) => {
     timerState.message = message || '';
     timerState.showEndTime = showEndTime !== false;
     timerState.transparent = !!transparent;
+    timerState.blackBg = !!blackBg;
     timerState.clockOnly = !!clockOnly;
     timerState.running = false;
     timerState.endTime = null;
@@ -519,6 +521,7 @@ io.on('connection', (socket) => {
         label: timerState.label,
         message: timerState.message,
         originalTotal: timerState.originalTotal,
+        remainingSeconds: timerState.remainingSeconds,
         showEndTime: timerState.showEndTime,
         endTimeLabel: timerState.endTimeLabel,
         endTime: Date.now() + timerState.remainingSeconds * 1000,
@@ -535,6 +538,10 @@ io.on('connection', (socket) => {
       timerState.endTime = null;
       timerState.endTimeFormatted = '';
       stopTick();
+      // Update lastTimer with current remaining so restore resumes from here
+      if (lastTimer) {
+        lastTimer.remainingSeconds = timerState.remainingSeconds;
+      }
       broadcast();
     }
   });
@@ -565,6 +572,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('stop', () => {
+    // Save remaining time before clearing so restore can resume
+    if (lastTimer && timerState.remainingSeconds > 0) {
+      lastTimer.remainingSeconds = timerState.remainingSeconds;
+    }
     timerState.totalSeconds = 0;
     timerState.originalTotal = 0;
     timerState.remainingSeconds = 0;
@@ -599,8 +610,9 @@ io.on('connection', (socket) => {
     broadcast();
   });
 
-  socket.on('update-display-modes', ({ transparent, clockOnly }) => {
+  socket.on('update-display-modes', ({ transparent, blackBg, clockOnly }) => {
     timerState.transparent = !!transparent;
+    timerState.blackBg = !!blackBg;
     timerState.clockOnly = !!clockOnly;
     broadcast();
   });
@@ -610,16 +622,17 @@ io.on('connection', (socket) => {
     broadcast();
   });
 
-  // Restore last running timer — recalculate remaining from original end time
+  // Restore last timer — resume from where it was paused/stopped
   socket.on('restore-last-timer', () => {
-    if (!lastTimer) return;
+    if (!lastTimer || lastTimer.remainingSeconds <= 0) return;
+    const remaining = lastTimer.remainingSeconds;
     const now = Date.now();
-    const newEndTime = now + lastTimer.originalTotal * 1000;
+    const newEndTime = now + remaining * 1000;
     timerState.label = lastTimer.label;
     timerState.message = lastTimer.message;
     timerState.originalTotal = lastTimer.originalTotal;
     timerState.totalSeconds = lastTimer.originalTotal;
-    timerState.remainingSeconds = lastTimer.originalTotal;
+    timerState.remainingSeconds = remaining;
     timerState.showEndTime = lastTimer.showEndTime;
     timerState.endTimeLabel = lastTimer.endTimeLabel;
     timerState.running = true;

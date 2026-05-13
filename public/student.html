@@ -26,8 +26,9 @@
   body.paused { color: #444; }
   body.state-done    { background: #4a0e0e; color: #e0e0e0; }
 
-  /* Transparent mode — for OBS/display only */
+  /* Background modes — applies to all student views */
   body.mode-transparent { background: transparent !important; }
+  body.mode-black-bg { background: #000 !important; }
 
   /* Clock-only mode — hide everything except digits */
   body.mode-clock-only .course-title,
@@ -358,6 +359,7 @@ const isPreview = params.has('preview');
 const isOBS = params.has('obs');
 const urlCode = params.get('code');
 const urlTransparent = params.get('transparent') === 'true';
+const urlBlack = params.get('black') === 'true';
 const urlClockOnly = params.get('clockonly') === 'true';
 
 const isLargeScreen = window.innerWidth >= 800;
@@ -736,13 +738,14 @@ socket.on('timer-update', (s) => {
   const { cls, paused } = stateClass(s.remainingSeconds, refTotal, s.running);
   document.body.className = cls;
   document.body.classList.toggle('paused', paused);
-  // Display modes — only apply to display/OBS/preview, not phone students
-  // OBS uses only its URL parameters; everyone else uses server flags
+  // Display modes — OBS uses URL parameters; all other viewers use server flags
   if (isOBS) {
     document.body.classList.toggle('mode-transparent', urlTransparent);
+    document.body.classList.toggle('mode-black-bg', urlBlack);
     document.body.classList.toggle('mode-clock-only', urlClockOnly);
   } else {
     document.body.classList.toggle('mode-transparent', !!s.transparent);
+    document.body.classList.toggle('mode-black-bg', !!s.blackBg);
     document.body.classList.toggle('mode-clock-only', !!s.clockOnly);
   }
   ring.style.stroke = paused ? '#444' : strokeColor(cls);
