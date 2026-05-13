@@ -834,6 +834,21 @@
   .seq-progress-badge.visible { display: flex; }
   .seq-progress-badge .seq-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
   .seq-progress-badge .seq-step-count { color: var(--dim); font-size: 0.7rem; }
+  .seq-progress-badge .seq-waiting {
+    color: var(--yellow, #f1c40f); font-size: 0.7rem; font-style: italic;
+    animation: seq-waiting-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes seq-waiting-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  @keyframes play-btn-glow {
+    0%, 100% { box-shadow: 0 0 4px rgba(46,204,113,0.3); }
+    50% { box-shadow: 0 0 12px rgba(46,204,113,0.7), 0 0 20px rgba(46,204,113,0.3); }
+  }
+  .tb-start.seq-waiting-start {
+    animation: play-btn-glow 1.5s ease-in-out infinite;
+  }
   .seq-progress-badge .seq-btns { display: flex; gap: 6px; margin-top: 2px; }
   .seq-skip-btn {
     padding: 3px 12px; border: 1px solid rgba(52,152,219,0.4); border-radius: 4px;
@@ -1023,6 +1038,7 @@
         <div class="seq-progress-badge" id="seqProgressBadge">
           <span class="seq-name" id="seqProgressName"></span>
           <span class="seq-step-count" id="seqProgressCount"></span>
+          <span class="seq-waiting" id="seqWaitingMsg" style="display:none;">&#9208;&#xFE0E; Waiting to start...</span>
           <span class="seq-btns">
             <button class="seq-skip-btn" onclick="skipSequenceStep()" title="Skip to next timer">Skip &#9654;</button>
             <button class="seq-stop-btn" onclick="stopSequence()" title="End sequence">End</button>
@@ -2188,15 +2204,21 @@ socket.on('timer-update', (s) => {
   // Warning check
   if (s.running && s.remainingSeconds > 0) checkWarning(s.remainingSeconds);
 
-  // Sync course title from server (in case another tab set it)
-  const ctField = document.getElementById('fieldCourseTitle');
+  // Sync fields from server (sequence step changes, other-tab edits, etc.)
   if (Date.now() - ctPushTime < 2000 || Date.now() - lastPushTime < 2000) {
     // Skip sync — push is still round-tripping
-  } else if (!ctField.matches(':focus') && !ctField.classList.contains('field-dirty')) {
-    const ctDisplay = (s.courseTitle || '');
-    if (ctDisplay !== ctField.textContent) {
-      ctField.textContent = ctDisplay;
-    }
+  } else {
+    const syncField = (id, val) => {
+      const el = document.getElementById(id);
+      const v = val || '';
+      if (!el.matches(':focus') && !el.classList.contains('field-dirty') && v !== el.textContent) {
+        el.textContent = v;
+      }
+    };
+    syncField('fieldCourseTitle', s.courseTitle);
+    syncField('fieldLabel', s.label);
+    syncField('fieldEndTimeLabel', s.endTimeLabel);
+    syncField('fieldMessage', s.message);
   }
 
   // Sync live state for dirty-field detection
@@ -2213,6 +2235,7 @@ socket.on('timer-update', (s) => {
   }
 
   updateButtonStates();
+  if (activeSeqState) updateSeqWaiting();
 });
 
 socket.on('last-timer', (data) => {
@@ -3819,17 +3842,34 @@ function stopSequence() {
 }
 
 // Listen for sequence state updates from server
+let activeSeqState = null;
 socket.on('sequence-state', (state) => {
+  activeSeqState = state;
   const badge = document.getElementById('seqProgressBadge');
   if (!state) {
     badge.classList.remove('visible');
+    document.getElementById('seqWaitingMsg').style.display = 'none';
+    document.querySelector('.tb-start').classList.remove('seq-waiting-start');
     return;
   }
   badge.classList.add('visible');
   document.getElementById('seqProgressName').textContent = state.name;
   document.getElementById('seqProgressCount').textContent =
     `${state.currentIndex + 1} of ${state.totalSteps}`;
+  updateSeqWaiting();
 });
+
+function updateSeqWaiting() {
+  const waitEl = document.getElementById('seqWaitingMsg');
+  const playBtn = document.querySelector('.tb-start');
+  if (activeSeqState && !timerIsRunning && timerRemaining > 0) {
+    waitEl.style.display = '';
+    playBtn.classList.add('seq-waiting-start');
+  } else {
+    waitEl.style.display = 'none';
+    playBtn.classList.remove('seq-waiting-start');
+  }
+}
 
 // Load sequences on page init
 loadSequences();

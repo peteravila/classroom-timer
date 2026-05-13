@@ -240,7 +240,7 @@ function broadcastSequenceState() {
     name: activeSequence.name,
     currentIndex: activeSequence.currentIndex,
     totalSteps: activeSequence.steps.length,
-    autoAdvance: activeSequence.autoAdvance,
+    currentLabel: activeSequence.steps[activeSequence.currentIndex].label,
     nextLabel: activeSequence.currentIndex < activeSequence.steps.length - 1
       ? activeSequence.steps[activeSequence.currentIndex + 1].label
       : null,
