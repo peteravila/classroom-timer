@@ -496,6 +496,92 @@ app.get('/qr', async (req, res) => {
   }
 });
 
+// QR-only page — standalone OBS browser source for QR code display
+app.get('/qr-only', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LiveTimer QR Code</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 20px;
+  }
+  .qr-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .scan-label {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 10px;
+    max-width: 220px;
+    line-height: 1.3;
+    text-align: center;
+  }
+  .qr-image img {
+    border-radius: 8px;
+    background: #fff;
+    padding: 4px;
+  }
+  .hint {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.4);
+    margin-top: 40px;
+    max-width: 220px;
+    line-height: 1.4;
+    text-align: center;
+  }
+  .hint b { color: rgba(255,255,255,0.55); }
+  .class-code {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: 4px;
+    color: rgba(255,255,255,0.7);
+    font-family: monospace;
+    margin-top: 40px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="qr-container">
+  <div class="scan-label">Scan to view this timer on your phone</div>
+  <div class="qr-image" id="qrImg"></div>
+  <div class="hint" id="qrHint"></div>
+  <div class="class-code" id="classCode"></div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  function loadQR() {
+    fetch('/qr').then(r => r.json()).then(data => {
+      document.getElementById('qrImg').innerHTML = '<img src="' + data.qr + '" alt="QR code" width="150">';
+      document.getElementById('classCode').textContent = data.code;
+      const baseUrl = data.url.replace(/\\?.*$/, '');
+      document.getElementById('qrHint').innerHTML = "Can't scan? Go to<br><b>" + baseUrl + "</b>";
+    }).catch(() => {});
+  }
+  loadQR();
+
+  // Auto-update when class code changes
+  const socket = io();
+  socket.on('connect', () => { socket.emit('identify', 'preview'); });
+  socket.on('class-code', () => { loadQR(); });
+</script>
+</body>
+</html>`);
+});
+
 // ── Socket.io ────────────────────────────────────────────────
 let connectedStudents = 0;
 
