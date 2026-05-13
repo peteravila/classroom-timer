@@ -124,6 +124,17 @@
   }
   body.state-done .done-banner { display: block; }
 
+  /* Sequence "Up next" interstitial overlay */
+  .seq-next-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+    z-index: 1000; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px;
+  }
+  .seq-next-overlay.visible { display: flex; }
+  .seq-next-label { font-size: 0.9rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 2px; }
+  .seq-next-name { font-size: 2rem; font-weight: 700; color: #fff; text-align: center; }
+
   /* QR code — large screens only (Zoom share), hidden on phones */
   .qr-corner {
     display: none;
@@ -329,6 +340,10 @@
   <div class="end-time" id="endTime"></div>
   <div class="message" id="message"></div>
   <div class="done-banner" id="doneBanner">Time's Up!</div>
+  <div class="seq-next-overlay" id="seqNextOverlay">
+    <div class="seq-next-label">Up Next</div>
+    <div class="seq-next-name" id="seqNextName"></div>
+  </div>
   <div class="status-badge" id="statusBadge">No timer set</div>
 </div>
 
@@ -538,15 +553,9 @@ function submitCode() {
     });
     return;
   }
-  errEl.textContent = 'Validating...';
+  errEl.textContent = '';
   manualSubmit = true;
   socket.emit('validate-code', code);
-  // If no response within 3 seconds, show a diagnostic message
-  setTimeout(() => {
-    if (errEl.textContent === 'Validating...') {
-      errEl.textContent = 'No response from server. Connected: ' + socket.connected + ', ID: ' + socket.id;
-    }
-  }, 3000);
 }
 
 // Allow Enter key to submit code
@@ -695,6 +704,10 @@ function autoSizeAllFields() {
 window.addEventListener('resize', autoSizeAllFields);
 
 socket.on('timer-update', (s) => {
+  // Hide sequence interstitial if showing
+  const seqOverlay = document.getElementById('seqNextOverlay');
+  if (seqOverlay.classList.contains('visible') && s.running) seqOverlay.classList.remove('visible');
+
   const digitsEl = document.getElementById('digits');
   digitsEl.textContent = fmt(s.remainingSeconds);
   const hasHours = Math.abs(s.remainingSeconds) >= 3600;
@@ -761,6 +774,15 @@ socket.on('timer-update', (s) => {
 socket.on('timer-done', () => {
   // Vibrate on phones if supported
   if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+});
+
+// Sequence "Up next" interstitial
+socket.on('sequence-next-preview', (preview) => {
+  const overlay = document.getElementById('seqNextOverlay');
+  document.getElementById('seqNextName').textContent = preview.label || 'Next Timer';
+  overlay.classList.add('visible');
+  // Auto-hide after 3 seconds (server will send the new timer)
+  setTimeout(() => overlay.classList.remove('visible'), 3000);
 });
 
 // Load QR code immediately (skip in preview mode)

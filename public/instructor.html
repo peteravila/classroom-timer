@@ -723,6 +723,117 @@
   .lib-toolbar-btn:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
   .lib-toolbar-btn.btn-danger:hover { background: rgba(231,76,60,0.08); color: var(--red); border-color: var(--red); }
 
+  /* Library view toggle (Timers / Sequences) */
+  .lib-view-toggle {
+    display: flex; gap: 0; margin-bottom: 12px; border: 1px solid #444; border-radius: 6px; overflow: hidden;
+  }
+  .lib-view-btn {
+    flex: 1; padding: 6px 0; border: none; background: transparent; color: var(--dim);
+    font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    font-family: inherit;
+  }
+  .lib-view-btn.active { background: var(--accent); color: var(--text); }
+  .lib-view-btn:hover:not(.active) { background: rgba(255,255,255,0.04); }
+
+  /* Sequence list */
+  .seq-list { display: flex; flex-direction: column; gap: 6px; }
+  .seq-card {
+    padding: 10px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+    background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.15s;
+  }
+  .seq-card:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.15); }
+  .seq-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .seq-card-name { font-weight: 600; font-size: 0.85rem; }
+  .seq-card-meta { font-size: 0.7rem; color: var(--dim); }
+  .seq-card-steps { font-size: 0.72rem; color: #888; }
+  .seq-card-actions { display: flex; gap: 4px; }
+  .seq-card-btn {
+    padding: 3px 8px; border: 1px solid #444; border-radius: 4px;
+    background: transparent; color: var(--dim); font-size: 0.7rem;
+    cursor: pointer; transition: all 0.15s; font-family: inherit;
+  }
+  .seq-card-btn:hover { color: var(--green); border-color: var(--green); }
+  .seq-card-btn.btn-del:hover { color: var(--red); border-color: var(--red); }
+
+  /* Sequence builder (edit/create form) */
+  .seq-builder { display: none; }
+  .seq-builder.visible { display: block; }
+  .seq-builder-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .seq-builder-name {
+    flex: 1; padding: 6px 10px; border: 1px solid #444; border-radius: 6px;
+    background: var(--bg); color: var(--text); font-size: 0.85rem; font-family: inherit;
+  }
+  .seq-builder-name:focus { outline: none; border-color: var(--blue); }
+  .seq-step-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; min-height: 40px; }
+  .seq-step {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
+    background: rgba(255,255,255,0.02); cursor: grab;
+  }
+  .seq-step.dragging { opacity: 0.4; }
+  .seq-step.drag-over { border-top: 2px solid var(--green); }
+  .seq-step-num { font-size: 0.7rem; color: var(--dim); min-width: 18px; text-align: center; }
+  .seq-step-name { flex: 1; font-size: 0.8rem; font-weight: 500; }
+  .seq-step-mins { font-size: 0.75rem; color: var(--blue); }
+  .seq-step-remove {
+    width: 18px; height: 18px; border: 1px solid #444; border-radius: 3px;
+    background: transparent; color: #555; font-size: 0.65rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .seq-step-remove:hover { color: var(--red); border-color: var(--red); }
+  .seq-add-timer {
+    width: 100%; padding: 6px; border: 1px dashed #444; border-radius: 6px;
+    background: transparent; color: var(--dim); font-size: 0.78rem;
+    cursor: pointer; margin-bottom: 10px; font-family: inherit;
+  }
+  .seq-add-timer:hover { border-color: var(--green); color: var(--green); }
+  .seq-timer-picker {
+    display: none; max-height: 200px; overflow-y: auto;
+    border: 1px solid #444; border-radius: 6px; margin-bottom: 10px;
+    background: var(--card);
+  }
+  .seq-timer-picker.visible { display: block; }
+  .seq-timer-pick-item {
+    padding: 6px 10px; cursor: pointer; font-size: 0.78rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.1s;
+  }
+  .seq-timer-pick-item:last-child { border-bottom: none; }
+  .seq-timer-pick-item:hover { background: rgba(78,204,163,0.08); }
+  .seq-builder-footer { display: flex; gap: 8px; align-items: center; }
+  .seq-builder-footer button {
+    padding: 6px 14px; border: 1px solid #444; border-radius: 6px;
+    background: transparent; color: var(--dim); font-size: 0.8rem;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .seq-builder-footer button.btn-save { border-color: var(--green); color: var(--green); }
+  .seq-builder-footer button.btn-save:hover { background: rgba(78,204,163,0.1); }
+  .seq-builder-footer button:hover { background: rgba(255,255,255,0.04); }
+  .seq-auto-advance { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .seq-auto-advance label { font-size: 0.8rem; color: #aaa; }
+
+  /* Sequence progress badge (shown during playback) */
+  .seq-progress-badge {
+    display: none; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 6px;
+    background: rgba(52,152,219,0.12); border: 1px solid rgba(52,152,219,0.3);
+    font-size: 0.75rem; color: var(--blue); margin-top: 4px;
+  }
+  .seq-progress-badge.visible { display: flex; }
+  .seq-progress-badge .seq-name { font-weight: 600; }
+  .seq-progress-badge .seq-step-count { color: var(--dim); }
+  .seq-skip-btn {
+    padding: 2px 8px; border: 1px solid rgba(52,152,219,0.4); border-radius: 4px;
+    background: transparent; color: var(--blue); font-size: 0.7rem;
+    cursor: pointer; margin-left: auto; font-family: inherit;
+  }
+  .seq-skip-btn:hover { background: rgba(52,152,219,0.12); }
+  .seq-stop-btn {
+    padding: 2px 8px; border: 1px solid rgba(231,76,60,0.4); border-radius: 4px;
+    background: transparent; color: var(--red); font-size: 0.7rem;
+    cursor: pointer; font-family: inherit;
+  }
+  .seq-stop-btn:hover { background: rgba(231,76,60,0.1); }
+
   /* Students tab — status board */
   .students-summary {
     display: flex; gap: 16px; align-items: center; margin-bottom: 16px;
@@ -834,7 +945,7 @@
   .mock-checkin-btn-working { background: rgba(52,152,219,0.15); color: var(--blue); border-color: var(--blue); }
   .mock-checkin-btn-done { background: rgba(78,204,163,0.15); color: var(--green); border-color: var(--green); }
   .mock-checkin-btn-away { background: rgba(230,126,34,0.15); color: #e67e22; border-color: #e67e22; }
-  .mock-checkin-btn-clear { background: rgba(255,255,255,0.05); color: #666; border-color: #555; }
+  .mock-checkin-btn-clear { background: rgba(255,255,255,0.05); color: #aaa; border-color: #888; }
 
   /* Tab badge */
   .tab-badge {
@@ -894,6 +1005,12 @@
           <button class="transport-btn tb-reset" onclick="doReset()" title="Reset">&#8634;</button>
           <button class="transport-btn tb-restore" onclick="doRestore()" title="Restore last timer" style="position:relative;">&#8634;<svg style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);margin-top:1px;" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="5" y1="1.5" x2="5" y2="5"/><line x1="5" y1="5" x2="7" y2="6.5"/></svg></button>
           <button class="transport-btn tb-clear" onclick="doClearAll()" title="Clear all fields"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 8-8 3 3-8 8-5 5z"/><line x1="8" y1="12" x2="11" y2="15"/><line x1="3" y1="20" x2="21" y2="20"/></svg></button>
+        </div>
+        <div class="seq-progress-badge" id="seqProgressBadge">
+          <span class="seq-name" id="seqProgressName"></span>
+          <span class="seq-step-count" id="seqProgressCount"></span>
+          <button class="seq-skip-btn" onclick="skipSequenceStep()" title="Skip to next timer">Skip &#9654;</button>
+          <button class="seq-stop-btn" onclick="stopSequence()" title="End sequence">End</button>
         </div>
         <hr style="border:none; border-top:1px solid #888; margin:8px 0;">
         <div class="connected-badge">
@@ -1004,16 +1121,49 @@
 
     <!-- Tab: Library -->
     <div class="tab-content active" id="tab-library">
-      <div class="lib-toolbar">
-        <div class="lib-search-wrap"><svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="21" y1="21" x2="16" y2="16"/></svg><input type="text" class="lib-search" id="libSearch" placeholder="Search timers..." oninput="filterLibrary()" style="padding-left:25px;"></div>
-        <select class="lib-orders-select" id="savedOrderSelect" onchange="applySavedOrder()">
-          <option value="">Saved Orders</option>
-        </select>
-        <button class="lib-toolbar-btn" onclick="saveCurrentOrder()" title="Save current order">Save</button>
-        <button class="lib-toolbar-btn btn-danger" id="btnDeleteOrder" onclick="deleteCurrentOrder()" title="Delete selected order" style="display:none;">✕</button>
+      <div class="lib-view-toggle">
+        <button class="lib-view-btn active" id="viewTimersBtn" onclick="switchLibView('timers')">Timers</button>
+        <button class="lib-view-btn" id="viewSequencesBtn" onclick="switchLibView('sequences')">Sequences</button>
       </div>
-      <div id="libraryList" style="max-height:460px; overflow-y:auto;"></div>
-      <button class="btn-new-timer" onclick="newTimerToFields()">+ New Timer</button>
+
+      <!-- Timers view -->
+      <div id="timersView">
+        <div class="lib-toolbar">
+          <div class="lib-search-wrap"><svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="21" y1="21" x2="16" y2="16"/></svg><input type="text" class="lib-search" id="libSearch" placeholder="Search timers..." oninput="filterLibrary()" style="padding-left:25px;"></div>
+          <select class="lib-orders-select" id="savedOrderSelect" onchange="applySavedOrder()">
+            <option value="">Saved Orders</option>
+          </select>
+          <button class="lib-toolbar-btn" onclick="saveCurrentOrder()" title="Save current order">Save</button>
+          <button class="lib-toolbar-btn btn-danger" id="btnDeleteOrder" onclick="deleteCurrentOrder()" title="Delete selected order" style="display:none;">✕</button>
+        </div>
+        <div id="libraryList" style="max-height:460px; overflow-y:auto;"></div>
+        <button class="btn-new-timer" onclick="newTimerToFields()">+ New Timer</button>
+      </div>
+
+      <!-- Sequences view -->
+      <div id="sequencesView" style="display:none;">
+        <div id="seqListView">
+          <div class="seq-list" id="sequenceList"></div>
+          <button class="btn-new-timer" onclick="newSequence()" style="margin-top:8px;">+ New Sequence</button>
+        </div>
+
+        <div class="seq-builder" id="seqBuilder">
+          <div class="seq-builder-header">
+            <input type="text" class="seq-builder-name" id="seqName" placeholder="Sequence name...">
+          </div>
+          <div class="seq-auto-advance">
+            <input type="checkbox" id="seqAutoAdvance" class="custom-cb" checked>
+            <label for="seqAutoAdvance">Auto-advance to next timer</label>
+          </div>
+          <div class="seq-step-list" id="seqStepList"></div>
+          <button class="seq-add-timer" onclick="showSeqTimerPicker()">+ Add Timer</button>
+          <div class="seq-timer-picker" id="seqTimerPicker"></div>
+          <div class="seq-builder-footer">
+            <button class="btn-save" onclick="saveSequence()">Save</button>
+            <button onclick="cancelSequenceEdit()">Cancel</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Tab: Options (per-timer, saved with library items) -->
@@ -3408,6 +3558,248 @@ function updateStudentBadge() {
 function resetStudentStates() {
   socket.emit('reset-student-states');
 }
+
+// ── Library view toggle ──
+function switchLibView(view) {
+  const timersBtn = document.getElementById('viewTimersBtn');
+  const seqBtn = document.getElementById('viewSequencesBtn');
+  const timersView = document.getElementById('timersView');
+  const seqView = document.getElementById('sequencesView');
+  if (view === 'sequences') {
+    timersBtn.classList.remove('active');
+    seqBtn.classList.add('active');
+    timersView.style.display = 'none';
+    seqView.style.display = 'block';
+    renderSequenceList();
+  } else {
+    seqBtn.classList.remove('active');
+    timersBtn.classList.add('active');
+    seqView.style.display = 'none';
+    timersView.style.display = 'block';
+  }
+}
+
+// ── Sequences ──
+let sequenceData = []; // loaded from server
+let editingSequenceId = null; // null = new, string = editing existing
+let seqBuilderSteps = []; // current builder step list [{timerId, name, minutes}]
+
+async function loadSequences() {
+  try {
+    const res = await fetch('/api/sequences');
+    sequenceData = await res.json();
+  } catch (e) {
+    console.error('Failed to load sequences:', e);
+    sequenceData = [];
+  }
+}
+
+function renderSequenceList() {
+  const el = document.getElementById('sequenceList');
+  if (sequenceData.length === 0) {
+    el.innerHTML = '<div style="text-align:center; color:var(--dim); font-size:0.8rem; padding:20px;">No sequences yet. Create one to chain timers together.</div>';
+    return;
+  }
+  el.innerHTML = sequenceData.map(seq => {
+    const stepCount = (seq.steps || []).length;
+    const totalMins = (seq.steps || []).reduce((sum, step) => {
+      const lib = library.find(t => t.id === step.timerId);
+      return sum + (lib ? lib.minutes : 0);
+    }, 0);
+    const stepNames = (seq.steps || []).map(step => {
+      const lib = library.find(t => t.id === step.timerId);
+      return lib ? lib.name : '?';
+    }).join(' → ');
+    return `<div class="seq-card" onclick="startSequence('${seq.id}')">
+      <div class="seq-card-header">
+        <span class="seq-card-name">${esc(seq.name || 'Untitled')}</span>
+        <div class="seq-card-actions">
+          <button class="seq-card-btn" onclick="event.stopPropagation(); editSequence('${seq.id}')" title="Edit">Edit</button>
+          <button class="seq-card-btn btn-del" onclick="event.stopPropagation(); deleteSequence('${seq.id}')" title="Delete">✕</button>
+        </div>
+      </div>
+      <div class="seq-card-steps">${esc(stepNames)}</div>
+      <div class="seq-card-meta">${stepCount} timer${stepCount !== 1 ? 's' : ''} · ${Math.round(totalMins)} min total · ${seq.autoAdvance !== false ? 'Auto-advance' : 'Manual'}</div>
+    </div>`;
+  }).join('');
+}
+
+function newSequence() {
+  editingSequenceId = null;
+  seqBuilderSteps = [];
+  document.getElementById('seqName').value = '';
+  document.getElementById('seqAutoAdvance').checked = true;
+  showSeqBuilder();
+}
+
+function editSequence(id) {
+  const seq = sequenceData.find(s => s.id === id);
+  if (!seq) return;
+  editingSequenceId = id;
+  document.getElementById('seqName').value = seq.name || '';
+  document.getElementById('seqAutoAdvance').checked = seq.autoAdvance !== false;
+  seqBuilderSteps = (seq.steps || []).map(step => {
+    const lib = library.find(t => t.id === step.timerId);
+    return {
+      timerId: step.timerId,
+      name: lib ? lib.name : '(deleted)',
+      minutes: lib ? lib.minutes : 0,
+    };
+  });
+  showSeqBuilder();
+}
+
+function showSeqBuilder() {
+  document.getElementById('seqListView').style.display = 'none';
+  document.getElementById('seqBuilder').classList.add('visible');
+  renderSeqSteps();
+}
+
+function cancelSequenceEdit() {
+  document.getElementById('seqBuilder').classList.remove('visible');
+  document.getElementById('seqListView').style.display = 'block';
+  document.getElementById('seqTimerPicker').classList.remove('visible');
+}
+
+function renderSeqSteps() {
+  const el = document.getElementById('seqStepList');
+  if (seqBuilderSteps.length === 0) {
+    el.innerHTML = '<div style="text-align:center; color:var(--dim); font-size:0.75rem; padding:12px;">Add timers from your library to build a sequence.</div>';
+    return;
+  }
+  el.innerHTML = seqBuilderSteps.map((step, i) => `
+    <div class="seq-step" draggable="true" data-seq-idx="${i}"
+         ondragstart="seqDragStart(event)" ondragover="seqDragOver(event)"
+         ondrop="seqDrop(event)" ondragend="seqDragEnd(event)">
+      <span class="seq-step-num">${i + 1}</span>
+      <span class="seq-step-name">${esc(step.name)}</span>
+      <span class="seq-step-mins">${step.minutes}m</span>
+      <button class="seq-step-remove" onclick="removeSeqStep(${i})" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeSeqStep(idx) {
+  seqBuilderSteps.splice(idx, 1);
+  renderSeqSteps();
+}
+
+// Drag & drop for sequence steps
+let seqDragIdx = null;
+function seqDragStart(e) {
+  seqDragIdx = +e.currentTarget.dataset.seqIdx;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function seqDragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+function seqDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const targetIdx = +e.currentTarget.dataset.seqIdx;
+  if (seqDragIdx === null || seqDragIdx === targetIdx) return;
+  const [moved] = seqBuilderSteps.splice(seqDragIdx, 1);
+  seqBuilderSteps.splice(targetIdx, 0, moved);
+  renderSeqSteps();
+}
+function seqDragEnd(e) {
+  seqDragIdx = null;
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.seq-step.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+function showSeqTimerPicker() {
+  const picker = document.getElementById('seqTimerPicker');
+  if (picker.classList.contains('visible')) {
+    picker.classList.remove('visible');
+    return;
+  }
+  picker.innerHTML = library.map(t => `
+    <div class="seq-timer-pick-item" onclick="addSeqTimer('${t.id}')">
+      <strong>${esc(t.name)}</strong> <span style="color:var(--blue); margin-left:6px;">${t.minutes}m</span>
+      <span style="color:var(--dim); margin-left:6px;">${esc(t.label || '')}</span>
+    </div>
+  `).join('');
+  picker.classList.add('visible');
+}
+
+function addSeqTimer(timerId) {
+  const lib = library.find(t => t.id === timerId);
+  if (!lib) return;
+  seqBuilderSteps.push({ timerId: lib.id, name: lib.name, minutes: lib.minutes });
+  renderSeqSteps();
+  // Keep picker open for adding multiple
+}
+
+async function saveSequence() {
+  const name = document.getElementById('seqName').value.trim();
+  if (!name) {
+    document.getElementById('seqName').style.borderColor = 'var(--red)';
+    setTimeout(() => document.getElementById('seqName').style.borderColor = '', 1500);
+    return;
+  }
+  if (seqBuilderSteps.length === 0) return;
+  const seq = {
+    name,
+    autoAdvance: document.getElementById('seqAutoAdvance').checked,
+    steps: seqBuilderSteps.map(s => ({ timerId: s.timerId })),
+  };
+  if (editingSequenceId) seq.id = editingSequenceId;
+  try {
+    const res = await fetch('/api/sequences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(seq),
+    });
+    sequenceData = await res.json();
+  } catch (e) {
+    console.error('Failed to save sequence:', e);
+  }
+  cancelSequenceEdit();
+  renderSequenceList();
+}
+
+async function deleteSequence(id) {
+  const ok = await customConfirm('Delete this sequence?');
+  if (!ok) return;
+  try {
+    const res = await fetch('/api/sequences/' + id, { method: 'DELETE' });
+    sequenceData = await res.json();
+  } catch (e) {
+    console.error('Failed to delete sequence:', e);
+  }
+  renderSequenceList();
+}
+
+function startSequence(id) {
+  socket.emit('start-sequence', { sequenceId: id });
+}
+
+function skipSequenceStep() {
+  socket.emit('skip-sequence-step');
+}
+
+function stopSequence() {
+  socket.emit('stop-sequence');
+}
+
+// Listen for sequence state updates from server
+socket.on('sequence-state', (state) => {
+  const badge = document.getElementById('seqProgressBadge');
+  if (!state) {
+    badge.classList.remove('visible');
+    return;
+  }
+  badge.classList.add('visible');
+  document.getElementById('seqProgressName').textContent = state.name;
+  document.getElementById('seqProgressCount').textContent =
+    `${state.currentIndex + 1} of ${state.totalSteps}`;
+});
+
+// Load sequences on page init
+loadSequences();
 
 // ── OBS URL copy ──
 function copyOBSUrl(extraParams) {

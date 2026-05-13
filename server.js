@@ -193,6 +193,133 @@ function resetAllStudentStates() {
   broadcastStudentList();
 }
 
+// ── Sequences (saved timer chains) ──────────────────────────
+let sequences = [];
+
+async function loadSequences() {
+  if (db) {
+    try {
+      const doc = await db.collection('settings').findOne({ _id: 'sequences' });
+      if (doc && doc.sequences) return doc.sequences;
+    } catch (e) {
+      console.error('  MongoDB loadSequences failed:', e.message);
+    }
+  }
+  return [];
+}
+
+async function saveSequences(seqs) {
+  if (db) {
+    try {
+      await db.collection('settings').updateOne(
+        { _id: 'sequences' },
+        { $set: { sequences: seqs, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    } catch (e) {
+      console.error('  MongoDB saveSequences failed:', e.message);
+    }
+  }
+}
+
+// Active sequence playback state (in memory)
+let activeSequence = null;  // { id, name, autoAdvance, steps: [...resolved timer data], currentIndex }
+let sequenceAdvanceTimeout = null;  // setTimeout handle for auto-advance delay
+
+function clearSequenceState() {
+  activeSequence = null;
+  if (sequenceAdvanceTimeout) {
+    clearTimeout(sequenceAdvanceTimeout);
+    sequenceAdvanceTimeout = null;
+  }
+}
+
+function broadcastSequenceState() {
+  const seqState = activeSequence ? {
+    id: activeSequence.id,
+    name: activeSequence.name,
+    currentIndex: activeSequence.currentIndex,
+    totalSteps: activeSequence.steps.length,
+    autoAdvance: activeSequence.autoAdvance,
+    nextLabel: activeSequence.currentIndex < activeSequence.steps.length - 1
+      ? activeSequence.steps[activeSequence.currentIndex + 1].label
+      : null,
+  } : null;
+  io.to('instructor').emit('sequence-state', seqState);
+}
+
+function loadSequenceStep(index) {
+  if (!activeSequence || index >= activeSequence.steps.length) {
+    // Sequence finished
+    clearSequenceState();
+    broadcastSequenceState();
+    return false;
+  }
+  activeSequence.currentIndex = index;
+  const step = activeSequence.steps[index];
+  timerState.totalSeconds = step.totalSeconds;
+  timerState.originalTotal = step.totalSeconds;
+  timerState.remainingSeconds = step.totalSeconds;
+  timerState.label = step.label || '';
+  timerState.message = step.message || '';
+  timerState.showEndTime = step.showEndTime !== false;
+  timerState.endTimeLabel = 'Class resumes at';
+  timerState.running = false;
+  timerState.endTime = null;
+  timerState.endTimeFormatted = '';
+  stopTick();
+  broadcast();
+  broadcastSequenceState();
+  return true;
+}
+
+function advanceSequence() {
+  if (!activeSequence) return;
+  const nextIndex = activeSequence.currentIndex + 1;
+  if (nextIndex >= activeSequence.steps.length) {
+    // Sequence complete
+    clearSequenceState();
+    broadcastSequenceState();
+    return;
+  }
+  if (activeSequence.autoAdvance) {
+    // Stop the old timer tick so it doesn't keep broadcasting negative values
+    stopTick();
+    timerState.running = false;
+    // Notify clients of upcoming timer
+    const nextStep = activeSequence.steps[nextIndex];
+    const preview = { label: nextStep.label, index: nextIndex, total: activeSequence.steps.length };
+    if (muted) {
+      io.to('instructor').emit('sequence-next-preview', preview);
+    } else {
+      io.emit('sequence-next-preview', preview);
+    }
+    // Auto-start after 3-second interstitial
+    sequenceAdvanceTimeout = setTimeout(() => {
+      sequenceAdvanceTimeout = null;
+      if (loadSequenceStep(nextIndex)) {
+        // Auto-start the timer
+        timerState.running = true;
+        lastTimer = {
+          label: timerState.label,
+          message: timerState.message,
+          originalTotal: timerState.originalTotal,
+          remainingSeconds: timerState.remainingSeconds,
+          showEndTime: timerState.showEndTime,
+          endTimeLabel: timerState.endTimeLabel,
+          endTime: Date.now() + timerState.remainingSeconds * 1000,
+        };
+        startTick();
+        broadcast();
+        io.to('instructor').emit('last-timer', lastTimer);
+      }
+    }, 3000);
+  } else {
+    // Manual advance — load but don't start
+    loadSequenceStep(nextIndex);
+  }
+}
+
 // ── Timer state ──────────────────────────────────────────────
 let timerState = {
   courseTitle: '',      // persistent course title — survives stop/reset
@@ -252,6 +379,10 @@ function startTick() {
         io.to('instructor').emit('timer-done');
       } else {
         io.emit('timer-done');
+      }
+      // If running in a sequence, advance to next step
+      if (activeSequence) {
+        advanceSequence();
       }
     }
     broadcast();
@@ -330,6 +461,25 @@ app.delete('/api/orders/:id', async (req, res) => {
   res.json(savedOrders);
 });
 
+// Sequence REST endpoints
+app.get('/api/sequences', (req, res) => res.json(sequences));
+
+app.post('/api/sequences', async (req, res) => {
+  const seq = req.body;
+  seq.id = seq.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const idx = sequences.findIndex(s => s.id === seq.id);
+  if (idx >= 0) sequences[idx] = seq;
+  else sequences.push(seq);
+  await saveSequences(sequences);
+  res.json(sequences);
+});
+
+app.delete('/api/sequences/:id', async (req, res) => {
+  sequences = sequences.filter(s => s.id !== req.params.id);
+  await saveSequences(sequences);
+  res.json(sequences);
+});
+
 // QR code — includes class code in URL
 app.get('/qr', async (req, res) => {
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
@@ -364,6 +514,7 @@ io.on('connection', (socket) => {
       socket.emit('checkin-enabled', checkinEnabled);
       io.to('instructor').emit('client-count', connectedStudents);
       broadcastStudentList();
+      broadcastSequenceState();
     } else if (r === 'preview' || r === 'display') {
       role = r;
       validated = true;
@@ -587,6 +738,9 @@ io.on('connection', (socket) => {
     timerState.endTimeLabel = '';
     timerState.showEndTime = false;
     stopTick();
+    // Stop clears any active sequence
+    clearSequenceState();
+    broadcastSequenceState();
     broadcast();
   });
 
@@ -638,23 +792,81 @@ io.on('connection', (socket) => {
     timerState.running = true;
     timerState.endTime = newEndTime;
     timerState.endTimeFormatted = formatEndTime(newEndTime);
-    stopTick();
-    // Start ticking from the restored end time
-    let doneFired = timerState.remainingSeconds <= 0;
-    tickInterval = setInterval(() => {
-      const left = Math.round((timerState.endTime - Date.now()) / 1000);
-      timerState.remainingSeconds = left;
-      if (left <= 0 && !doneFired) {
-        doneFired = true;
-        if (muted) {
-          io.to('instructor').emit('timer-done');
-        } else {
-          io.emit('timer-done');
-        }
-      }
-      broadcast();
-    }, 250);
+    startTick();
     broadcast();
+  });
+
+  // ── Sequence playback ──
+  socket.on('start-sequence', ({ sequenceId }) => {
+    if (role !== 'instructor') return;
+    // Stop any currently running timer/sequence first
+    stopTick();
+    timerState.running = false;
+    clearSequenceState();
+    const seq = sequences.find(s => s.id === sequenceId);
+    if (!seq || !seq.steps || seq.steps.length === 0) return;
+    // Resolve library item IDs to timer data snapshots
+    const resolvedSteps = seq.steps.map(step => {
+      const libItem = library.find(t => t.id === step.timerId);
+      if (!libItem) return null;
+      return {
+        timerId: libItem.id,
+        label: libItem.label || libItem.name || '',
+        message: libItem.message || '',
+        totalSeconds: Math.max(0, Math.round((libItem.minutes || 0) * 60)),
+        showEndTime: libItem.showEndTime !== false,
+      };
+    }).filter(Boolean);
+    if (resolvedSteps.length === 0) return;
+    clearSequenceState();
+    activeSequence = {
+      id: seq.id,
+      name: seq.name,
+      autoAdvance: seq.autoAdvance !== false,
+      steps: resolvedSteps,
+      currentIndex: 0,
+    };
+    // Load first step (but don't auto-start — instructor hits play)
+    loadSequenceStep(0);
+  });
+
+  socket.on('skip-sequence-step', () => {
+    if (role !== 'instructor' || !activeSequence) return;
+    stopTick();
+    timerState.running = false;
+    timerState.endTime = null;
+    timerState.endTimeFormatted = '';
+    // Clear any pending auto-advance
+    if (sequenceAdvanceTimeout) {
+      clearTimeout(sequenceAdvanceTimeout);
+      sequenceAdvanceTimeout = null;
+    }
+    const nextIndex = activeSequence.currentIndex + 1;
+    if (nextIndex >= activeSequence.steps.length) {
+      clearSequenceState();
+      broadcastSequenceState();
+      broadcast();
+    } else {
+      loadSequenceStep(nextIndex);
+    }
+  });
+
+  socket.on('stop-sequence', () => {
+    if (role !== 'instructor') return;
+    clearSequenceState();
+    // Stop the current timer too
+    stopTick();
+    timerState.running = false;
+    timerState.endTime = null;
+    timerState.endTimeFormatted = '';
+    broadcastSequenceState();
+    broadcast();
+  });
+
+  // Send sequence state when instructor connects
+  socket.on('get-sequence-state', () => {
+    if (role !== 'instructor') return;
+    broadcastSequenceState();
   });
 
 });
@@ -666,8 +878,9 @@ const PORT = process.env.PORT || 3000;
   await connectMongo();
   library = await loadLibrary();
   savedOrders = await loadSavedOrders();
+  sequences = await loadSequences();
   classCode = await loadClassCode() || generateCode();
-  await saveClassCode(classCode);  // persist if newly generated
+  await saveClassCode(classCode);
   server.listen(PORT, () => {
     console.log(`\n  Classroom Timer is running!`);
     console.log(`   Instructor panel : http://localhost:${PORT}/instructor`);
