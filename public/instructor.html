@@ -1092,17 +1092,6 @@
 
           <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px;">
-            <label for="optStartTab" style="font-size:0.85rem; color:#aaa;">After starting, go to tab:</label>
-            <select id="optStartTab" style="padding:6px 10px; border:1px solid #666; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem;">
-              <option value="library">Library</option>
-              <option value="options">Options</option>
-              <option value="settings">Settings</option>
-            </select>
-          </div>
-
-          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
-
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <label for="alarmSound" style="font-size:0.85rem; color:#aaa; white-space:nowrap; min-width:95px;">Alarm sound:</label>
             <select id="alarmSound" style="flex:1; padding:6px 10px; border:1px solid #333; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem;">
@@ -1148,6 +1137,17 @@
 
           <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px;">
+            <label for="optStartTab" style="font-size:0.85rem; color:#aaa;">After starting, go to tab:</label>
+            <select id="optStartTab" style="padding:6px 10px; border:1px solid #666; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem;">
+              <option value="library">Library</option>
+              <option value="options">Options</option>
+              <option value="settings">Settings</option>
+            </select>
+          </div>
+
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
+
           <div style="margin-bottom:20px;">
             <div class="checkbox-row">
               <input type="checkbox" id="muteStudents" class="custom-cb">
@@ -1166,19 +1166,6 @@
                 Import
                 <input type="file" id="importLibFile" accept=".json" style="display:none;" onchange="importLibrary(this)">
               </label>
-            </div>
-          </div>
-
-          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
-
-          <div>
-            <label style="font-size:0.85rem; color:#aaa;">Student URL</label>
-            <div class="qr-section" style="text-align:left; margin-top:8px;">
-              <div id="qrContainer">Loading QR code...</div>
-              <div class="student-url" id="urlContainer" style="display:none">
-                <code id="studentUrl"></code>
-                <button onclick="copyUrl()">Copy</button>
-              </div>
             </div>
           </div>
 
@@ -1211,6 +1198,19 @@
               <div style="display:flex; align-items:center; gap:8px;">
                 <button class="obs-copy-btn" onclick="copyOBSUrl('&black=true&clockonly=true')">Copy</button>
                 <span style="font-size:0.75rem; color:var(--dim);">Black + clock only</span>
+              </div>
+            </div>
+          </div>
+
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
+
+          <div>
+            <label style="font-size:0.85rem; color:#aaa;">Student URL</label>
+            <div class="qr-section" style="text-align:left; margin-top:8px;">
+              <div id="qrContainer">Loading QR code...</div>
+              <div class="student-url" id="urlContainer" style="display:none">
+                <code id="studentUrl"></code>
+                <button onclick="copyUrl()">Copy</button>
               </div>
             </div>
           </div>
