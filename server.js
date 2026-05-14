@@ -524,7 +524,7 @@ app.get('/qr-only', (req, res) => {
     align-items: center;
   }
   .scan-label {
-    font-size: clamp(1rem, 3vw, 2rem);
+    font-size: clamp(1.2rem, 3.5vw, 2.4rem);
     color: rgba(255,255,255,0.65);
     margin-bottom: 3%;
     max-width: 90%;
@@ -539,7 +539,7 @@ app.get('/qr-only', (req, res) => {
     height: auto;
   }
   .hint {
-    font-size: clamp(0.85rem, 2.2vw, 1.5rem);
+    font-size: clamp(1rem, 2.8vw, 1.8rem);
     color: rgba(255,255,255,0.6);
     margin-top: 4%;
     max-width: 90%;
@@ -548,7 +548,7 @@ app.get('/qr-only', (req, res) => {
   }
   .hint b { color: rgba(255,255,255,0.75); }
   .class-code {
-    font-size: clamp(1.6rem, 5vw, 4rem);
+    font-size: clamp(2rem, 6vw, 5rem);
     font-weight: 800;
     letter-spacing: 0.3em;
     color: rgba(255,255,255,0.85);
@@ -560,7 +560,7 @@ app.get('/qr-only', (req, res) => {
 </head>
 <body>
 <div class="qr-container">
-  <div class="scan-label">Scan to view this timer on your phone</div>
+  <div class="scan-label">Scan to connect to LiveTimer</div>
   <div class="qr-image" id="qrImg"></div>
   <div class="hint" id="qrHint"></div>
   <div class="class-code" id="classCode"></div>
