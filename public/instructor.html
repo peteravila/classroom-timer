@@ -994,9 +994,65 @@
   .qr-section img { border-radius: 8px; background: #fff; padding: 6px; margin: 8px 0; }
   .connected-count { font-size: 2rem; font-weight: 700; color: var(--green); margin-top: 2px; }
 
+  /* ── Login overlay ── */
+  .login-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: var(--bg);
+    display: flex; justify-content: center; align-items: center;
+  }
+  .login-overlay.hidden { display: none; }
+  .login-box {
+    background: var(--card); border-radius: 12px; padding: 40px;
+    width: 100%; max-width: 380px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .login-box h1 { color: var(--green); margin-bottom: 6px; font-size: 1.6rem; }
+  .login-box .login-subtitle { color: var(--dim); font-size: 0.85rem; margin-bottom: 24px; text-align: center; }
+  .login-box label { display: block; font-size: 0.8rem; color: var(--dim); margin-bottom: 4px; margin-top: 14px; }
+  .login-box input[type="email"],
+  .login-box input[type="password"] {
+    width: 100%; padding: 10px 12px; border-radius: 6px;
+    border: 1px solid #333; background: var(--bg); color: var(--text);
+    font-size: 0.95rem; outline: none;
+  }
+  .login-box input:focus { border-color: var(--green); }
+  .login-btn {
+    width: 100%; margin-top: 20px; padding: 12px;
+    background: var(--green); color: #111; border: none; border-radius: 6px;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+  .login-btn:hover { filter: brightness(1.1); }
+  .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .login-error {
+    color: var(--red); font-size: 0.85rem; text-align: center;
+    margin-top: 12px; min-height: 1.2em;
+  }
+  .login-logout {
+    position: fixed; top: 10px; right: 16px; z-index: 100;
+    background: none; border: 1px solid #444; color: var(--dim);
+    padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;
+  }
+  .login-logout:hover { border-color: var(--text); color: var(--text); }
+
 </style>
 </head>
 <body>
+
+<!-- Login overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h1>LiveTimer</h1>
+    <div class="login-subtitle">Instructor Login</div>
+    <form id="loginForm" autocomplete="on">
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" name="email" autocomplete="email" required>
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" name="password" autocomplete="current-password" required>
+      <button type="submit" class="login-btn" id="loginBtn">Log In</button>
+      <div class="login-error" id="loginError"></div>
+    </form>
+  </div>
+</div>
 
 <div class="page-wrap">
 
@@ -1437,6 +1493,33 @@
               <div id="qrContainer">Loading QR code...</div>
             </div>
           </div>
+
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
+
+          <div>
+            <label style="font-size:0.85rem; color:#aaa;">Account</label>
+            <div style="margin-top:8px; margin-left:103px;">
+              <button onclick="showChangePassword()" style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Change Password</button>
+            </div>
+          </div>
+
+          <!-- Admin section: only visible with ?admin=true and isAdmin account -->
+          <div id="adminSection" style="display:none;">
+            <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
+            <label style="font-size:0.85rem; color:#e74c3c;">Admin</label>
+            <div style="margin-top:8px; margin-left:103px;">
+              <div style="margin-bottom:12px;">
+                <label style="font-size:0.8rem; color:var(--dim);">Reset instructor password:</label>
+                <div style="display:flex; gap:6px; margin-top:6px; align-items:center; flex-wrap:wrap;">
+                  <input type="email" id="adminResetEmail" placeholder="instructor email" style="padding:6px 10px; border:1px solid #333; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem; width:200px;">
+                  <input type="text" id="adminResetPass" placeholder="new password" style="padding:6px 10px; border:1px solid #333; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem; width:160px;">
+                  <button onclick="adminResetPassword()" style="padding:6px 12px; border:1px solid #666; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Reset</button>
+                </div>
+                <div id="adminResetResult" style="font-size:0.75rem; margin-top:6px; min-height:1.2em;"></div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -1547,7 +1630,148 @@
 </div>
 
 <script>
-const socket = io();
+// ── Authentication ──
+let authToken = localStorage.getItem('livetimer-token');
+let socket = null;
+
+const loginOverlay = document.getElementById('loginOverlay');
+const loginForm = document.getElementById('loginForm');
+const loginError = document.getElementById('loginError');
+const loginBtn = document.getElementById('loginBtn');
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  loginError.textContent = '';
+  loginBtn.disabled = true;
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  try {
+    const resp = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Login failed');
+    authToken = data.token;
+    localStorage.setItem('livetimer-token', data.token);
+    startApp();
+  } catch (err) {
+    loginError.textContent = err.message;
+  } finally {
+    loginBtn.disabled = false;
+  }
+});
+
+async function checkAuth() {
+  if (!authToken) return false;
+  try {
+    const resp = await fetch('/api/me', {
+      headers: { 'Authorization': 'Bearer ' + authToken },
+    });
+    if (!resp.ok) throw new Error('Invalid token');
+    return true;
+  } catch (e) {
+    authToken = null;
+    localStorage.removeItem('livetimer-token');
+    return false;
+  }
+}
+
+function logout() {
+  authToken = null;
+  localStorage.removeItem('livetimer-token');
+  if (socket) socket.disconnect();
+  loginOverlay.classList.remove('hidden');
+  // Remove logout button
+  const btn = document.querySelector('.login-logout');
+  if (btn) btn.remove();
+}
+
+async function startApp() {
+  loginOverlay.classList.add('hidden');
+  // Add logout button
+  if (!document.querySelector('.login-logout')) {
+    const btn = document.createElement('button');
+    btn.className = 'login-logout';
+    btn.textContent = 'Log out';
+    btn.onclick = logout;
+    document.body.appendChild(btn);
+  }
+  // Check if admin section should be visible
+  const isAdminMode = new URLSearchParams(window.location.search).has('admin');
+  if (isAdminMode) {
+    try {
+      const resp = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      const me = await resp.json();
+      if (me.isAdmin) {
+        document.getElementById('adminSection').style.display = '';
+      }
+    } catch (e) { /* not admin, hide it */ }
+  }
+  // Connect socket with auth token
+  socket = io({ auth: { token: authToken } });
+  initSocket();
+}
+
+// ── Change password ──
+async function showChangePassword() {
+  const currentPw = await customPrompt('Current password');
+  if (!currentPw) return;
+  const newPw = await customPrompt('New password (min 6 characters)');
+  if (!newPw) return;
+  if (newPw.length < 6) { await customAlert('Password must be at least 6 characters.'); return; }
+  const confirmPw = await customPrompt('Confirm new password');
+  if (confirmPw !== newPw) { await customAlert('Passwords do not match.'); return; }
+  try {
+    const resp = await fetch('/api/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error);
+    await customAlert('Password changed successfully.');
+  } catch (e) {
+    await customAlert('Error: ' + e.message);
+  }
+}
+
+// ── Admin: reset instructor password ──
+async function adminResetPassword() {
+  const email = document.getElementById('adminResetEmail').value.trim();
+  const newPass = document.getElementById('adminResetPass').value;
+  const resultEl = document.getElementById('adminResetResult');
+  if (!email || !newPass) { resultEl.textContent = 'Email and password required.'; resultEl.style.color = 'var(--red)'; return; }
+  if (newPass.length < 6) { resultEl.textContent = 'Password must be at least 6 characters.'; resultEl.style.color = 'var(--red)'; return; }
+  try {
+    const resp = await fetch('/api/admin/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify({ email, newPassword: newPass }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error);
+    resultEl.textContent = 'Password reset for ' + data.email;
+    resultEl.style.color = 'var(--green)';
+    document.getElementById('adminResetEmail').value = '';
+    document.getElementById('adminResetPass').value = '';
+  } catch (e) {
+    resultEl.textContent = 'Error: ' + e.message;
+    resultEl.style.color = 'var(--red)';
+  }
+}
+
+// Check auth on page load
+(async () => {
+  if (await checkAuth()) {
+    startApp();
+  } else {
+    loginOverlay.classList.remove('hidden');
+  }
+})();
+
+// ── App state ──
 let library = [];
 let activeLibId = null;
 let timerIsRunning = false;
@@ -2215,6 +2439,7 @@ function fmt(secs) {
   return time;
 }
 
+function initSocket() {
 // ── Identify as instructor on every connect/reconnect ──
 socket.on('connect', () => {
   socket.emit('identify', 'instructor');
@@ -3947,6 +4172,15 @@ socket.on('checkin-enabled', (enabled) => {
 setInterval(() => {
   if (studentList.length > 0) renderStudentBoard();
 }, 30000);
+
+// Handle auth errors from server
+socket.on('connect_error', (err) => {
+  if (err.message === 'Authentication required') {
+    logout();
+  }
+});
+
+} // end initSocket
 </script>
 <div class="prompt-backdrop" id="promptBackdrop">
   <div class="prompt-box">

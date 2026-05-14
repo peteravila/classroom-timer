@@ -7,6 +7,8 @@ const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const { MongoClient } = require('mongodb');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,6 +45,52 @@ async function connectMongo() {
   } catch (e) {
     console.error('  MongoDB connection failed, falling back to JSON file:', e.message);
     db = null;
+  }
+}
+
+// ── Instructor Authentication ────────────────────────────────
+const JWT_SECRET = process.env.JWT_SECRET || 'livetimer-dev-secret-change-in-production';
+const SALT_ROUNDS = 10;
+
+async function createInstructor(email, password, name, isAdmin = false) {
+  if (!db) throw new Error('Database not available');
+  const existing = await db.collection('instructors').findOne({ email: email.toLowerCase() });
+  if (existing) throw new Error('An account with this email already exists');
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+  const instructor = {
+    email: email.toLowerCase(),
+    password: hashedPassword,
+    name: name || email.split('@')[0],
+    isAdmin: !!isAdmin,
+    createdAt: new Date(),
+  };
+  const result = await db.collection('instructors').insertOne(instructor);
+  instructor._id = result.insertedId;
+  return instructor;
+}
+
+async function authenticateInstructor(email, password) {
+  if (!db) throw new Error('Database not available');
+  const instructor = await db.collection('instructors').findOne({ email: email.toLowerCase() });
+  if (!instructor) throw new Error('Invalid email or password');
+  const valid = await bcrypt.compare(password, instructor.password);
+  if (!valid) throw new Error('Invalid email or password');
+  return instructor;
+}
+
+function generateToken(instructor) {
+  return jwt.sign(
+    { id: instructor._id.toString(), email: instructor.email, name: instructor.name, isAdmin: !!instructor.isAdmin },
+    JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+}
+
+function verifyToken(token) {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (e) {
+    return null;
   }
 }
 
@@ -222,6 +270,34 @@ async function saveSequences(seqs) {
   }
 }
 
+// ── Timer state persistence (MongoDB) ───────────────────────
+async function saveTimerState() {
+  if (!db) return;
+  try {
+    await db.collection('settings').updateOne(
+      { _id: 'timerState' },
+      { $set: {
+        timer: { ...timerState },
+        lastTimer: lastTimer ? { ...lastTimer } : null,
+        updatedAt: new Date()
+      }},
+      { upsert: true }
+    );
+  } catch (e) {
+    console.error('  MongoDB saveTimerState failed:', e.message);
+  }
+}
+
+async function loadTimerState() {
+  if (!db) return null;
+  try {
+    return await db.collection('settings').findOne({ _id: 'timerState' });
+  } catch (e) {
+    console.error('  MongoDB loadTimerState failed:', e.message);
+    return null;
+  }
+}
+
 // Active sequence playback state (in memory)
 let activeSequence = null;  // { id, name, autoAdvance, steps: [...resolved timer data], currentIndex }
 let sequenceAdvanceTimeout = null;  // setTimeout handle for auto-advance delay
@@ -270,6 +346,7 @@ function loadSequenceStep(index) {
   stopTick();
   broadcast();
   broadcastSequenceState();
+  saveTimerState();
   return true;
 }
 
@@ -287,6 +364,7 @@ function autoStartTimer() {
   startTick();
   broadcast();
   io.to('instructor').emit('last-timer', lastTimer);
+  saveTimerState();
 }
 
 function advanceSequence() {
@@ -483,6 +561,82 @@ app.delete('/api/sequences/:id', async (req, res) => {
   res.json(sequences);
 });
 
+// ── Auth endpoints ──────────────────────────────────────────
+app.post('/api/signup', async (req, res) => {
+  const { email, password, name } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  try {
+    const instructor = await createInstructor(email, password, name);
+    const token = generateToken(instructor);
+    res.json({ token, name: instructor.name, email: instructor.email });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  try {
+    const instructor = await authenticateInstructor(email, password);
+    const token = generateToken(instructor);
+    res.json({ token, name: instructor.name, email: instructor.email });
+  } catch (e) {
+    res.status(401).json({ error: e.message });
+  }
+});
+
+app.get('/api/me', (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated' });
+  const payload = verifyToken(auth.slice(7));
+  if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
+  res.json({ name: payload.name, email: payload.email, isAdmin: !!payload.isAdmin });
+});
+
+// ── Change password ─────────────────────────────────────────
+app.post('/api/change-password', async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated' });
+  const payload = verifyToken(auth.slice(7));
+  if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  try {
+    const instructor = await db.collection('instructors').findOne({ email: payload.email });
+    if (!instructor) return res.status(404).json({ error: 'Account not found' });
+    const valid = await bcrypt.compare(currentPassword, instructor.password);
+    if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+    const hashedNew = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await db.collection('instructors').updateOne({ _id: instructor._id }, { $set: { password: hashedNew } });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// ── Admin: reset any instructor's password ──────────────────
+app.post('/api/admin/reset-password', async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated' });
+  const payload = verifyToken(auth.slice(7));
+  if (!payload || !payload.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+  const { email, newPassword } = req.body;
+  if (!email || !newPassword) return res.status(400).json({ error: 'Email and new password required' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  try {
+    const instructor = await db.collection('instructors').findOne({ email: email.toLowerCase() });
+    if (!instructor) return res.status(404).json({ error: 'No account found with that email' });
+    const hashedNew = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await db.collection('instructors').updateOne({ _id: instructor._id }, { $set: { password: hashedNew } });
+    res.json({ success: true, email: instructor.email });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
 // QR code — includes class code in URL
 app.get('/qr', async (req, res) => {
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
@@ -524,7 +678,7 @@ app.get('/qr-only', (req, res) => {
     align-items: center;
   }
   .scan-label {
-    font-size: clamp(1.2rem, 3.5vw, 2.4rem);
+    font-size: clamp(1.5rem, 4.5vw, 3rem);
     color: rgba(255,255,255,0.65);
     margin-bottom: 3%;
     max-width: 90%;
@@ -539,16 +693,16 @@ app.get('/qr-only', (req, res) => {
     height: auto;
   }
   .hint {
-    font-size: clamp(1rem, 2.8vw, 1.8rem);
+    font-size: clamp(1.2rem, 3.5vw, 2.2rem);
     color: rgba(255,255,255,0.6);
     margin-top: 4%;
     max-width: 90%;
     line-height: 1.4;
     text-align: center;
   }
-  .hint b { color: rgba(255,255,255,0.75); }
+  .hint b { color: rgba(255,255,255,0.75); display: block; margin-top: 0.5em; }
   .class-code {
-    font-size: clamp(2rem, 6vw, 5rem);
+    font-size: clamp(2.4rem, 7vw, 6rem);
     font-weight: 800;
     letter-spacing: 0.3em;
     color: rgba(255,255,255,0.85);
@@ -596,8 +750,17 @@ io.on('connection', (socket) => {
 
   socket.on('identify', (r) => {
     if (r === 'instructor') {
+      // Verify auth token
+      const token = socket.handshake.auth && socket.handshake.auth.token;
+      const payload = token ? verifyToken(token) : null;
+      if (!payload) {
+        socket.emit('connect_error', { message: 'Authentication required' });
+        socket.disconnect(true);
+        return;
+      }
       role = 'instructor';
       validated = true;
+      socket.instructorId = payload.id;
       socket.join('instructor');
       // Send current state to instructor
       socket.emit('timer-update', timerState);
@@ -741,6 +904,7 @@ io.on('connection', (socket) => {
     timerState.endTimeFormatted = '';
     stopTick();
     broadcast();
+    saveTimerState();
   });
 
   // Set timer duration only — does not touch label or message
@@ -755,6 +919,7 @@ io.on('connection', (socket) => {
     timerState.endTimeFormatted = '';
     stopTick();
     broadcast();
+    saveTimerState();
   });
 
   socket.on('start', () => {
@@ -773,6 +938,7 @@ io.on('connection', (socket) => {
       startTick();
       broadcast();
       io.to('instructor').emit('last-timer', lastTimer);
+      saveTimerState();
     }
   });
 
@@ -787,6 +953,7 @@ io.on('connection', (socket) => {
         lastTimer.remainingSeconds = timerState.remainingSeconds;
       }
       broadcast();
+      saveTimerState();
     }
   });
 
@@ -797,6 +964,7 @@ io.on('connection', (socket) => {
     timerState.endTimeFormatted = '';
     stopTick();
     broadcast();
+    saveTimerState();
   });
 
   socket.on('add-time', ({ minutes }) => {
@@ -813,6 +981,7 @@ io.on('connection', (socket) => {
       }
     }
     broadcast();
+    saveTimerState();
   });
 
   socket.on('stop', () => {
@@ -835,26 +1004,31 @@ io.on('connection', (socket) => {
     clearSequenceState();
     broadcastSequenceState();
     broadcast();
+    saveTimerState();
   });
 
   socket.on('update-message', ({ message }) => {
     timerState.message = message || '';
     broadcast();
+    saveTimerState();
   });
 
   socket.on('update-label', ({ label }) => {
     timerState.label = label || '';
     broadcast();
+    saveTimerState();
   });
 
   socket.on('update-end-time-label', ({ endTimeLabel }) => {
     timerState.endTimeLabel = endTimeLabel || 'Class resumes at';
     broadcast();
+    saveTimerState();
   });
 
   socket.on('update-course-title', ({ courseTitle }) => {
     timerState.courseTitle = courseTitle || '';
     broadcast();
+    saveTimerState();
   });
 
   socket.on('update-display-modes', ({ transparent, blackBg, clockOnly }) => {
@@ -862,11 +1036,13 @@ io.on('connection', (socket) => {
     timerState.blackBg = !!blackBg;
     timerState.clockOnly = !!clockOnly;
     broadcast();
+    saveTimerState();
   });
 
   socket.on('update-show-end-time', ({ showEndTime }) => {
     timerState.showEndTime = showEndTime !== false;
     broadcast();
+    saveTimerState();
   });
 
   // Restore last timer — resume from where it was paused/stopped
@@ -887,6 +1063,7 @@ io.on('connection', (socket) => {
     timerState.endTimeFormatted = formatEndTime(newEndTime);
     startTick();
     broadcast();
+    saveTimerState();
   });
 
   // ── Sequence playback ──
@@ -943,6 +1120,7 @@ io.on('connection', (socket) => {
       clearSequenceState();
       broadcastSequenceState();
       broadcast();
+      saveTimerState();
     } else {
       loadSequenceStep(nextIndex);
     }
@@ -958,6 +1136,7 @@ io.on('connection', (socket) => {
     timerState.endTimeFormatted = '';
     broadcastSequenceState();
     broadcast();
+    saveTimerState();
   });
 
   // Send sequence state when instructor connects
@@ -978,6 +1157,51 @@ const PORT = process.env.PORT || 3000;
   sequences = await loadSequences();
   classCode = await loadClassCode() || generateCode();
   await saveClassCode(classCode);
+
+  // Ensure at least one instructor account exists (seed)
+  if (db) {
+    const count = await db.collection('instructors').countDocuments();
+    if (count === 0) {
+      console.log('  No instructor accounts found — creating seed account.');
+      console.log('  Email: peterpsavila@gmail.com');
+      console.log('  Password: livetimer (change this after first login!)');
+      try {
+        await createInstructor('peterpsavila@gmail.com', 'livetimer', 'Peter', true);
+      } catch (e) {
+        console.error('  Failed to create seed account:', e.message);
+      }
+    }
+  }
+
+  // Recover timer state from MongoDB
+  const savedState = await loadTimerState();
+  if (savedState) {
+    if (savedState.timer) {
+      Object.assign(timerState, savedState.timer);
+      if (timerState.running && timerState.endTime) {
+        const remaining = Math.round((timerState.endTime - Date.now()) / 1000);
+        if (remaining > 0) {
+          timerState.remainingSeconds = remaining;
+          startTick();
+          console.log(`  Recovered running timer: ${remaining}s remaining`);
+        } else {
+          // Timer expired while server was down
+          timerState.running = false;
+          timerState.remainingSeconds = 0;
+          timerState.endTime = null;
+          timerState.endTimeFormatted = '';
+          console.log('  Timer had expired during downtime — cleared.');
+          await saveTimerState();
+        }
+      } else {
+        console.log('  Recovered timer state (not running).');
+      }
+    }
+    if (savedState.lastTimer) {
+      lastTimer = savedState.lastTimer;
+    }
+  }
+
   server.listen(PORT, () => {
     console.log(`\n  Classroom Timer is running!`);
     console.log(`   Instructor panel : http://localhost:${PORT}/instructor`);
