@@ -1027,8 +1027,14 @@
     color: var(--red); font-size: 0.85rem; text-align: center;
     margin-top: 12px; min-height: 1.2em;
   }
-  .login-logout {
+  .login-topbar {
     position: fixed; top: 10px; right: 16px; z-index: 100;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .login-greeting {
+    font-size: 0.75rem; color: var(--dim);
+  }
+  .login-logout {
     background: none; border: 1px solid #444; color: var(--dim);
     padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;
   }
@@ -1683,32 +1689,44 @@ function logout() {
   localStorage.removeItem('livetimer-token');
   if (socket) socket.disconnect();
   loginOverlay.classList.remove('hidden');
-  // Remove logout button
-  const btn = document.querySelector('.login-logout');
-  if (btn) btn.remove();
+  // Remove topbar (greeting + logout)
+  const topbar = document.querySelector('.login-topbar');
+  if (topbar) topbar.remove();
 }
 
 async function startApp() {
   loginOverlay.classList.add('hidden');
-  // Add logout button
-  if (!document.querySelector('.login-logout')) {
+  // Add topbar (greeting + logout)
+  if (!document.querySelector('.login-topbar')) {
+    const topbar = document.createElement('div');
+    topbar.className = 'login-topbar';
     const btn = document.createElement('button');
     btn.className = 'login-logout';
     btn.textContent = 'Log out';
     btn.onclick = logout;
-    document.body.appendChild(btn);
+    topbar.appendChild(btn);
+    document.body.appendChild(topbar);
   }
-  // Check if admin section should be visible
-  const isAdminMode = new URLSearchParams(window.location.search).has('admin');
-  if (isAdminMode) {
-    try {
-      const resp = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + authToken } });
-      const me = await resp.json();
-      if (me.isAdmin) {
-        document.getElementById('adminSection').style.display = '';
+  // Fetch instructor info — greeting + admin check
+  try {
+    const resp = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + authToken } });
+    const me = await resp.json();
+    // Show greeting if name exists
+    if (me.name) {
+      const topbar = document.querySelector('.login-topbar');
+      if (topbar && !topbar.querySelector('.login-greeting')) {
+        const greeting = document.createElement('span');
+        greeting.className = 'login-greeting';
+        greeting.textContent = 'Hi, ' + me.name;
+        topbar.insertBefore(greeting, topbar.firstChild);
       }
-    } catch (e) { /* not admin, hide it */ }
-  }
+    }
+    // Check if admin section should be visible
+    const isAdminMode = new URLSearchParams(window.location.search).has('admin');
+    if (isAdminMode && me.isAdmin) {
+      document.getElementById('adminSection').style.display = '';
+    }
+  } catch (e) { /* couldn't fetch — no greeting, no admin */ }
   // Connect socket with auth token
   socket = io({ auth: { token: authToken } });
   initSocket();
