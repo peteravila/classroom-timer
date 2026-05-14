@@ -476,14 +476,9 @@ if (isPreview) {
   document.documentElement.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
 } else if (isOBS) {
-  // OBS browser source — skip code gate, show timer, show class code text
+  // OBS browser source — skip code gate, show timer
   document.getElementById('codeGate').style.display = 'none';
   document.getElementById('timerContent').classList.add('visible');
-  document.getElementById('obsClassCode').style.display = 'block';
-  // Fetch and display the class code
-  fetch('/qr').then(r => r.json()).then(data => {
-    document.getElementById('obsClassCode').textContent = data.code;
-  }).catch(() => {});
 } else if (!urlCode && !isLargeScreen) {
   // Phone without code — show code entry gate
   const savedName = getStudentName();
@@ -576,10 +571,6 @@ socket.on('code-rejected', () => {
 socket.on('code-expired', () => {
   // OBS/display viewers: just refresh the class code, no gate needed
   if (isOBS || isPreview) {
-    fetch('/qr').then(r => r.json()).then(data => {
-      const el = document.getElementById('obsClassCode');
-      if (el) el.textContent = data.code;
-    }).catch(() => {});
     return;
   }
   studentValidated = false;
