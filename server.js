@@ -497,6 +497,9 @@ app.get('/qr', async (req, res) => {
 });
 
 // QR-only page — standalone OBS browser source for QR code display
+// Responsive: scales to fill whatever browser source dimensions are set in OBS.
+// Use large dimensions (e.g. 800×1000) for a dedicated full-screen QR scene,
+// or small dimensions (e.g. 300×400) for a compact overlay. Same URL for both.
 app.get('/qr-only', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -510,46 +513,47 @@ app.get('/qr-only', (req, res) => {
     background: #1a1a2e;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     min-height: 100vh;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    padding: 20px;
+    padding: 5%;
   }
   .qr-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0;
   }
   .scan-label {
-    font-size: 0.95rem;
-    color: rgba(255,255,255,0.55);
-    margin-bottom: 10px;
-    max-width: 220px;
+    font-size: clamp(1rem, 3vw, 2rem);
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 3%;
+    max-width: 90%;
     line-height: 1.3;
     text-align: center;
   }
   .qr-image img {
     border-radius: 8px;
     background: #fff;
-    padding: 4px;
+    padding: 6px;
+    width: clamp(150px, 40vmin, 500px);
+    height: auto;
   }
   .hint {
-    font-size: 0.85rem;
+    font-size: clamp(0.85rem, 2.2vw, 1.5rem);
     color: rgba(255,255,255,0.6);
-    margin-top: 14px;
-    max-width: 220px;
+    margin-top: 4%;
+    max-width: 90%;
     line-height: 1.4;
     text-align: center;
   }
   .hint b { color: rgba(255,255,255,0.75); }
   .class-code {
-    font-size: 1.6rem;
+    font-size: clamp(1.6rem, 5vw, 4rem);
     font-weight: 800;
-    letter-spacing: 4px;
-    color: rgba(255,255,255,0.8);
+    letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.85);
     font-family: monospace;
-    margin-top: 14px;
+    margin-top: 4%;
     text-align: center;
   }
 </style>
@@ -565,7 +569,7 @@ app.get('/qr-only', (req, res) => {
 <script>
   function loadQR() {
     fetch('/qr').then(r => r.json()).then(data => {
-      document.getElementById('qrImg').innerHTML = '<img src="' + data.qr + '" alt="QR code" width="150">';
+      document.getElementById('qrImg').innerHTML = '<img src="' + data.qr + '" alt="QR code">';
       document.getElementById('classCode').textContent = data.code;
       const baseUrl = data.url.replace(/\\?.*$/, '');
       document.getElementById('qrHint').innerHTML = "Can't scan? Go to<br><b>" + baseUrl + "</b>";
