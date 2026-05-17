@@ -5096,8 +5096,9 @@ function updateButtonStates() {
   startBtn.classList.toggle('enabled', (paused) || hasDuration);
 
   // Pause: enabled when running
+  // TEMP: screenshot mode — keep pause looking enabled when paused too
   const pauseBtn = document.querySelector('.tb-pause');
-  pauseBtn.classList.toggle('enabled', running);
+  pauseBtn.classList.toggle('enabled', running || paused);
 
   // Stop: enabled only when running or paused or done
   const stopBtn = document.querySelector('.tb-stop');
