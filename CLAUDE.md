@@ -48,11 +48,13 @@ This is a real-time classroom timer for virtual instruction (Zoom + OBS). An ins
 **Instructor page layout:** The instructor page uses a single-column layout centered around a live phone mockup that mirrors the student view. Text fields (course title, label, end time label, message) are contenteditable elements directly on the mockup — what you edit is what students see. Transport controls (play, pause, stop, restore) sit below the mockup. Tabs below that provide access to Library, Options, and Settings.
 
 **Instructor page tabs:**
-- Library: Grid of saved presets with load/save/create/delete/reorder. Click a timer name to load, play button to start immediately.
+- Library: Full-width grid showing all timer fields with horizontal scrolling and resizable columns (widths persist in localStorage). Toolbar with batch operations: New, Update (field picker dialog showing current values), Duplicate, Delete (with sequence dependency checking), and Reset Columns. Checkboxes for multi-select. Click a timer name to load, play button to start immediately. Columns: checkbox, load, play, name, duration, title, end time label, message, show end time, background mode, clock only, after loading.
 - Options: Per-timer settings saved with library items — show end time, transparent background (OBS/display only), clock only (OBS/display only), after-loading tab
 - Settings: Global settings — class code with "Disconnect All Students" button, after-starting tab, alarm, warning, mute toggle, library backup export/import, student URL/QR
 
-**Duration popup:** A draggable overlay with hour/minute spinners and quick-set buttons. CSS uses `backdrop-filter: blur(6px)` with a light translucent background (`rgba(180, 180, 200, 0.2)`) so the timer is visible counting down underneath. Supports both duration mode and target-time mode.
+**Digit spinners on mockup:** The clock digits on the phone mockup are flanked by spinner arrow controls — hours (▲▼) on the left, minutes (▲▼) on the right, with "hrs"/"min" labels above each. A "..." button below the right spinner opens the duration popup. Arrows are blue, go green on hover, and support hold-to-repeat (400ms delay, 120ms interval). When the timer is running or paused, spinner arrows are disabled (dimmed). The clock field has a fixed width (180px) so spinners don't shift during use. When idle, digits display in HH:MM format (no seconds); when running, HH:MM:SS with seconds. The `fmtHM()` formatter handles idle display, `fmt()` handles live countdown.
+
+**Duration popup:** A draggable overlay with hour/minute spinners, quick-set buttons, target-time mode, and Add button (for adding time to a running timer). CSS uses `backdrop-filter: blur(6px)` with a light translucent background (`rgba(180, 180, 200, 0.2)`) so the timer is visible counting down underneath. The mockup spinners are quick-access shortcuts; the popup is the full editor with target-time mode and Add functionality.
 
 **Custom dialogs:** All native browser confirm(), alert(), and prompt() calls have been replaced with custom styled modal dialogs using frosted glass styling (`backdrop-filter: blur(8px)`, `rgba(30, 30, 50, 0.7)`, `max-width: 360px`). Functions: `customConfirm(msg)` returns a Promise<boolean>, `customAlert(msg)` returns a Promise<void>, `customPrompt(label)` returns a Promise<string|null>.
 
@@ -95,10 +97,9 @@ This is a real-time classroom timer for virtual instruction (Zoom + OBS). An ins
 - **LiveTimer_Brochure.pdf** — 3-page dark-themed marketing brochure with screenshots. Generated via Python/reportlab. Source script is session-local (livetimer_brochure10.py). Screenshots are ss_*.png files in the project root.
 - **LiveTimer_Brochure.docx** — Word version of the same brochure, generated via python-docx.
 
+### Completed
+- **Multi-instructor support** — Full per-instructor data isolation: library, timer state, class code, sequences, and saved orders scoped by instructor ID. Socket rooms per-instructor. Auth system, admin grid for managing instructors.
+
 ### Pending / In Progress
-- **Instructor page authentication** — Discussed but not yet implemented. Needed before multi-instructor support.
-- **Progress ring scaling for long timers** — Currently the ring drains by percentage, so on multi-hour timers it's a tiny sliver by the time colors change. Under discussion: rescale the ring in the capped zone, freeze at a minimum %, or leave as-is. Awaiting Peter's decision.
-- **Multi-instructor support (Phase 2)** — Eventually make the app available to multiple instructors, each with their own library and timer state.
-- **Clean up debug code in student.html** — The submitCode() function still has diagnostic timeout/feedback code ("Validating...", "No response from server") that should be simplified once the reconnection flow is confirmed stable.
-- **Delete old Render services** — classroom-timer and any test services should be removed.
+- **Email-based forgot password** — Add when manual admin resets become a hassle.
 - **Brochure iteration** — The brochure (v10) has mixed-alignment layout with text wrapping around images, reduced word count, larger fonts. Peter may have further feedback.

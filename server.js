@@ -6,7 +6,7 @@ const { Server } = require('socket.io');
 const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -17,24 +17,13 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// ── Timer Library (MongoDB with JSON file fallback) ─────────
+// ── MongoDB ─────────────────────────────────────────────────
 const MONGODB_URI = process.env.MONGODB_URI;
-const LIBRARY_FILE = path.join(__dirname, 'timer-library.json');
+let db = null;
 
-let db = null; // MongoDB database reference
-
-const DEFAULT_LIBRARY = [
-  { id: '1', name: 'Lunch 60',       minutes: 60, label: 'Lunch Break',    message: 'Enjoy your lunch! See you back in class soon.', showEndTime: true },
-  { id: '2', name: 'Break 15',       minutes: 15, label: 'Short Break',    message: 'Quick break — grab a coffee or stretch!',       showEndTime: true },
-  { id: '3', name: 'Break 10',       minutes: 10, label: 'Break',          message: 'Be back in 10!',                                showEndTime: true },
-  { id: '4', name: 'Lab 30',         minutes: 30, label: 'Lab Activity',   message: 'Work through the lab at your own pace.',         showEndTime: true },
-  { id: '5', name: 'Lab 60',         minutes: 60, label: 'Lab Activity',   message: 'Take your time — ask questions if you get stuck.', showEndTime: true },
-];
-
-// Connect to MongoDB (if URI is configured)
 async function connectMongo() {
   if (!MONGODB_URI) {
-    console.log('  No MONGODB_URI set — using local JSON file for library.');
+    console.log('  No MONGODB_URI set — running without database.');
     return;
   }
   try {
@@ -43,7 +32,7 @@ async function connectMongo() {
     db = client.db('classroomTimer');
     console.log('  Connected to MongoDB Atlas.');
   } catch (e) {
-    console.error('  MongoDB connection failed, falling back to JSON file:', e.message);
+    console.error('  MongoDB connection failed:', e.message);
     db = null;
   }
 }
@@ -94,35 +83,116 @@ function verifyToken(token) {
   }
 }
 
-async function loadLibrary() {
-  // Try MongoDB first
+// ── Auth middleware for REST endpoints ───────────────────────
+function requireAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated' });
+  const payload = verifyToken(auth.slice(7));
+  if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
+  req.instructor = payload;
+  req.instructorId = payload.id;
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (!req.instructor.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+    next();
+  });
+}
+
+// ── Per-instructor session state ────────────────────────────
+// Each instructor gets their own isolated session with timer, library, etc.
+const sessions = new Map(); // instructorId → session object
+
+// Class code → instructorId reverse lookup
+const codeToInstructor = new Map();
+
+const DEFAULT_TIMER_STATE = {
+  courseTitle: '',
+  label: '',
+  message: '',
+  totalSeconds: 0,
+  originalTotal: 0,
+  remainingSeconds: 0,
+  running: false,
+  endTime: null,
+  showEndTime: true,
+  endTimeFormatted: '',
+  endTimeLabel: 'Class resumes at',
+  transparent: false,
+  blackBg: false,
+  clockOnly: false,
+};
+
+function createSession(instructorId) {
+  return {
+    instructorId,
+    library: [],
+    savedOrders: [],
+    sequences: [],
+    timerState: { ...DEFAULT_TIMER_STATE },
+    lastTimer: null,
+    classCode: null,
+    muted: false,
+    tickInterval: null,
+    connectedStudents: 0,
+    students: new Map(),
+    studentCounter: 0,
+    checkinEnabled: false,
+    activeSequence: null,
+    sequenceAdvanceTimeout: null,
+  };
+}
+
+function getSession(instructorId) {
+  if (!sessions.has(instructorId)) {
+    sessions.set(instructorId, createSession(instructorId));
+  }
+  return sessions.get(instructorId);
+}
+
+// ── Class code generation (unique across all instructors) ───
+function generateCode() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let code, attempts = 0;
+  do {
+    code = '';
+    for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    attempts++;
+  } while (codeToInstructor.has(code) && attempts < 100);
+  return code;
+}
+
+// ── MongoDB load/save (all scoped by instructorId) ──────────
+const DEFAULT_LIBRARY = [
+  { id: '1', name: 'Lunch 60',       minutes: 60, label: 'Lunch Break',    message: 'Enjoy your lunch! See you back in class soon.', showEndTime: true },
+  { id: '2', name: 'Break 15',       minutes: 15, label: 'Short Break',    message: 'Quick break — grab a coffee or stretch!',       showEndTime: true },
+  { id: '3', name: 'Break 10',       minutes: 10, label: 'Break',          message: 'Be back in 10!',                                showEndTime: true },
+  { id: '4', name: 'Lab 30',         minutes: 30, label: 'Lab Activity',   message: 'Work through the lab at your own pace.',         showEndTime: true },
+  { id: '5', name: 'Lab 60',         minutes: 60, label: 'Lab Activity',   message: 'Take your time — ask questions if you get stuck.', showEndTime: true },
+];
+
+async function loadLibrary(instructorId) {
   if (db) {
     try {
-      const doc = await db.collection('libraries').findOne({ _id: 'default' });
+      const doc = await db.collection('libraries').findOne({ _id: instructorId });
       if (doc && doc.timers && doc.timers.length > 0) return doc.timers;
       // No data yet — seed with defaults
-      await saveLibrary(DEFAULT_LIBRARY);
-      return DEFAULT_LIBRARY;
+      await saveLibrary(instructorId, DEFAULT_LIBRARY);
+      return [...DEFAULT_LIBRARY];
     } catch (e) {
       console.error('  MongoDB loadLibrary failed:', e.message);
     }
   }
-  // Fall back to JSON file
-  try {
-    if (fs.existsSync(LIBRARY_FILE)) {
-      return JSON.parse(fs.readFileSync(LIBRARY_FILE, 'utf8'));
-    }
-  } catch (e) { /* fall through */ }
-  await saveLibrary(DEFAULT_LIBRARY);
-  return DEFAULT_LIBRARY;
+  return [...DEFAULT_LIBRARY];
 }
 
-async function saveLibrary(lib) {
-  // Save to MongoDB if available
+async function saveLibrary(instructorId, lib) {
   if (db) {
     try {
       await db.collection('libraries').updateOne(
-        { _id: 'default' },
+        { _id: instructorId },
         { $set: { timers: lib, updatedAt: new Date() } },
         { upsert: true }
       );
@@ -130,19 +200,12 @@ async function saveLibrary(lib) {
       console.error('  MongoDB saveLibrary failed:', e.message);
     }
   }
-  // Always save to JSON file as backup
-  try {
-    fs.writeFileSync(LIBRARY_FILE, JSON.stringify(lib, null, 2));
-  } catch (e) { /* ignore on read-only filesystems */ }
 }
 
-let library = [];
-let savedOrders = [];
-
-async function loadSavedOrders() {
+async function loadSavedOrders(instructorId) {
   if (db) {
     try {
-      const doc = await db.collection('settings').findOne({ _id: 'savedOrders' });
+      const doc = await db.collection('savedOrders').findOne({ _id: instructorId });
       if (doc && doc.orders) return doc.orders;
     } catch (e) {
       console.error('  MongoDB loadSavedOrders failed:', e.message);
@@ -151,11 +214,11 @@ async function loadSavedOrders() {
   return [];
 }
 
-async function saveSavedOrders(orders) {
+async function saveSavedOrders(instructorId, orders) {
   if (db) {
     try {
-      await db.collection('settings').updateOne(
-        { _id: 'savedOrders' },
+      await db.collection('savedOrders').updateOne(
+        { _id: instructorId },
         { $set: { orders, updatedAt: new Date() } },
         { upsert: true }
       );
@@ -165,89 +228,10 @@ async function saveSavedOrders(orders) {
   }
 }
 
-// ── Class code & mute ───────────────────────────────────────
-function generateCode() {
-  // 4-char alphanumeric, no ambiguous chars (0O1lI)
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-}
-
-let classCode = null;     // loaded from DB on startup, or generated fresh
-let muted = false;        // when true, students don't receive updates
-
-async function loadClassCode() {
+async function loadSequences(instructorId) {
   if (db) {
     try {
-      const doc = await db.collection('settings').findOne({ _id: 'classCode' });
-      if (doc && doc.code) return doc.code;
-    } catch (e) {
-      console.error('  MongoDB loadClassCode failed:', e.message);
-    }
-  }
-  // Fall back to JSON file
-  const codeFile = path.join(__dirname, 'class-code.json');
-  try {
-    if (fs.existsSync(codeFile)) {
-      const data = JSON.parse(fs.readFileSync(codeFile, 'utf8'));
-      if (data.code) return data.code;
-    }
-  } catch (e) { /* fall through */ }
-  return null;
-}
-
-async function saveClassCode(code) {
-  if (db) {
-    try {
-      await db.collection('settings').updateOne(
-        { _id: 'classCode' },
-        { $set: { code, updatedAt: new Date() } },
-        { upsert: true }
-      );
-    } catch (e) {
-      console.error('  MongoDB saveClassCode failed:', e.message);
-    }
-  }
-  // Always save to JSON file as backup
-  const codeFile = path.join(__dirname, 'class-code.json');
-  try {
-    fs.writeFileSync(codeFile, JSON.stringify({ code }, null, 2));
-  } catch (e) { /* ignore on read-only filesystems */ }
-}
-
-// ── Student check-in tracking ────────────────────────────────
-// Map of persistent student UUID → { id, name, state, socketId, timestamp }
-// state: 'idle' | 'working' | 'done'
-const students = new Map();
-let studentCounter = 0; // for auto-assigning "Student N"
-let checkinEnabled = false; // instructor toggle: show/hide check-in buttons on student phones
-
-function broadcastStudentList() {
-  const list = Array.from(students.values()).map(s => ({
-    id: s.id,
-    name: s.name,
-    state: s.state,
-    timestamp: s.timestamp,
-  }));
-  io.to('instructor').emit('student-list', list);
-}
-
-function resetAllStudentStates() {
-  for (const s of students.values()) {
-    s.state = 'idle';
-    s.timestamp = null;
-  }
-  broadcastStudentList();
-}
-
-// ── Sequences (saved timer chains) ──────────────────────────
-let sequences = [];
-
-async function loadSequences() {
-  if (db) {
-    try {
-      const doc = await db.collection('settings').findOne({ _id: 'sequences' });
+      const doc = await db.collection('sequences').findOne({ _id: instructorId });
       if (doc && doc.sequences) return doc.sequences;
     } catch (e) {
       console.error('  MongoDB loadSequences failed:', e.message);
@@ -256,11 +240,11 @@ async function loadSequences() {
   return [];
 }
 
-async function saveSequences(seqs) {
+async function saveSequences(instructorId, seqs) {
   if (db) {
     try {
-      await db.collection('settings').updateOne(
-        { _id: 'sequences' },
+      await db.collection('sequences').updateOne(
+        { _id: instructorId },
         { $set: { sequences: seqs, updatedAt: new Date() } },
         { upsert: true }
       );
@@ -270,15 +254,40 @@ async function saveSequences(seqs) {
   }
 }
 
-// ── Timer state persistence (MongoDB) ───────────────────────
-async function saveTimerState() {
+async function loadClassCode(instructorId) {
+  if (db) {
+    try {
+      const doc = await db.collection('classCodes').findOne({ _id: instructorId });
+      if (doc && doc.code) return doc.code;
+    } catch (e) {
+      console.error('  MongoDB loadClassCode failed:', e.message);
+    }
+  }
+  return null;
+}
+
+async function saveClassCode(instructorId, code) {
+  if (db) {
+    try {
+      await db.collection('classCodes').updateOne(
+        { _id: instructorId },
+        { $set: { code, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    } catch (e) {
+      console.error('  MongoDB saveClassCode failed:', e.message);
+    }
+  }
+}
+
+async function saveTimerState(instructorId, session) {
   if (!db) return;
   try {
-    await db.collection('settings').updateOne(
-      { _id: 'timerState' },
+    await db.collection('timerStates').updateOne(
+      { _id: instructorId },
       { $set: {
-        timer: { ...timerState },
-        lastTimer: lastTimer ? { ...lastTimer } : null,
+        timer: { ...session.timerState },
+        lastTimer: session.lastTimer ? { ...session.lastTimer } : null,
         updatedAt: new Date()
       }},
       { upsert: true }
@@ -288,142 +297,62 @@ async function saveTimerState() {
   }
 }
 
-async function loadTimerState() {
+async function loadTimerState(instructorId) {
   if (!db) return null;
   try {
-    return await db.collection('settings').findOne({ _id: 'timerState' });
+    return await db.collection('timerStates').findOne({ _id: instructorId });
   } catch (e) {
     console.error('  MongoDB loadTimerState failed:', e.message);
     return null;
   }
 }
 
-// Active sequence playback state (in memory)
-let activeSequence = null;  // { id, name, autoAdvance, steps: [...resolved timer data], currentIndex }
-let sequenceAdvanceTimeout = null;  // setTimeout handle for auto-advance delay
+// ── Initialize an instructor session (load from DB) ─────────
+async function initSession(instructorId) {
+  const s = getSession(instructorId);
+  s.library = await loadLibrary(instructorId);
+  s.savedOrders = await loadSavedOrders(instructorId);
+  s.sequences = await loadSequences(instructorId);
 
-function clearSequenceState() {
-  activeSequence = null;
-  if (sequenceAdvanceTimeout) {
-    clearTimeout(sequenceAdvanceTimeout);
-    sequenceAdvanceTimeout = null;
-  }
-}
-
-function broadcastSequenceState() {
-  const seqState = activeSequence ? {
-    id: activeSequence.id,
-    name: activeSequence.name,
-    currentIndex: activeSequence.currentIndex,
-    totalSteps: activeSequence.steps.length,
-    currentLabel: activeSequence.steps[activeSequence.currentIndex].label,
-    nextLabel: activeSequence.currentIndex < activeSequence.steps.length - 1
-      ? activeSequence.steps[activeSequence.currentIndex + 1].label
-      : null,
-  } : null;
-  io.to('instructor').emit('sequence-state', seqState);
-}
-
-function loadSequenceStep(index) {
-  if (!activeSequence || index >= activeSequence.steps.length) {
-    // Sequence finished
-    clearSequenceState();
-    broadcastSequenceState();
-    return false;
-  }
-  activeSequence.currentIndex = index;
-  const step = activeSequence.steps[index];
-  timerState.totalSeconds = step.totalSeconds;
-  timerState.originalTotal = step.totalSeconds;
-  timerState.remainingSeconds = step.totalSeconds;
-  timerState.label = step.label || '';
-  timerState.message = step.message || '';
-  timerState.showEndTime = step.showEndTime !== false;
-  timerState.endTimeLabel = 'Class resumes at';
-  timerState.running = false;
-  timerState.endTime = null;
-  timerState.endTimeFormatted = '';
-  stopTick();
-  broadcast();
-  broadcastSequenceState();
-  saveTimerState();
-  return true;
-}
-
-function autoStartTimer() {
-  timerState.running = true;
-  lastTimer = {
-    label: timerState.label,
-    message: timerState.message,
-    originalTotal: timerState.originalTotal,
-    remainingSeconds: timerState.remainingSeconds,
-    showEndTime: timerState.showEndTime,
-    endTimeLabel: timerState.endTimeLabel,
-    endTime: Date.now() + timerState.remainingSeconds * 1000,
-  };
-  startTick();
-  broadcast();
-  io.to('instructor').emit('last-timer', lastTimer);
-  saveTimerState();
-}
-
-function advanceSequence() {
-  if (!activeSequence) return;
-  const nextIndex = activeSequence.currentIndex + 1;
-  if (nextIndex >= activeSequence.steps.length) {
-    // Sequence complete
-    clearSequenceState();
-    broadcastSequenceState();
-    return;
-  }
-  const nextStep = activeSequence.steps[nextIndex];
-  // Stop the old timer tick so it doesn't keep broadcasting negative values
-  stopTick();
-  timerState.running = false;
-  if (nextStep.autoStart !== false) {
-    // Notify clients of upcoming timer
-    const preview = { label: nextStep.label, index: nextIndex, total: activeSequence.steps.length };
-    if (muted) {
-      io.to('instructor').emit('sequence-next-preview', preview);
-    } else {
-      io.emit('sequence-next-preview', preview);
-    }
-    // Auto-start after 3-second interstitial
-    sequenceAdvanceTimeout = setTimeout(() => {
-      sequenceAdvanceTimeout = null;
-      if (loadSequenceStep(nextIndex)) {
-        autoStartTimer();
-      }
-    }, 3000);
+  // Load or generate class code
+  const existingCode = await loadClassCode(instructorId);
+  if (existingCode) {
+    s.classCode = existingCode;
   } else {
-    // Manual — load but don't start
-    loadSequenceStep(nextIndex);
+    s.classCode = generateCode();
+    await saveClassCode(instructorId, s.classCode);
   }
+  codeToInstructor.set(s.classCode, instructorId);
+
+  // Recover timer state
+  const savedState = await loadTimerState(instructorId);
+  if (savedState) {
+    if (savedState.timer) {
+      Object.assign(s.timerState, savedState.timer);
+      if (s.timerState.running && s.timerState.endTime) {
+        const remaining = Math.round((s.timerState.endTime - Date.now()) / 1000);
+        if (remaining > 0) {
+          s.timerState.remainingSeconds = remaining;
+          startTick(s);
+          console.log(`  Recovered running timer for instructor ${instructorId}: ${remaining}s remaining`);
+        } else {
+          s.timerState.running = false;
+          s.timerState.remainingSeconds = 0;
+          s.timerState.endTime = null;
+          s.timerState.endTimeFormatted = '';
+          await saveTimerState(instructorId, s);
+        }
+      }
+    }
+    if (savedState.lastTimer) {
+      s.lastTimer = savedState.lastTimer;
+    }
+  }
+
+  return s;
 }
 
-// ── Timer state ──────────────────────────────────────────────
-let timerState = {
-  courseTitle: '',      // persistent course title — survives stop/reset
-  label: '',
-  message: '',
-  totalSeconds: 0,
-  originalTotal: 0,    // original duration for ring/color thresholds (survives pause/restart)
-  remainingSeconds: 0,
-  running: false,
-  endTime: null,       // epoch ms when timer will hit 0
-  showEndTime: true,
-  endTimeFormatted: '',
-  endTimeLabel: 'Class resumes at',
-  transparent: false,  // transparent background (for OBS/display)
-  blackBg: false,      // solid black background (for OBS/display)
-  clockOnly: false,    // show only countdown digits (for OBS/display)
-};
-
-// Snapshot of last running timer for "restore" feature
-let lastTimer = null;
-
-let tickInterval = null;
-
+// ── Timer engine (per-instructor) ───────────────────────────
 function formatEndTime(epochMs) {
   if (!epochMs) return '';
   const d = new Date(epochMs);
@@ -434,134 +363,265 @@ function formatEndTime(epochMs) {
   return `${h}:${m} ${ampm}`;
 }
 
-function broadcast() {
-  if (timerState.endTime) {
-    timerState.endTimeFormatted = formatEndTime(timerState.endTime);
+function broadcast(s) {
+  if (s.timerState.endTime) {
+    s.timerState.endTimeFormatted = formatEndTime(s.timerState.endTime);
   }
-  if (muted) {
-    // Only send to instructor/preview sockets
-    io.to('instructor').emit('timer-update', timerState);
+  if (s.muted) {
+    io.to('instructor:' + s.instructorId).emit('timer-update', s.timerState);
   } else {
-    io.emit('timer-update', timerState);
+    io.to('instructor:' + s.instructorId).emit('timer-update', s.timerState);
+    io.to('students:' + s.instructorId).emit('timer-update', s.timerState);
   }
 }
 
-function startTick() {
-  stopTick();
-  timerState.endTime = Date.now() + timerState.remainingSeconds * 1000;
-  timerState.endTimeFormatted = formatEndTime(timerState.endTime);
+function startTick(s) {
+  stopTick(s);
+  s.timerState.endTime = Date.now() + s.timerState.remainingSeconds * 1000;
+  s.timerState.endTimeFormatted = formatEndTime(s.timerState.endTime);
   let doneFired = false;
-  tickInterval = setInterval(() => {
-    const left = Math.round((timerState.endTime - Date.now()) / 1000);
-    timerState.remainingSeconds = left;
+  s.tickInterval = setInterval(() => {
+    const left = Math.round((s.timerState.endTime - Date.now()) / 1000);
+    s.timerState.remainingSeconds = left;
     if (left <= 0 && !doneFired) {
       doneFired = true;
-      if (muted) {
-        io.to('instructor').emit('timer-done');
+      if (s.muted) {
+        io.to('instructor:' + s.instructorId).emit('timer-done');
       } else {
-        io.emit('timer-done');
+        io.to('instructor:' + s.instructorId).emit('timer-done');
+        io.to('students:' + s.instructorId).emit('timer-done');
       }
-      // If running in a sequence, advance to next step
-      if (activeSequence) {
-        advanceSequence();
+      if (s.activeSequence) {
+        advanceSequence(s);
       }
     }
-    broadcast();
+    broadcast(s);
   }, 250);
 }
 
-function stopTick() {
-  if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
+function stopTick(s) {
+  if (s.tickInterval) { clearInterval(s.tickInterval); s.tickInterval = null; }
+}
+
+// ── Student check-in (per-instructor) ───────────────────────
+function broadcastStudentList(s) {
+  const list = Array.from(s.students.values()).map(st => ({
+    id: st.id,
+    name: st.name,
+    state: st.state,
+    timestamp: st.timestamp,
+  }));
+  io.to('instructor:' + s.instructorId).emit('student-list', list);
+}
+
+function resetAllStudentStates(s) {
+  for (const st of s.students.values()) {
+    st.state = 'idle';
+    st.timestamp = null;
+  }
+  broadcastStudentList(s);
+}
+
+// ── Sequence playback (per-instructor) ──────────────────────
+function clearSequenceState(s) {
+  s.activeSequence = null;
+  if (s.sequenceAdvanceTimeout) {
+    clearTimeout(s.sequenceAdvanceTimeout);
+    s.sequenceAdvanceTimeout = null;
+  }
+}
+
+function broadcastSequenceState(s) {
+  const seqState = s.activeSequence ? {
+    id: s.activeSequence.id,
+    name: s.activeSequence.name,
+    currentIndex: s.activeSequence.currentIndex,
+    totalSteps: s.activeSequence.steps.length,
+    currentLabel: s.activeSequence.steps[s.activeSequence.currentIndex].label,
+    nextLabel: s.activeSequence.currentIndex < s.activeSequence.steps.length - 1
+      ? s.activeSequence.steps[s.activeSequence.currentIndex + 1].label
+      : null,
+  } : null;
+  io.to('instructor:' + s.instructorId).emit('sequence-state', seqState);
+}
+
+function loadSequenceStep(s, index) {
+  if (!s.activeSequence || index >= s.activeSequence.steps.length) {
+    clearSequenceState(s);
+    broadcastSequenceState(s);
+    return false;
+  }
+  s.activeSequence.currentIndex = index;
+  const step = s.activeSequence.steps[index];
+  s.timerState.totalSeconds = step.totalSeconds;
+  s.timerState.originalTotal = step.totalSeconds;
+  s.timerState.remainingSeconds = step.totalSeconds;
+  s.timerState.label = step.label || '';
+  s.timerState.message = step.message || '';
+  s.timerState.showEndTime = step.showEndTime !== false;
+  s.timerState.endTimeLabel = 'Class resumes at';
+  s.timerState.running = false;
+  s.timerState.endTime = null;
+  s.timerState.endTimeFormatted = '';
+  stopTick(s);
+  broadcast(s);
+  broadcastSequenceState(s);
+  saveTimerState(s.instructorId, s);
+  return true;
+}
+
+function autoStartTimer(s) {
+  s.timerState.running = true;
+  s.lastTimer = {
+    label: s.timerState.label,
+    message: s.timerState.message,
+    originalTotal: s.timerState.originalTotal,
+    remainingSeconds: s.timerState.remainingSeconds,
+    showEndTime: s.timerState.showEndTime,
+    endTimeLabel: s.timerState.endTimeLabel,
+    endTime: Date.now() + s.timerState.remainingSeconds * 1000,
+  };
+  startTick(s);
+  broadcast(s);
+  io.to('instructor:' + s.instructorId).emit('last-timer', s.lastTimer);
+  saveTimerState(s.instructorId, s);
+}
+
+function advanceSequence(s) {
+  if (!s.activeSequence) return;
+  const nextIndex = s.activeSequence.currentIndex + 1;
+  if (nextIndex >= s.activeSequence.steps.length) {
+    clearSequenceState(s);
+    broadcastSequenceState(s);
+    return;
+  }
+  const nextStep = s.activeSequence.steps[nextIndex];
+  stopTick(s);
+  s.timerState.running = false;
+  if (nextStep.autoStart !== false) {
+    const preview = { label: nextStep.label, index: nextIndex, total: s.activeSequence.steps.length };
+    if (s.muted) {
+      io.to('instructor:' + s.instructorId).emit('sequence-next-preview', preview);
+    } else {
+      io.to('instructor:' + s.instructorId).emit('sequence-next-preview', preview);
+      io.to('students:' + s.instructorId).emit('sequence-next-preview', preview);
+    }
+    s.sequenceAdvanceTimeout = setTimeout(() => {
+      s.sequenceAdvanceTimeout = null;
+      if (loadSequenceStep(s, nextIndex)) {
+        autoStartTimer(s);
+      }
+    }, 3000);
+  } else {
+    loadSequenceStep(s, nextIndex);
+  }
 }
 
 // ── Routes ───────────────────────────────────────────────────
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'student.html')));
 app.get('/instructor', (req, res) => res.sendFile(path.join(__dirname, 'public', 'instructor.html')));
 
-// Library REST endpoints
-app.get('/api/library', (req, res) => res.json(library));
+// ── Library REST endpoints (auth required) ──────────────────
+app.get('/api/library', requireAuth, (req, res) => {
+  const s = getSession(req.instructorId);
+  res.json(s.library);
+});
 
-app.post('/api/library', async (req, res) => {
+app.post('/api/library', requireAuth, async (req, res) => {
+  const s = getSession(req.instructorId);
   const item = req.body;
   item.id = item.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const idx = library.findIndex(t => t.id === item.id);
-  if (idx >= 0) library[idx] = item;
-  else library.push(item);
-  await saveLibrary(library);
-  res.json(library);
+  const idx = s.library.findIndex(t => t.id === item.id);
+  if (idx >= 0) s.library[idx] = item;
+  else s.library.push(item);
+  await saveLibrary(req.instructorId, s.library);
+  res.json(s.library);
 });
 
-app.delete('/api/library/:id', async (req, res) => {
-  library = library.filter(t => t.id !== req.params.id);
-  await saveLibrary(library);
-  res.json(library);
+app.delete('/api/library/:id', requireAuth, async (req, res) => {
+  const s = getSession(req.instructorId);
+  s.library = s.library.filter(t => t.id !== req.params.id);
+  await saveLibrary(req.instructorId, s.library);
+  res.json(s.library);
 });
 
-app.put('/api/library/reorder', async (req, res) => {
+app.put('/api/library/reorder', requireAuth, async (req, res) => {
+  const s = getSession(req.instructorId);
   const { ids } = req.body;
   if (Array.isArray(ids)) {
-    const map = Object.fromEntries(library.map(t => [t.id, t]));
-    library = ids.map(id => map[id]).filter(Boolean);
-    await saveLibrary(library);
+    const map = Object.fromEntries(s.library.map(t => [t.id, t]));
+    s.library = ids.map(id => map[id]).filter(Boolean);
+    await saveLibrary(req.instructorId, s.library);
   }
-  res.json(library);
+  res.json(s.library);
 });
 
-// Library export/import
-app.get('/api/library/export', (req, res) => {
+app.get('/api/library/export', requireAuth, (req, res) => {
+  const s = getSession(req.instructorId);
   res.setHeader('Content-Disposition', 'attachment; filename="timer-library.json"');
-  res.json(library);
+  res.json(s.library);
 });
 
-app.post('/api/library/import', async (req, res) => {
+app.post('/api/library/import', requireAuth, async (req, res) => {
+  const s = getSession(req.instructorId);
   const imported = req.body;
   if (!Array.isArray(imported)) return res.status(400).json({ error: 'Expected an array of timers' });
-  library = imported;
-  await saveLibrary(library);
-  res.json(library);
+  s.library = imported;
+  await saveLibrary(req.instructorId, s.library);
+  res.json(s.library);
 });
 
-// Saved orders REST endpoints
-app.get('/api/orders', (req, res) => res.json(savedOrders));
+// ── Saved orders REST endpoints (auth required) ─────────────
+app.get('/api/orders', requireAuth, (req, res) => {
+  const s = getSession(req.instructorId);
+  res.json(s.savedOrders);
+});
 
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', requireAuth, async (req, res) => {
+  const s = getSession(req.instructorId);
   const { name, ids } = req.body;
   if (!name || !Array.isArray(ids)) return res.status(400).json({ error: 'name and ids required' });
   const id = req.body.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const idx = savedOrders.findIndex(o => o.id === id);
+  const idx = s.savedOrders.findIndex(o => o.id === id);
   const order = { id, name, ids };
-  if (idx >= 0) savedOrders[idx] = order;
-  else savedOrders.push(order);
-  await saveSavedOrders(savedOrders);
-  res.json(savedOrders);
+  if (idx >= 0) s.savedOrders[idx] = order;
+  else s.savedOrders.push(order);
+  await saveSavedOrders(req.instructorId, s.savedOrders);
+  res.json(s.savedOrders);
 });
 
-app.delete('/api/orders/:id', async (req, res) => {
-  savedOrders = savedOrders.filter(o => o.id !== req.params.id);
-  await saveSavedOrders(savedOrders);
-  res.json(savedOrders);
+app.delete('/api/orders/:id', requireAuth, async (req, res) => {
+  const s = getSession(req.instructorId);
+  s.savedOrders = s.savedOrders.filter(o => o.id !== req.params.id);
+  await saveSavedOrders(req.instructorId, s.savedOrders);
+  res.json(s.savedOrders);
 });
 
-// Sequence REST endpoints
-app.get('/api/sequences', (req, res) => res.json(sequences));
+// ── Sequence REST endpoints (auth required) ─────────────────
+app.get('/api/sequences', requireAuth, (req, res) => {
+  const s = getSession(req.instructorId);
+  res.json(s.sequences);
+});
 
-app.post('/api/sequences', async (req, res) => {
+app.post('/api/sequences', requireAuth, async (req, res) => {
+  const s = getSession(req.instructorId);
   const seq = req.body;
   seq.id = seq.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const idx = sequences.findIndex(s => s.id === seq.id);
-  if (idx >= 0) sequences[idx] = seq;
-  else sequences.push(seq);
-  await saveSequences(sequences);
-  res.json(sequences);
+  const idx = s.sequences.findIndex(x => x.id === seq.id);
+  if (idx >= 0) s.sequences[idx] = seq;
+  else s.sequences.push(seq);
+  await saveSequences(req.instructorId, s.sequences);
+  res.json(s.sequences);
 });
 
-app.delete('/api/sequences/:id', async (req, res) => {
-  sequences = sequences.filter(s => s.id !== req.params.id);
-  await saveSequences(sequences);
-  res.json(sequences);
+app.delete('/api/sequences/:id', requireAuth, async (req, res) => {
+  const s = getSession(req.instructorId);
+  s.sequences = s.sequences.filter(x => x.id !== req.params.id);
+  await saveSequences(req.instructorId, s.sequences);
+  res.json(s.sequences);
 });
 
-// ── Auth endpoints ──────────────────────────────────────────
+// ── Auth endpoints (no middleware needed) ────────────────────
 app.post('/api/signup', async (req, res) => {
   const { email, password, name } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
@@ -595,17 +655,12 @@ app.get('/api/me', (req, res) => {
   res.json({ name: payload.name, email: payload.email, isAdmin: !!payload.isAdmin });
 });
 
-// ── Change password ─────────────────────────────────────────
-app.post('/api/change-password', async (req, res) => {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated' });
-  const payload = verifyToken(auth.slice(7));
-  if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
+app.post('/api/change-password', requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
   if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
   try {
-    const instructor = await db.collection('instructors').findOne({ email: payload.email });
+    const instructor = await db.collection('instructors').findOne({ email: req.instructor.email });
     if (!instructor) return res.status(404).json({ error: 'Account not found' });
     const valid = await bcrypt.compare(currentPassword, instructor.password);
     if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
@@ -617,12 +672,8 @@ app.post('/api/change-password', async (req, res) => {
   }
 });
 
-// ── Admin: reset any instructor's password ──────────────────
-app.post('/api/admin/reset-password', async (req, res) => {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated' });
-  const payload = verifyToken(auth.slice(7));
-  if (!payload || !payload.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+// ── Admin endpoints ─────────────────────────────────────────
+app.post('/api/admin/reset-password', requireAdmin, async (req, res) => {
   const { email, newPassword } = req.body;
   if (!email || !newPassword) return res.status(400).json({ error: 'Email and new password required' });
   if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
@@ -637,23 +688,99 @@ app.post('/api/admin/reset-password', async (req, res) => {
   }
 });
 
-// QR code — includes class code in URL
-app.get('/qr', async (req, res) => {
+app.get('/api/admin/instructors', requireAdmin, async (req, res) => {
+  try {
+    const instructors = await db.collection('instructors')
+      .find({}, { projection: { password: 0 } })
+      .sort({ createdAt: 1 })
+      .toArray();
+    res.json(instructors.map(i => ({ email: i.email, name: i.name, isAdmin: !!i.isAdmin, createdAt: i.createdAt })));
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to list instructors' });
+  }
+});
+
+app.post('/api/admin/toggle-admin', requireAdmin, async (req, res) => {
+  const { email, isAdmin } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  if (email.toLowerCase() === req.instructor.email.toLowerCase() && !isAdmin) {
+    return res.status(400).json({ error: 'Cannot remove your own admin status' });
+  }
+  try {
+    const result = await db.collection('instructors').updateOne(
+      { email: email.toLowerCase() },
+      { $set: { isAdmin: !!isAdmin } }
+    );
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Instructor not found' });
+    res.json({ success: true, email: email.toLowerCase(), isAdmin: !!isAdmin });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update admin status' });
+  }
+});
+
+app.post('/api/admin/add-instructor', requireAdmin, async (req, res) => {
+  const { email, password, name, isAdmin } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  try {
+    const instructor = await createInstructor(email, password, name, isAdmin);
+    res.json({ success: true, email: instructor.email, name: instructor.name });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/update-instructor', requireAdmin, async (req, res) => {
+  const { originalEmail, name, email } = req.body;
+  if (!originalEmail || !email) return res.status(400).json({ error: 'Original email and new email required' });
+  try {
+    if (originalEmail.toLowerCase() !== email.toLowerCase()) {
+      const existing = await db.collection('instructors').findOne({ email: email.toLowerCase() });
+      if (existing) return res.status(400).json({ error: 'An account with that email already exists' });
+    }
+    const update = { email: email.toLowerCase() };
+    if (name !== undefined) update.name = name;
+    const result = await db.collection('instructors').updateOne(
+      { email: originalEmail.toLowerCase() },
+      { $set: update }
+    );
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Instructor not found' });
+    res.json({ success: true, email: email.toLowerCase(), name });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update instructor' });
+  }
+});
+
+app.post('/api/admin/delete-instructor', requireAdmin, async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  if (email.toLowerCase() === req.instructor.email.toLowerCase()) {
+    return res.status(400).json({ error: 'Cannot delete your own account' });
+  }
+  try {
+    const result = await db.collection('instructors').deleteOne({ email: email.toLowerCase() });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Instructor not found' });
+    res.json({ success: true, email: email.toLowerCase() });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete instructor' });
+  }
+});
+
+// ── QR code (auth required — scoped to instructor's class code) ──
+app.get('/qr', requireAuth, async (req, res) => {
+  const s = getSession(req.instructorId);
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
   const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const studentUrl = `${protocol}://${host}/?code=${classCode}`;
+  const studentUrl = `${protocol}://${host}/?code=${s.classCode}`;
   try {
     const dataUrl = await QRCode.toDataURL(studentUrl, { width: 300, margin: 2 });
-    res.json({ url: studentUrl, qr: dataUrl, code: classCode });
+    res.json({ url: studentUrl, qr: dataUrl, code: s.classCode });
   } catch (err) {
     res.status(500).json({ error: 'Could not generate QR code' });
   }
 });
 
-// QR-only page — standalone OBS browser source for QR code display
-// Responsive: scales to fill whatever browser source dimensions are set in OBS.
-// Use large dimensions (e.g. 800×1000) for a dedicated full-screen QR scene,
-// or small dimensions (e.g. 300×400) for a compact overlay. Same URL for both.
+// QR-only page — needs a code parameter to know which instructor
 app.get('/qr-only', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -721,8 +848,13 @@ app.get('/qr-only', (req, res) => {
 </div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
+  // Get auth token from URL params for instructor-scoped QR
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+
   function loadQR() {
-    fetch('/qr').then(r => r.json()).then(data => {
+    const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    fetch('/qr', { headers }).then(r => r.json()).then(data => {
       document.getElementById('qrImg').innerHTML = '<img src="' + data.qr + '" alt="QR code">';
       document.getElementById('classCode').textContent = data.code;
       const baseUrl = data.url.replace(/\\?.*$/, '');
@@ -732,7 +864,7 @@ app.get('/qr-only', (req, res) => {
   loadQR();
 
   // Auto-update when class code changes
-  const socket = io();
+  const socket = io({ auth: token ? { token } : {} });
   socket.on('connect', () => { socket.emit('identify', 'preview'); });
   socket.on('class-code', () => { loadQR(); });
 </script>
@@ -741,16 +873,15 @@ app.get('/qr-only', (req, res) => {
 });
 
 // ── Socket.io ────────────────────────────────────────────────
-let connectedStudents = 0;
-
 io.on('connection', (socket) => {
   let role = 'pending'; // pending | student | instructor | preview
   let validated = false;
-  let studentPersistentId = null; // UUID from student's localStorage
+  let studentPersistentId = null;
+  let instructorId = null; // which instructor this socket belongs to
+  let session = null;      // shorthand for getSession(instructorId)
 
   socket.on('identify', (r) => {
     if (r === 'instructor') {
-      // Verify auth token
       const token = socket.handshake.auth && socket.handshake.auth.token;
       const payload = token ? verifyToken(token) : null;
       if (!payload) {
@@ -760,36 +891,61 @@ io.on('connection', (socket) => {
       }
       role = 'instructor';
       validated = true;
-      socket.instructorId = payload.id;
-      socket.join('instructor');
+      instructorId = payload.id;
+      session = getSession(instructorId);
+      socket.join('instructor:' + instructorId);
       // Send current state to instructor
-      socket.emit('timer-update', timerState);
-      socket.emit('last-timer', lastTimer);
-      socket.emit('class-code', classCode);
-      socket.emit('mute-state', muted);
-      socket.emit('checkin-enabled', checkinEnabled);
-      io.to('instructor').emit('client-count', connectedStudents);
-      broadcastStudentList();
-      broadcastSequenceState();
-    } else if (r === 'preview' || r === 'display') {
-      role = r;
+      socket.emit('timer-update', session.timerState);
+      socket.emit('last-timer', session.lastTimer);
+      socket.emit('class-code', session.classCode);
+      socket.emit('mute-state', session.muted);
+      socket.emit('checkin-enabled', session.checkinEnabled);
+      io.to('instructor:' + instructorId).emit('client-count', session.connectedStudents);
+      broadcastStudentList(session);
+      broadcastSequenceState(session);
+    } else if (r === 'preview' || r === 'display' || (typeof r === 'object' && (r.role === 'preview' || r.role === 'display'))) {
+      // Preview/display: try auth token first, then class code
+      const identifyRole = typeof r === 'object' ? r.role : r;
+      const identifyCode = typeof r === 'object' ? r.code : null;
+      const token = socket.handshake.auth && socket.handshake.auth.token;
+      const payload = token ? verifyToken(token) : null;
+      let joinRoom = null;
+      if (payload) {
+        instructorId = payload.id;
+        session = getSession(instructorId);
+        joinRoom = 'instructor:' + instructorId; // privileged viewer (qr-only page, etc.)
+      } else if (identifyCode) {
+        // Route via class code (e.g. large-screen display with ?code=XXXX)
+        const ownerInstructorId = codeToInstructor.get(identifyCode.toUpperCase());
+        if (ownerInstructorId) {
+          instructorId = ownerInstructorId;
+          session = getSession(instructorId);
+          joinRoom = 'students:' + instructorId;
+        }
+      }
+      role = identifyRole;
       validated = true;
-      socket.join('instructor'); // preview/display get same updates as instructor
-      socket.emit('timer-update', timerState);
+      if (instructorId) {
+        socket.join(joinRoom);
+        socket.emit('timer-update', session.timerState);
+      }
     }
   });
 
-  // Student validates with class code
+  // Student validates with class code — routes to the correct instructor
   socket.on('validate-code', (code) => {
-    if (code === classCode) {
+    const ownerInstructorId = codeToInstructor.get(code);
+    if (ownerInstructorId) {
       role = 'student';
       validated = true;
-      socket.join('students');
-      connectedStudents++;
+      instructorId = ownerInstructorId;
+      session = getSession(instructorId);
+      socket.join('students:' + instructorId);
+      session.connectedStudents++;
       socket.emit('code-accepted');
-      socket.emit('timer-update', timerState);
-      socket.emit('checkin-enabled', checkinEnabled);
-      io.to('instructor').emit('client-count', connectedStudents);
+      socket.emit('timer-update', session.timerState);
+      socket.emit('checkin-enabled', session.checkinEnabled);
+      io.to('instructor:' + instructorId).emit('client-count', session.connectedStudents);
     } else {
       socket.emit('code-rejected');
     }
@@ -797,287 +953,281 @@ io.on('connection', (socket) => {
 
   // Student identifies with persistent UUID and optional name
   socket.on('student-identify', ({ id, name }) => {
-    if (role !== 'student') return;
+    if (role !== 'student' || !session) return;
     studentPersistentId = id;
-    let student = students.get(id);
+    let student = session.students.get(id);
     if (student) {
-      // Returning student — update socket and name if provided
       student.socketId = socket.id;
       if (name) student.name = name;
     } else {
-      // New student
-      studentCounter++;
+      session.studentCounter++;
       student = {
         id,
-        name: name || `Student ${studentCounter}`,
+        name: name || `Student ${session.studentCounter}`,
         state: 'idle',
         socketId: socket.id,
         timestamp: null,
       };
-      students.set(id, student);
+      session.students.set(id, student);
     }
-    // Tell the student their assigned name and current state
     socket.emit('student-name', student.name);
     socket.emit('student-state-restore', student.state);
-    broadcastStudentList();
+    broadcastStudentList(session);
   });
 
-  // Student changes check-in status
   socket.on('student-status', ({ state }) => {
-    if (role !== 'student' || !studentPersistentId) return;
-    const student = students.get(studentPersistentId);
+    if (role !== 'student' || !studentPersistentId || !session) return;
+    const student = session.students.get(studentPersistentId);
     if (!student) return;
     if (!['idle', 'working', 'done', 'away'].includes(state)) return;
     student.state = state;
     student.timestamp = Date.now();
-    broadcastStudentList();
+    broadcastStudentList(session);
   });
 
   socket.on('disconnect', () => {
-    if (role === 'student' && validated) {
-      connectedStudents--;
-      io.to('instructor').emit('client-count', connectedStudents);
-      // Don't remove from students map — they may reconnect.
-      // Just clear the socketId so instructor can see they're disconnected if needed.
-      if (studentPersistentId && students.has(studentPersistentId)) {
-        students.get(studentPersistentId).socketId = null;
+    if (role === 'student' && validated && session) {
+      session.connectedStudents--;
+      io.to('instructor:' + instructorId).emit('client-count', session.connectedStudents);
+      if (studentPersistentId && session.students.has(studentPersistentId)) {
+        session.students.get(studentPersistentId).socketId = null;
       }
     }
   });
 
-  // ── Instructor-only: generate new class code ──
+  // ── Instructor-only events (all scoped to their session) ──
+
   socket.on('generate-code', async () => {
-    if (role !== 'instructor') return;
-    classCode = generateCode();
-    await saveClassCode(classCode);
-    // Disconnect all students
-    io.to('students').emit('code-expired');
-    io.in('students').disconnectSockets(true);
-    connectedStudents = 0;
-    // Clear student tracking
-    students.clear();
-    studentCounter = 0;
-    // Notify instructor
-    io.to('instructor').emit('class-code', classCode);
-    io.to('instructor').emit('client-count', connectedStudents);
-    broadcastStudentList();
+    if (role !== 'instructor' || !session) return;
+    // Remove old code from lookup
+    codeToInstructor.delete(session.classCode);
+    // Generate new unique code
+    session.classCode = generateCode();
+    codeToInstructor.set(session.classCode, instructorId);
+    await saveClassCode(instructorId, session.classCode);
+    // Disconnect this instructor's students only
+    io.to('students:' + instructorId).emit('code-expired');
+    const studentSockets = await io.in('students:' + instructorId).fetchSockets();
+    for (const s of studentSockets) s.disconnect(true);
+    session.connectedStudents = 0;
+    session.students.clear();
+    session.studentCounter = 0;
+    io.to('instructor:' + instructorId).emit('class-code', session.classCode);
+    io.to('instructor:' + instructorId).emit('client-count', session.connectedStudents);
+    broadcastStudentList(session);
   });
 
-  // ── Instructor-only: reset student check-in states ──
   socket.on('reset-student-states', () => {
-    if (role !== 'instructor') return;
-    resetAllStudentStates();
+    if (role !== 'instructor' || !session) return;
+    resetAllStudentStates(session);
   });
 
-  // ── Instructor-only: toggle check-in buttons on student phones ──
   socket.on('set-checkin-enabled', (enabled) => {
-    if (role !== 'instructor') return;
-    checkinEnabled = !!enabled;
-    io.to('instructor').emit('checkin-enabled', checkinEnabled);
-    io.to('students').emit('checkin-enabled', checkinEnabled);
+    if (role !== 'instructor' || !session) return;
+    session.checkinEnabled = !!enabled;
+    io.to('instructor:' + instructorId).emit('checkin-enabled', session.checkinEnabled);
+    io.to('students:' + instructorId).emit('checkin-enabled', session.checkinEnabled);
   });
 
-  // ── Instructor-only: mute/unmute student updates ──
   socket.on('set-mute', (isMuted) => {
-    if (role !== 'instructor') return;
-    muted = !!isMuted;
-    io.to('instructor').emit('mute-state', muted);
-    if (!muted) {
-      // Unmuting — push current state to all students
-      io.to('students').emit('timer-update', timerState);
+    if (role !== 'instructor' || !session) return;
+    session.muted = !!isMuted;
+    io.to('instructor:' + instructorId).emit('mute-state', session.muted);
+    if (!session.muted) {
+      io.to('students:' + instructorId).emit('timer-update', session.timerState);
     }
   });
 
   socket.on('set-timer', ({ minutes, label, message, showEndTime, transparent, blackBg, clockOnly }) => {
+    if (role !== 'instructor' || !session) return;
     const secs = Math.max(0, Math.round(minutes * 60));
-    timerState.totalSeconds = secs;
-    timerState.originalTotal = secs;
-    timerState.remainingSeconds = secs;
-    timerState.label = label || '';
-    timerState.message = message || '';
-    timerState.showEndTime = showEndTime !== false;
-    timerState.transparent = !!transparent;
-    timerState.blackBg = !!blackBg;
-    timerState.clockOnly = !!clockOnly;
-    timerState.running = false;
-    timerState.endTime = null;
-    timerState.endTimeFormatted = '';
-    stopTick();
-    broadcast();
-    saveTimerState();
+    session.timerState.totalSeconds = secs;
+    session.timerState.originalTotal = secs;
+    session.timerState.remainingSeconds = secs;
+    session.timerState.label = label || '';
+    session.timerState.message = message || '';
+    session.timerState.showEndTime = showEndTime !== false;
+    session.timerState.transparent = !!transparent;
+    session.timerState.blackBg = !!blackBg;
+    session.timerState.clockOnly = !!clockOnly;
+    session.timerState.running = false;
+    session.timerState.endTime = null;
+    session.timerState.endTimeFormatted = '';
+    stopTick(session);
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
-  // Set timer duration only — does not touch label or message
   socket.on('set-timer-only', ({ minutes, showEndTime }) => {
+    if (role !== 'instructor' || !session) return;
     const secs = Math.max(0, Math.round(minutes * 60));
-    timerState.totalSeconds = secs;
-    timerState.originalTotal = secs;
-    timerState.remainingSeconds = secs;
-    timerState.showEndTime = showEndTime !== false;
-    timerState.running = false;
-    timerState.endTime = null;
-    timerState.endTimeFormatted = '';
-    stopTick();
-    broadcast();
-    saveTimerState();
+    session.timerState.totalSeconds = secs;
+    session.timerState.originalTotal = secs;
+    session.timerState.remainingSeconds = secs;
+    session.timerState.showEndTime = showEndTime !== false;
+    session.timerState.running = false;
+    session.timerState.endTime = null;
+    session.timerState.endTimeFormatted = '';
+    stopTick(session);
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('start', () => {
-    if (timerState.totalSeconds > 0 && !timerState.running) {
-      timerState.running = true;
-      // Snapshot for restore feature
-      lastTimer = {
-        label: timerState.label,
-        message: timerState.message,
-        originalTotal: timerState.originalTotal,
-        remainingSeconds: timerState.remainingSeconds,
-        showEndTime: timerState.showEndTime,
-        endTimeLabel: timerState.endTimeLabel,
-        endTime: Date.now() + timerState.remainingSeconds * 1000,
-      };
-      startTick();
-      broadcast();
-      io.to('instructor').emit('last-timer', lastTimer);
-      saveTimerState();
-    }
+    if (role !== 'instructor' || !session || session.timerState.totalSeconds <= 0 || session.timerState.running) return;
+    session.timerState.running = true;
+    session.lastTimer = {
+      label: session.timerState.label,
+      message: session.timerState.message,
+      originalTotal: session.timerState.originalTotal,
+      remainingSeconds: session.timerState.remainingSeconds,
+      showEndTime: session.timerState.showEndTime,
+      endTimeLabel: session.timerState.endTimeLabel,
+      endTime: Date.now() + session.timerState.remainingSeconds * 1000,
+    };
+    startTick(session);
+    broadcast(session);
+    io.to('instructor:' + instructorId).emit('last-timer', session.lastTimer);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('pause', () => {
-    if (timerState.running) {
-      timerState.running = false;
-      timerState.endTime = null;
-      timerState.endTimeFormatted = '';
-      stopTick();
-      // Update lastTimer with current remaining so restore resumes from here
-      if (lastTimer) {
-        lastTimer.remainingSeconds = timerState.remainingSeconds;
-      }
-      broadcast();
-      saveTimerState();
+    if (role !== 'instructor' || !session || !session.timerState.running) return;
+    session.timerState.running = false;
+    session.timerState.endTime = null;
+    session.timerState.endTimeFormatted = '';
+    stopTick(session);
+    if (session.lastTimer) {
+      session.lastTimer.remainingSeconds = session.timerState.remainingSeconds;
     }
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('reset', () => {
-    timerState.remainingSeconds = timerState.totalSeconds;
-    timerState.running = false;
-    timerState.endTime = null;
-    timerState.endTimeFormatted = '';
-    stopTick();
-    broadcast();
-    saveTimerState();
+    if (role !== 'instructor' || !session) return;
+    session.timerState.remainingSeconds = session.timerState.totalSeconds;
+    session.timerState.running = false;
+    session.timerState.endTime = null;
+    session.timerState.endTimeFormatted = '';
+    stopTick(session);
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('add-time', ({ minutes }) => {
+    if (role !== 'instructor' || !session) return;
     const extra = Math.round(minutes * 60);
-    timerState.totalSeconds += extra;
-    timerState.originalTotal += extra;
-    timerState.remainingSeconds += extra;
-    if (timerState.running && timerState.endTime) {
-      timerState.endTime += extra * 1000;
-      // Update lastTimer snapshot too
-      if (lastTimer) {
-        lastTimer.endTime += extra * 1000;
-        lastTimer.originalTotal += extra;
+    session.timerState.totalSeconds += extra;
+    session.timerState.originalTotal += extra;
+    session.timerState.remainingSeconds += extra;
+    if (session.timerState.running && session.timerState.endTime) {
+      session.timerState.endTime += extra * 1000;
+      if (session.lastTimer) {
+        session.lastTimer.endTime += extra * 1000;
+        session.lastTimer.originalTotal += extra;
       }
     }
-    broadcast();
-    saveTimerState();
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('stop', () => {
-    // Save remaining time before clearing so restore can resume
-    if (lastTimer && timerState.remainingSeconds > 0) {
-      lastTimer.remainingSeconds = timerState.remainingSeconds;
+    if (role !== 'instructor' || !session) return;
+    if (session.lastTimer && session.timerState.remainingSeconds > 0) {
+      session.lastTimer.remainingSeconds = session.timerState.remainingSeconds;
     }
-    timerState.totalSeconds = 0;
-    timerState.originalTotal = 0;
-    timerState.remainingSeconds = 0;
-    timerState.running = false;
-    timerState.endTime = null;
-    timerState.endTimeFormatted = '';
-    timerState.label = '';
-    timerState.message = '';
-    timerState.endTimeLabel = '';
-    timerState.showEndTime = false;
-    stopTick();
-    // Stop clears any active sequence
-    clearSequenceState();
-    broadcastSequenceState();
-    broadcast();
-    saveTimerState();
+    session.timerState.totalSeconds = 0;
+    session.timerState.originalTotal = 0;
+    session.timerState.remainingSeconds = 0;
+    session.timerState.running = false;
+    session.timerState.endTime = null;
+    session.timerState.endTimeFormatted = '';
+    session.timerState.label = '';
+    session.timerState.message = '';
+    session.timerState.endTimeLabel = '';
+    session.timerState.showEndTime = false;
+    stopTick(session);
+    clearSequenceState(session);
+    broadcastSequenceState(session);
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('update-message', ({ message }) => {
-    timerState.message = message || '';
-    broadcast();
-    saveTimerState();
+    if (role !== 'instructor' || !session) return;
+    session.timerState.message = message || '';
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('update-label', ({ label }) => {
-    timerState.label = label || '';
-    broadcast();
-    saveTimerState();
+    if (role !== 'instructor' || !session) return;
+    session.timerState.label = label || '';
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('update-end-time-label', ({ endTimeLabel }) => {
-    timerState.endTimeLabel = endTimeLabel || 'Class resumes at';
-    broadcast();
-    saveTimerState();
+    if (role !== 'instructor' || !session) return;
+    session.timerState.endTimeLabel = endTimeLabel || 'Class resumes at';
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('update-course-title', ({ courseTitle }) => {
-    timerState.courseTitle = courseTitle || '';
-    broadcast();
-    saveTimerState();
+    if (role !== 'instructor' || !session) return;
+    session.timerState.courseTitle = courseTitle || '';
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('update-display-modes', ({ transparent, blackBg, clockOnly }) => {
-    timerState.transparent = !!transparent;
-    timerState.blackBg = !!blackBg;
-    timerState.clockOnly = !!clockOnly;
-    broadcast();
-    saveTimerState();
+    if (role !== 'instructor' || !session) return;
+    session.timerState.transparent = !!transparent;
+    session.timerState.blackBg = !!blackBg;
+    session.timerState.clockOnly = !!clockOnly;
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   socket.on('update-show-end-time', ({ showEndTime }) => {
-    timerState.showEndTime = showEndTime !== false;
-    broadcast();
-    saveTimerState();
+    if (role !== 'instructor' || !session) return;
+    session.timerState.showEndTime = showEndTime !== false;
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
-  // Restore last timer — resume from where it was paused/stopped
   socket.on('restore-last-timer', () => {
-    if (!lastTimer || lastTimer.remainingSeconds <= 0) return;
-    const remaining = lastTimer.remainingSeconds;
+    if (role !== 'instructor' || !session || !session.lastTimer || session.lastTimer.remainingSeconds <= 0) return;
+    const remaining = session.lastTimer.remainingSeconds;
     const now = Date.now();
     const newEndTime = now + remaining * 1000;
-    timerState.label = lastTimer.label;
-    timerState.message = lastTimer.message;
-    timerState.originalTotal = lastTimer.originalTotal;
-    timerState.totalSeconds = lastTimer.originalTotal;
-    timerState.remainingSeconds = remaining;
-    timerState.showEndTime = lastTimer.showEndTime;
-    timerState.endTimeLabel = lastTimer.endTimeLabel;
-    timerState.running = true;
-    timerState.endTime = newEndTime;
-    timerState.endTimeFormatted = formatEndTime(newEndTime);
-    startTick();
-    broadcast();
-    saveTimerState();
+    session.timerState.label = session.lastTimer.label;
+    session.timerState.message = session.lastTimer.message;
+    session.timerState.originalTotal = session.lastTimer.originalTotal;
+    session.timerState.totalSeconds = session.lastTimer.originalTotal;
+    session.timerState.remainingSeconds = remaining;
+    session.timerState.showEndTime = session.lastTimer.showEndTime;
+    session.timerState.endTimeLabel = session.lastTimer.endTimeLabel;
+    session.timerState.running = true;
+    session.timerState.endTime = newEndTime;
+    session.timerState.endTimeFormatted = formatEndTime(newEndTime);
+    startTick(session);
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
   // ── Sequence playback ──
   socket.on('start-sequence', ({ sequenceId }) => {
-    if (role !== 'instructor') return;
-    // Stop any currently running timer/sequence first
-    stopTick();
-    timerState.running = false;
-    clearSequenceState();
-    const seq = sequences.find(s => s.id === sequenceId);
+    if (role !== 'instructor' || !session) return;
+    stopTick(session);
+    session.timerState.running = false;
+    clearSequenceState(session);
+    const seq = session.sequences.find(s => s.id === sequenceId);
     if (!seq || !seq.steps || seq.steps.length === 0) return;
-    // Resolve library item IDs to timer data snapshots
     const resolvedSteps = seq.steps.map(step => {
-      const libItem = library.find(t => t.id === step.timerId);
+      const libItem = session.library.find(t => t.id === step.timerId);
       if (!libItem) return null;
       return {
         timerId: libItem.id,
@@ -1089,74 +1239,65 @@ io.on('connection', (socket) => {
       };
     }).filter(Boolean);
     if (resolvedSteps.length === 0) return;
-    clearSequenceState();
-    activeSequence = {
+    clearSequenceState(session);
+    session.activeSequence = {
       id: seq.id,
       name: seq.name,
       steps: resolvedSteps,
       currentIndex: 0,
     };
-    // Load first step
-    loadSequenceStep(0);
-    // Auto-start if the first step says so
+    loadSequenceStep(session, 0);
     if (resolvedSteps[0].autoStart !== false) {
-      autoStartTimer();
+      autoStartTimer(session);
     }
   });
 
   socket.on('skip-sequence-step', () => {
-    if (role !== 'instructor' || !activeSequence) return;
-    stopTick();
-    timerState.running = false;
-    timerState.endTime = null;
-    timerState.endTimeFormatted = '';
-    // Clear any pending auto-advance
-    if (sequenceAdvanceTimeout) {
-      clearTimeout(sequenceAdvanceTimeout);
-      sequenceAdvanceTimeout = null;
+    if (role !== 'instructor' || !session || !session.activeSequence) return;
+    stopTick(session);
+    session.timerState.running = false;
+    session.timerState.endTime = null;
+    session.timerState.endTimeFormatted = '';
+    if (session.sequenceAdvanceTimeout) {
+      clearTimeout(session.sequenceAdvanceTimeout);
+      session.sequenceAdvanceTimeout = null;
     }
-    const nextIndex = activeSequence.currentIndex + 1;
-    if (nextIndex >= activeSequence.steps.length) {
-      clearSequenceState();
-      broadcastSequenceState();
-      broadcast();
-      saveTimerState();
+    const nextIndex = session.activeSequence.currentIndex + 1;
+    if (nextIndex >= session.activeSequence.steps.length) {
+      clearSequenceState(session);
+      broadcastSequenceState(session);
+      broadcast(session);
+      saveTimerState(instructorId, session);
     } else {
-      loadSequenceStep(nextIndex);
+      loadSequenceStep(session, nextIndex);
     }
   });
 
   socket.on('stop-sequence', () => {
-    if (role !== 'instructor') return;
-    clearSequenceState();
-    // Stop the current timer too
-    stopTick();
-    timerState.running = false;
-    timerState.endTime = null;
-    timerState.endTimeFormatted = '';
-    broadcastSequenceState();
-    broadcast();
-    saveTimerState();
+    if (role !== 'instructor' || !session) return;
+    clearSequenceState(session);
+    stopTick(session);
+    session.timerState.running = false;
+    session.timerState.endTime = null;
+    session.timerState.endTimeFormatted = '';
+    broadcastSequenceState(session);
+    broadcast(session);
+    saveTimerState(instructorId, session);
   });
 
-  // Send sequence state when instructor connects
   socket.on('get-sequence-state', () => {
-    if (role !== 'instructor') return;
-    broadcastSequenceState();
+    if (role !== 'instructor' || !session) return;
+    broadcastSequenceState(session);
   });
-
 });
+
+// Legacy data migration removed — migration to per-instructor data completed.
 
 // ── Start ────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 
 (async () => {
   await connectMongo();
-  library = await loadLibrary();
-  savedOrders = await loadSavedOrders();
-  sequences = await loadSequences();
-  classCode = await loadClassCode() || generateCode();
-  await saveClassCode(classCode);
 
   // Ensure at least one instructor account exists (seed)
   if (db) {
@@ -1173,37 +1314,18 @@ const PORT = process.env.PORT || 3000;
     }
   }
 
-  // Recover timer state from MongoDB
-  const savedState = await loadTimerState();
-  if (savedState) {
-    if (savedState.timer) {
-      Object.assign(timerState, savedState.timer);
-      if (timerState.running && timerState.endTime) {
-        const remaining = Math.round((timerState.endTime - Date.now()) / 1000);
-        if (remaining > 0) {
-          timerState.remainingSeconds = remaining;
-          startTick();
-          console.log(`  Recovered running timer: ${remaining}s remaining`);
-        } else {
-          // Timer expired while server was down
-          timerState.running = false;
-          timerState.remainingSeconds = 0;
-          timerState.endTime = null;
-          timerState.endTimeFormatted = '';
-          console.log('  Timer had expired during downtime — cleared.');
-          await saveTimerState();
-        }
-      } else {
-        console.log('  Recovered timer state (not running).');
-      }
-    }
-    if (savedState.lastTimer) {
-      lastTimer = savedState.lastTimer;
+  // Pre-load sessions for all instructors who have data
+  if (db) {
+    const instructors = await db.collection('instructors').find({}).toArray();
+    for (const inst of instructors) {
+      const id = inst._id.toString();
+      await initSession(id);
+      console.log(`  Loaded session for ${inst.email} (code: ${getSession(id).classCode})`);
     }
   }
 
   server.listen(PORT, () => {
-    console.log(`\n  Classroom Timer is running!`);
+    console.log(`\n  LiveTimer is running!`);
     console.log(`   Instructor panel : http://localhost:${PORT}/instructor`);
     console.log(`   Student view     : http://localhost:${PORT}/`);
     console.log(`\n   Share the student URL (or QR code) with your class.\n`);

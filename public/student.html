@@ -491,9 +491,9 @@ let manualSubmit = false; // true when user clicked Join — suppresses error on
 // Re-identify on every connect/reconnect so the server knows our role
 socket.on('connect', () => {
   if (isPreview) {
-    socket.emit('identify', 'preview');
+    socket.emit('identify', { role: 'preview', code: urlCode ? urlCode.toUpperCase() : null });
   } else if (isOBS) {
-    socket.emit('identify', 'display');
+    socket.emit('identify', { role: 'display', code: urlCode ? urlCode.toUpperCase() : null });
   } else if (studentValidated) {
     // Already validated — re-validate with the code we used
     socket.emit('validate-code', studentValidated);
@@ -502,7 +502,7 @@ socket.on('connect', () => {
     // First connect with QR code — auto-validate (skip if code was expired by disconnect-all)
     socket.emit('validate-code', urlCode.toUpperCase());
   } else if (isLargeScreen) {
-    socket.emit('identify', 'display');
+    socket.emit('identify', { role: 'display', code: urlCode ? urlCode.toUpperCase() : null });
   }
 });
 

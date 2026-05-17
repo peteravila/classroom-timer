@@ -55,9 +55,10 @@ Stop the server with Ctrl+C. Restart after any server.js changes. Use `npm run d
 - **Runtime:** Node.js
 - **Server:** Express.js
 - **Real-time:** Socket.io (WebSockets)
-- **Database:** MongoDB Atlas (free tier) — stores timer library and class code
+- **Database:** MongoDB Atlas (free tier) — stores timer library, class code, timer state, and instructor accounts
+- **Auth:** bcrypt (password hashing), jsonwebtoken (JWT tokens)
 - **QR Code:** qrcode (npm package, generates data URL PNGs)
-- **Environment:** dotenv for MONGODB_URI
+- **Environment:** dotenv for MONGODB_URI and JWT_SECRET
 - **Frontend:** Vanilla HTML/CSS/JavaScript (no build step, no frameworks)
 
 ## File Structure
@@ -164,14 +165,19 @@ Saved timer presets persist to MongoDB (collection `library`) with JSON file fal
 
 ### Instructor Page (public/instructor.html)
 
-Single self-contained HTML file (~2100 lines). Key features:
+Single self-contained HTML file (~4000+ lines). Key features:
 
 - **Phone mockup centerpiece:** A live phone-shaped preview that mirrors the student view. Not an iframe — native HTML/CSS with contenteditable fields. Updates in real time during countdown (digits, ring, colors, state classes).
 - **Contenteditable fields:** Course title, label, end time label, and message are editable directly on the mockup. Changes push to server on blur or via Push buttons.
-- **Transport controls:** Play, Pause, Stop, Restore buttons below the mockup.
-- **Duration popup:** Draggable overlay with hour/minute spinners and quick-set buttons. Translucent frosted glass (`backdrop-filter: blur(6px)`) so the timer is visible underneath. Supports duration mode and target-time mode.
-- **Tabs:** Library (grid of presets), Options (per-timer display settings), Settings (class code, mute, alarm, backup).
+- **Digit spinners on mockup:** Clock digits flanked by hour (▲▼) and minute (▲▼) spinner arrows with "hrs"/"min" labels. Blue when active, green on hover, hold-to-repeat (400ms delay, 120ms interval). Disabled (dimmed) when timer is running or paused. Clock field is fixed-width (180px). Idle display uses HH:MM format; running display uses HH:MM:SS.
+- **"..." button:** Below the right (minutes) spinner, opens the duration popup for quick-set times, target-time mode, and add-time functionality.
+- **Transport controls:** Play, Pause, Stop, Restore buttons below the mockup. Blue when enabled, green hover mask, `outline: none` to suppress focus rings.
+- **Duration popup:** Draggable overlay with hour/minute spinners, quick-set buttons, target-time mode, and Add button. Translucent frosted glass (`backdrop-filter: blur(6px)`) so the timer is visible underneath.
+- **Library toolbar:** Batch operations toolbar with New, Update (field picker dialog), Duplicate, Delete buttons, and a Reset Columns button. Uses `.enabled` class pattern (blue when active, green hover). Batch update shows a field picker dialog with current values. Batch delete checks for sequence dependencies and offers to clean up.
+- **Library grid:** Full-width grid showing all timer fields (checkbox, load, play, name, duration, title, end time label, message, show end time, background mode, clock only, after loading). Horizontal scrolling, resizable column headers with drag handles, sortable columns, localStorage persistence for column widths.
+- **Tabs:** Library (grid of presets with batch ops), Options (per-timer display settings), Settings (class code, mute, alarm, backup).
 - **Custom dialogs:** All native confirm/alert/prompt replaced with styled modal dialogs using frosted glass. `customConfirm(msg)` → Promise<boolean>, `customAlert(msg)` → Promise<void>, `customPrompt(label)` → Promise<string|null>.
+- **Authentication:** Login gate with JWT tokens. Supports signup (first user becomes admin), login, change password, admin password reset. "Hi, [name]" greeting next to logout button.
 - **Audio alarm:** Web Audio API beep pattern when timer finishes.
 - **Connected count:** Shows number of connected clients.
 - **Library backup:** Export/import via JSON files in Settings tab.
@@ -193,21 +199,21 @@ Single self-contained HTML file (~440 lines). Mobile-first, full-screen design.
 - **Background color transitions:** Entire page background shifts through color states
 - **End time display:** Shows customizable label (e.g., "Class resumes at 1:30 PM")
 - **Phone vibration:** Uses `navigator.vibrate()` when timer finishes (mobile only)
-- **QR corner:** Large screens show QR code + class code + URL in bottom-right
-- **OBS mode:** `?obs=true` parameter skips code gate, hides QR, respects transparent/clock-only modes
+- **OBS mode:** `?obs=true` parameter skips code gate, respects transparent/clock-only modes. QR code display is handled by the dedicated `/qr-only` route.
 
 ## Known Issues / Future Work
 
 See `Pending Items.md` for the detailed list. Summary:
 
-1. **Persist timer state to MongoDB** — Server restart kills running timer. Agreed upon, not yet implemented.
+1. ~~**Persist timer state to MongoDB**~~ ✓ DONE — Timer state saves to MongoDB on state changes; server auto-recovers running timers on restart.
 2. **Progress ring scaling for long timers** — Ring drains by percentage; tiny changes on multi-hour timers. Awaiting Peter's decision.
-3. **Multi-instructor support (Phase 2)** — One global timer state currently. Planned: unique rooms per instructor.
+3. **Multi-instructor support (Phase 2)** — One global timer state currently. Planned: unique rooms per instructor. Auth system is in place (Step 1 complete).
 4. **Free tier sleep** — Render spins down after ~15 min inactivity. Keep-alive ping mitigates but only while instructor tab is active.
-5. **No authentication** — Anyone with the instructor URL can control the timer.
+5. ~~**No authentication**~~ ✓ DONE — JWT-based instructor auth with signup, login, admin roles, change/reset password.
 6. **Debug code in student.html submitCode()** — Diagnostic timeout/feedback code should be cleaned up once reconnection flow is confirmed stable.
-7. **Undeployed local changes** — Custom dialogs, reconnection fixes, duration popup styling haven't been pushed to production yet.
+7. **Undeployed local changes** — Many local changes (auth, library toolbar, digit spinners, timer persistence, etc.) haven't been pushed to production yet.
 8. **Library mismatch** — Local shows 5 timers but production may have more. Check MongoDB Atlas.
+9. **Email-based forgot password** — Deferred until manual admin resets become a hassle.
 
 ## CSS Design System
 

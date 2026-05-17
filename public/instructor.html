@@ -177,17 +177,54 @@
   .mock-ring-fg { fill: none; stroke: var(--green); stroke-width: 5; stroke-linecap: round;
     stroke-dasharray: 327; stroke-dashoffset: 72;
     transition: stroke 0.8s, stroke-dashoffset 0.3s; }
+  .mock-digits-wrap {
+    display: flex; align-items: stretch; justify-content: center;
+    position: relative; margin: 1px 0;
+  }
   .mock-digits {
     font-size: 3.2rem; font-weight: 800; color: var(--green);
     font-variant-numeric: tabular-nums; letter-spacing: 2px;
-    line-height: 1; margin: 1px 0; cursor: pointer;
+    line-height: 1; cursor: pointer;
     transition: color 0.8s, font-size 0.3s;
     flex-shrink: 0;
     border: 1.5px solid transparent; border-radius: 6px; padding: 2px 6px;
+    display: flex; align-items: center; justify-content: center;
+    width: 180px;
   }
   .mock-digits.field-dirty { border-color: var(--yellow); border-style: dotted; }
+  #mockDigitsText { position: relative; top: -4px; }
   .mock-digits.has-hours { font-size: 2.4rem; }
   .mock-digits:hover { opacity: 0.8; }
+  .digit-spinner {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 0; position: relative;
+  }
+  .digit-spinner-label {
+    position: absolute; top: 0;
+    font-size: 0.5rem; color: var(--dim); text-transform: uppercase;
+    letter-spacing: 0.5px; line-height: 1; user-select: none;
+  }
+  .digit-arrow {
+    background: transparent; border: none; color: var(--blue);
+    font-size: 0.75rem; cursor: pointer; padding: 3px 6px; line-height: 1;
+    transition: color 0.15s, background 0.15s; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .digit-arrow:hover { color: var(--green); background: rgba(255,255,255,0.06); }
+  .digit-arrow.disabled { color: var(--dim); cursor: default; }
+  .digit-arrow.disabled:hover { color: var(--dim); background: transparent; }
+  .digit-expand-btn {
+    position: absolute; bottom: 0;
+    background: transparent; border: none;
+    color: var(--blue); font-size: 0.75rem; line-height: 1;
+    cursor: pointer; transition: color 0.15s;
+    padding: 0; letter-spacing: 1px;
+  }
+  .digit-expand-btn:hover { color: var(--green); }
+  .digit-expand-spacer {
+    position: absolute; bottom: 0;
+    visibility: hidden;
+  }
 
   /* Live mockup color states — mirror student.html */
   .phone-mockup.state-green { background: #0d3b2e; }
@@ -239,8 +276,7 @@
   /* Duration popup overlay */
   .duration-popup-backdrop {
     display: none; position: fixed; inset: 0; z-index: 1000;
-    background: none; justify-content: center; align-items: center;
-    pointer-events: none;
+    background: transparent; justify-content: center; align-items: center;
   }
   .duration-popup-backdrop.open { display: flex; }
   .duration-popup {
@@ -251,6 +287,12 @@
     position: absolute; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     max-width: 520px; pointer-events: auto; cursor: grab;
   }
+  .dialog-close {
+    position: absolute; top: 8px; right: 12px;
+    background: none; border: none; color: var(--dim); font-size: 1.1rem;
+    cursor: pointer; padding: 4px 8px; line-height: 1; z-index: 1;
+  }
+  .dialog-close:hover { color: var(--text); }
   .duration-popup-close {
     position: absolute; top: 10px; right: 14px;
     background: none; border: none; color: var(--dim); font-size: 1.2rem;
@@ -315,13 +357,15 @@
   }
   .confirm-backdrop.open { display: flex; }
   .confirm-box {
-    background: rgba(30, 30, 50, 0.7);
+    background: rgba(30, 30, 50, 0.5);
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255,255,255,0.25);
     border-radius: 14px; padding: 24px 28px 20px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     max-width: 360px; text-align: center;
+    position: absolute; cursor: grab; user-select: none;
   }
+  .confirm-box:active { cursor: grabbing; }
   .confirm-msg {
     font-size: 0.9rem; color: var(--text); margin-bottom: 20px; line-height: 1.4;
   }
@@ -343,13 +387,15 @@
   }
   .prompt-backdrop.open { display: flex; }
   .prompt-box {
-    background: rgba(30, 30, 50, 0.7);
+    background: rgba(30, 30, 50, 0.5);
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255,255,255,0.25);
     border-radius: 14px; padding: 24px 28px 20px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     max-width: 360px; text-align: center;
+    position: absolute; cursor: grab; user-select: none;
   }
+  .prompt-box:active { cursor: grabbing; }
   .prompt-label {
     font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
     color: var(--dim); margin-bottom: 12px;
@@ -359,7 +405,7 @@
     border: 1.5px solid var(--blue); border-radius: 6px;
     background: rgba(255,255,255,0.08); color: var(--text);
     font-size: 1rem; font-family: inherit; margin-bottom: 18px;
-    outline: none;
+    outline: none; cursor: text; user-select: text;
   }
   .prompt-input:focus { border-color: var(--green); }
   .prompt-buttons { display: flex; gap: 12px; }
@@ -564,6 +610,7 @@
     background: transparent; color: var(--blue); font-size: 1.1rem;
     cursor: pointer; transition: all 0.15s;
     display: flex; align-items: center; justify-content: center; padding: 0;
+    outline: none;
   }
   .transport-btn.enabled { color: var(--blue); border-color: var(--blue); }
   .transport-btn.enabled svg { stroke: var(--blue); }
@@ -594,64 +641,71 @@
   .btn-field-add { color: var(--green) !important; border-color: var(--green) !important; }
   .btn-field-add:hover { background: rgba(78,204,163,0.15) !important; }
 
-  /* Library grid */
-  .lib-grid { width: 100%; border-collapse: collapse; }
+  /* Library grid — single scrollable panel */
+  .lib-grid-wrap { max-height: 460px; overflow: auto; }
+  .lib-grid { min-width: max-content; }
   .lib-grid-header {
-    display: grid; grid-template-columns: 40px 40px 2fr 36px 2fr 3fr 22px 22px 22px;
-    gap: 6px; padding: 4px 6px;
+    display: grid; gap: 0; padding: 0;
     border-bottom: 1px solid rgba(255,255,255,0.1);
-    position: relative;
+    position: sticky; top: 0; z-index: 5; background: var(--bg);
+    white-space: nowrap; height: 26px; align-items: center; box-sizing: border-box;
   }
-  .lib-grid-header span {
+  .lib-grid-header span, .lib-grid-header .lib-hdr-cell {
     font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;
     color: var(--dim); font-weight: 600;
+    padding: 4px 6px; position: relative; overflow: hidden; white-space: nowrap;
   }
-  .lib-grid-header span.sortable {
+  .lib-grid-header .sortable {
     cursor: pointer; user-select: none; transition: color 0.15s;
   }
-  .lib-grid-header span.sortable:hover { color: var(--blue); }
-  .lib-grid-header span.sort-active { color: var(--green); }
-  .lib-grid-header span.sort-active::after { margin-left: 2px; }
+  .lib-grid-header .sortable:hover { color: var(--blue); }
+  .lib-grid-header .sort-active { color: var(--green); }
+  .lib-grid-header .sort-active::after { margin-left: 2px; }
   .btn-clear-sort {
-    position: absolute; right: -2px; top: 50%; transform: translateY(-50%);
     border: 1px solid #444; border-radius: 4px; background: transparent;
     color: #555; font-size: 0.6rem; padding: 1px 5px; cursor: pointer;
-    display: none; transition: all 0.15s;
+    display: none; transition: all 0.15s; white-space: nowrap;
+    align-self: center; justify-self: center;
   }
   .btn-clear-sort:hover { color: var(--red); border-color: var(--red); }
   .btn-clear-sort.visible { display: inline-block; }
+  /* Column resize handle */
+  .col-resize-handle {
+    position: absolute; right: 0; top: 20%; bottom: 20%; width: 7px;
+    cursor: col-resize; z-index: 6;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .col-resize-handle::before {
+    content: ''; display: block; width: 1px; height: 100%;
+    background: rgba(255,255,255,0.15);
+  }
+  .col-resize-handle:hover::before, .col-resize-handle.dragging::before {
+    width: 2px; background: var(--blue);
+  }
   .lib-row {
-    display: grid; grid-template-columns: 40px 40px 2fr 36px 2fr 3fr 22px 22px 22px;
-    gap: 6px; align-items: center;
-    padding: 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    display: grid; gap: 0; align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
     transition: background 0.15s;
+    height: 29px; min-height: 29px; box-sizing: border-box;
   }
   .lib-row:last-child { border-bottom: none; }
   .lib-row:hover { background: rgba(255,255,255,0.03); }
+  .lib-row > * { padding: 4px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .lib-row-cb { width: 15px; height: 15px; accent-color: var(--green); cursor: pointer; margin: 0; padding: 4px 2px; }
   .lib-row.active { background: rgba(78,204,163,0.06); }
   .lib-row[draggable="true"] { cursor: grab; }
   .lib-row.dragging { opacity: 0.4; }
   .lib-row.drag-over { border-top: 2px solid var(--green); }
-  .lib-row-name {
-    font-weight: 600; font-size: 0.82rem;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    min-width: 0;
-  }
-  .lib-row-mins {
-    font-size: 0.78rem; color: var(--blue); text-align: right;
-    padding-right: 4px;
-  }
-  .lib-row-title, .lib-row-msg {
-    font-size: 0.78rem; color: var(--dim);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    min-width: 0;
-  }
+  .lib-row-name { font-weight: 600; font-size: 0.82rem; }
+  .lib-row-mins { font-size: 0.78rem; color: var(--blue); text-align: right; }
+  .lib-row-title, .lib-row-msg, .lib-row-etl { font-size: 0.78rem; color: var(--dim); }
   .lib-row-title { color: #bbb; }
+  .lib-row-opt { font-size: 0.72rem; color: var(--dim); text-align: center; }
   .lib-row-btn {
-    padding: 2px 5px; border: 1px solid var(--blue); border-radius: 5px;
+    padding: 0; border: 1px solid var(--blue); border-radius: 5px;
     background: transparent; color: var(--blue); font-size: 0.6rem; white-space: nowrap;
     cursor: pointer; transition: all 0.15s;
-    text-align: center; width: 40px; box-sizing: border-box;
+    text-align: center; width: 40px; height: 20px; box-sizing: border-box;
     display: inline-flex; align-items: center; justify-content: center;
   }
   .lib-row-btn:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
@@ -659,35 +713,86 @@
     border-color: var(--green); color: var(--green);
   }
   .lib-row-btn.btn-loaded:hover { background: rgba(78,204,163,0.15); }
-  .lib-row-go { padding: 2px 4px; font-size: 0.55rem; }
-  .lib-icon-btn {
-    width: 22px; height: 22px; border: 1px solid #444; border-radius: 4px;
-    background: transparent; font-size: 0.75rem;
-    cursor: pointer; transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center; padding: 0;
-  }
-  .lib-icon-btn.btn-save {
-    color: #555; border-color: #333;
-  }
-  .lib-icon-btn.btn-save.btn-active {
-    color: var(--green); border-color: var(--green);
-  }
-  .lib-icon-btn.btn-save.btn-active:hover { background: rgba(78,204,163,0.15); }
-  .lib-icon-btn.btn-dup {
-    color: #555; border-color: #333; font-size: 0.7rem;
-  }
-  .lib-icon-btn.btn-dup:hover { color: var(--green); border-color: var(--green); background: rgba(78,204,163,0.08); }
-  .lib-icon-btn.btn-del {
-    color: #555; border-color: #333;
-  }
-  .lib-icon-btn.btn-del:hover { color: var(--red); border-color: var(--red); }
-
+  .lib-row-go { font-size: 0.55rem; }
   .btn-new-timer {
     width: 100%; padding: 8px; border: 2px dashed #444; border-radius: 8px;
     background: transparent; color: var(--dim); font-size: 0.85rem; cursor: pointer;
     margin-top: 6px;
   }
   .btn-new-timer:hover { border-color: var(--green); color: var(--green); }
+
+  .lib-actions {
+    display: flex; gap: 6px; align-items: center; margin-bottom: 6px;
+    flex-wrap: nowrap;
+  }
+  .lib-btn-sep {
+    width: 1px; height: 18px; background: rgba(255,255,255,0.1); margin: 0 2px; flex-shrink: 0;
+  }
+  .lib-action-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border: 1px solid #666; border-radius: 5px;
+    background: transparent; color: #666; font-size: 0.75rem;
+    cursor: default; transition: all 0.15s; white-space: nowrap;
+    opacity: 0.7;
+  }
+  .lib-action-btn svg { width: 14px; height: 14px; vertical-align: middle; }
+  .lib-action-btn:not(.enabled) svg { stroke: #666; }
+  .lib-action-btn.enabled {
+    color: var(--blue); border-color: var(--blue); cursor: pointer; opacity: 1;
+  }
+  .lib-action-btn.enabled svg { stroke: var(--blue); }
+  .lib-action-btn.enabled:hover {
+    background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green);
+  }
+  .lib-action-btn.enabled:hover svg { stroke: var(--green); }
+  .lib-action-btn.btn-action-delete.enabled { color: var(--blue); border-color: var(--blue); }
+  .lib-action-btn.btn-action-delete.enabled:hover {
+    background: rgba(231,76,60,0.08); color: var(--red); border-color: var(--red);
+  }
+  .lib-action-btn.btn-action-delete.enabled:hover svg { stroke: var(--red); }
+  .lib-select-all { width: 15px; height: 15px; accent-color: var(--green); cursor: pointer; margin: 0; }
+
+  /* Admin grid cells */
+  .admin-row > * { padding: 2px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .admin-row > *:last-child { overflow: visible; }
+  input.admin-cell-input {
+    padding: 2px 6px; border: 1px solid transparent; border-radius: 3px;
+    background: transparent; color: var(--text); font-size: 0.78rem;
+    font-family: inherit; width: 100%; box-sizing: border-box;
+    transition: border-color 0.15s; height: 22px; line-height: 1;
+  }
+  input.admin-cell-input:hover { border-color: rgba(255,255,255,0.1); }
+  input.admin-cell-input:focus { border-color: var(--blue); outline: none; background: rgba(255,255,255,0.04); }
+  .admin-save-btn, .admin-cancel-btn {
+    padding: 3px 8px; border: 1px solid var(--blue); border-radius: 4px;
+    background: transparent; color: var(--blue); font-size: 0.7rem;
+    cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.15s;
+  }
+  .admin-save-btn:hover, .admin-cancel-btn:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
+
+  /* Library grid editable cells */
+  input.lib-cell-input, select.lib-cell-select {
+    padding: 2px 6px; border: 1px solid transparent; border-radius: 3px;
+    background: transparent; color: var(--text); font-size: 0.78rem;
+    font-family: inherit; width: 100%; box-sizing: border-box;
+    transition: border-color 0.15s; height: 22px; line-height: 1;
+  }
+  input.lib-cell-input:hover, select.lib-cell-select:hover { border-color: rgba(255,255,255,0.1); }
+  input.lib-cell-input:focus, select.lib-cell-select:focus { border-color: var(--blue); outline: none; background: rgba(255,255,255,0.04); }
+  input.lib-cell-input[type="number"] { text-align: right; -moz-appearance: textfield; }
+  input.lib-cell-input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .lib-cell-cb { width: 15px; height: 15px; accent-color: var(--blue); cursor: pointer; }
+  select.lib-cell-select { padding: 1px 4px; font-size: 0.72rem; height: 22px; }
+  /* Cancel button: red on hover when enabled */
+  .lib-action-btn.btn-action-cancel.enabled { color: var(--blue); border-color: var(--blue); cursor: pointer; opacity: 1; }
+  .lib-action-btn.btn-action-cancel.enabled svg { stroke: var(--blue); }
+  .lib-action-btn.btn-action-cancel.enabled:hover {
+    background: rgba(231,76,60,0.08); color: var(--red); border-color: var(--red);
+  }
+  .lib-action-btn.btn-action-cancel.enabled:hover svg { stroke: var(--red); }
+  /* Locked rows: dim and disable inputs when another row is being edited */
+  .lib-row.locked { opacity: 0.35; pointer-events: none; }
+  .lib-row.editing { background: rgba(78,204,163,0.06); }
 
   /* Library toolbar: search + saved orders */
   .lib-toolbar {
@@ -701,11 +806,17 @@
     width: 16px; height: 16px; pointer-events: none;
   }
   .lib-search {
-    width: 100%; padding: 6px 10px 6px 50px;
+    width: 100%; padding: 2px 24px 2px 25px;
     border: 1px solid #333; border-radius: 6px;
     background: var(--bg); color: var(--text); font-size: 0.8rem;
-    font-family: inherit;
+    font-family: inherit; height: 24px; box-sizing: border-box;
   }
+  .lib-search-close {
+    position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px; cursor: pointer; border: none; background: none;
+    color: #555; padding: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .lib-search-close:hover { color: var(--red); }
   .lib-search::placeholder { color: #555; }
   .lib-search:focus { outline: none; border-color: var(--blue); }
   .lib-orders-select {
@@ -947,11 +1058,11 @@
   /* OBS copy buttons */
   .obs-copy-btn {
     padding: 4px 12px; font-size: 0.7rem; font-weight: 600;
-    background: var(--accent); color: var(--text); border: 1px solid rgba(255,255,255,0.15);
+    background: transparent; color: var(--blue); border: 1.5px solid var(--blue);
     border-radius: 4px; cursor: pointer; white-space: nowrap;
-    transition: background 0.2s;
+    transition: all 0.15s; font-family: inherit;
   }
-  .obs-copy-btn:hover { background: var(--card2); }
+  .obs-copy-btn:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
 
   /* Mockup check-in footer */
   .mock-checkin-footer {
@@ -989,6 +1100,14 @@
   .tab-badge.badge-away { background: #e67e22; color: #fff; }
   .tab-badge.badge-empty { display: none; }
 
+  /* Settings action buttons */
+  .settings-btn {
+    padding: 5px 12px; border: 1.5px solid var(--blue); border-radius: 6px;
+    background: transparent; color: var(--blue); font-size: 0.78rem;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .settings-btn:hover { background: rgba(78,204,163,0.08); color: var(--green); border-color: var(--green); }
+
   /* QR section */
   .qr-section { text-align: center; }
   .qr-section img { border-radius: 8px; background: #fff; padding: 6px; margin: 8px 0; }
@@ -997,23 +1116,28 @@
   /* ── Login overlay ── */
   .login-overlay {
     position: fixed; inset: 0; z-index: 10000;
-    background: var(--bg);
+    background: rgba(0,0,0,0.4);
     display: flex; justify-content: center; align-items: center;
   }
   .login-overlay.hidden { display: none; }
   .login-box {
-    background: var(--card); border-radius: 12px; padding: 40px;
+    background: rgba(30, 30, 50, 0.5);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 14px; padding: 40px;
     width: 100%; max-width: 380px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    cursor: grab;
   }
+  .login-box:active { cursor: grabbing; }
   .login-box h1 { color: var(--green); margin-bottom: 6px; font-size: 1.6rem; }
   .login-box .login-subtitle { color: var(--dim); font-size: 0.85rem; margin-bottom: 24px; text-align: center; }
   .login-box label { display: block; font-size: 0.8rem; color: var(--dim); margin-bottom: 4px; margin-top: 14px; }
   .login-box input[type="email"],
   .login-box input[type="password"] {
     width: 100%; padding: 10px 12px; border-radius: 6px;
-    border: 1px solid #333; background: var(--bg); color: var(--text);
-    font-size: 0.95rem; outline: none;
+    border: 1.5px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--text);
+    font-size: 0.95rem; outline: none; cursor: text; user-select: text;
   }
   .login-box input:focus { border-color: var(--green); }
   .login-btn {
@@ -1148,8 +1272,22 @@
           </div>
         </div>
 
-        <!-- Digits (clickable to open duration popup) -->
-        <div class="mock-digits" id="mockDigits" onclick="openDurationPopup()" title="Click to set duration">00:00</div>
+        <!-- Digits with spinner arrows -->
+        <div class="mock-digits-wrap">
+          <div class="digit-spinner digit-spinner-left">
+            <span class="digit-spinner-label">hrs</span>
+            <button class="digit-arrow digit-arrow-up ds-btn" data-dsid="durH" data-dsdir="1" title="Hours +1">&#9650;</button>
+            <button class="digit-arrow digit-arrow-down ds-btn" data-dsid="durH" data-dsdir="-1" title="Hours −1">&#9660;</button>
+            <span class="digit-expand-spacer">&#8230;</span>
+          </div>
+          <div class="mock-digits" id="mockDigits" onclick="openDurationPopup()" title="Click to set duration"><span id="mockDigitsText">00:00</span></div>
+          <div class="digit-spinner digit-spinner-right">
+            <span class="digit-spinner-label">min</span>
+            <button class="digit-arrow digit-arrow-up ds-btn" data-dsid="durM" data-dsdir="1" title="Minutes +1">&#9650;</button>
+            <button class="digit-arrow digit-arrow-down ds-btn" data-dsid="durM" data-dsdir="-1" title="Minutes −1">&#9660;</button>
+            <button class="digit-expand-btn" onclick="event.stopPropagation();openDurationPopup()" title="Quick-set times">&#8230;</button>
+          </div>
+        </div>
 
         <!-- End Time Label + computed time -->
         <div class="mock-field-wrap">
@@ -1214,16 +1352,32 @@
 
       <!-- Timers view -->
       <div id="timersView">
-        <div class="lib-toolbar">
-          <div class="lib-search-wrap"><svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="21" y1="21" x2="16" y2="16"/></svg><input type="text" class="lib-search" id="libSearch" placeholder="Search timers..." oninput="filterLibrary()" style="padding-left:25px;"></div>
+        <div class="lib-toolbar" id="libSearchBar" style="display:none;">
+          <div class="lib-search-wrap"><svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="21" y1="21" x2="16" y2="16"/></svg><input type="text" class="lib-search" id="libSearch" placeholder="Search timers..." oninput="filterLibrary()" style="padding-left:25px;"><button class="lib-search-close" onclick="toggleLibSearch()" title="Close search"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
           <select class="lib-orders-select" id="savedOrderSelect" onchange="applySavedOrder()">
             <option value="">Saved Orders</option>
           </select>
           <button class="lib-toolbar-btn" onclick="saveCurrentOrder()" title="Save current order">Save</button>
           <button class="lib-toolbar-btn btn-danger" id="btnDeleteOrder" onclick="deleteCurrentOrder()" title="Delete selected order" style="display:none;">✕</button>
         </div>
-        <div id="libraryList" style="max-height:460px; overflow-y:auto;"></div>
-        <button class="btn-new-timer" onclick="newTimerToFields()">+ New Timer</button>
+        <div class="lib-actions" id="libActions">
+          <!-- Group 1: New, New from Mockup, Delete -->
+          <button class="lib-action-btn enabled" id="btnNewTimer" onclick="newBlankRow()" title="New blank timer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><circle cx="17" cy="5" r="3" fill="currentColor" stroke="none"/><path d="M15.6 3.6L18.4 6.4M18.4 3.6L15.6 6.4" stroke="#1a1a2e" stroke-width="1.5"/></svg></button>
+          <button class="lib-action-btn" id="btnNewFromMockup" onclick="if(this.classList.contains('enabled'))newTimerToFields()" title="New timer from mockup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><circle cx="17" cy="5" r="3" fill="currentColor" stroke="none"/><path d="M15.6 3.6L18.4 6.4M18.4 3.6L15.6 6.4" stroke="#1a1a2e" stroke-width="1.5"/><rect x="12" y="14" width="6" height="9" rx="1" fill="var(--bg, #1a1a2e)" stroke="currentColor" stroke-width="1.5"/><line x1="14" y1="21.5" x2="16" y2="21.5" stroke="currentColor" stroke-width="1"/></svg></button>
+          <button class="lib-action-btn btn-action-delete" id="btnBatchDelete" onclick="if(this.classList.contains('enabled'))batchDelete()" title="Delete selected timers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+          <span class="lib-btn-sep"></span>
+          <!-- Group 2: Update Several, Save, Cancel -->
+          <button class="lib-action-btn" id="btnBatchUpdate" onclick="if(this.classList.contains('enabled'))batchUpdate()" title="Update several timers at once"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="16" height="18" rx="2"/><path d="M7 3v5h8V3"/><rect x="7" y="13" width="8" height="5"/><path d="M19 7h2v16H7v-2"/></svg></button>
+          <button class="lib-action-btn" id="btnLibSave" onclick="if(this.classList.contains('enabled'))libSaveEditing()" title="Save changes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>
+          <button class="lib-action-btn btn-action-cancel" id="btnLibCancel" onclick="if(this.classList.contains('enabled'))libCancelEditing()" title="Cancel changes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <span class="lib-btn-sep"></span>
+          <!-- Group 3: Duplicate, Reset Columns, Search -->
+          <button class="lib-action-btn" id="btnBatchDuplicate" onclick="if(this.classList.contains('enabled'))batchDuplicate()" title="Duplicate selected timers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
+          <button class="lib-action-btn enabled" id="btnResetCols" onclick="resetColWidths()" title="Reset column widths to defaults"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="3" x2="4" y2="21"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="20" y1="3" x2="20" y2="21"/></svg></button>
+          <button class="lib-action-btn enabled" id="btnLibSearch" onclick="toggleLibSearch()" title="Search timers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="21" y1="21" x2="16" y2="16"/></svg></button>
+          <span id="libSelCount" style="font-size:0.7rem; color:var(--dim); margin-left:auto;"></span>
+        </div>
+        <div id="libraryList"></div>
       </div>
 
       <!-- Sequences view -->
@@ -1316,13 +1470,16 @@
 
           <div style="margin-bottom:20px;">
             <label style="font-size:0.85rem; color:#aaa;">Class Code</label>
-            <div style="margin-top:8px; margin-left:103px;">
-              <button onclick="generateNewCode()" style="padding:5px 12px; border:1.5px solid #666; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Disconnect All Students</button>
-              <div style="font-size:0.75rem; color:var(--dim); margin-top:4px;">Generates a new code and disconnects all current students.</div>
-              <div style="margin-top:8px;">
-                <span style="font-size:0.8rem; color:#888;">Current code:</span>
-                <span id="classCodeDisplay" style="font-size:1.4rem; font-weight:800; letter-spacing:4px; color:var(--green); font-family:monospace; margin-left:6px;"></span>
+            <div style="display:flex; align-items:flex-start; gap:16px; margin-top:8px;">
+              <div style="margin-left:103px; flex:1; min-width:0;">
+                <button class="settings-btn" onclick="generateNewCode()">Disconnect All Students</button>
+                <div style="font-size:0.75rem; color:var(--dim); margin-top:4px;">Generates a new code and disconnects all current students.</div>
+                <div style="margin-top:8px;">
+                  <span style="font-size:0.8rem; color:#888;">Current code:</span>
+                  <span id="classCodeDisplay" style="font-size:1.4rem; font-weight:800; letter-spacing:4px; color:var(--green); font-family:monospace; margin-left:6px;"></span>
+                </div>
               </div>
+              <div id="qrContainer" style="flex-shrink:0;">Loading QR code...</div>
             </div>
           </div>
 
@@ -1336,7 +1493,7 @@
               <option value="gong">Gong</option>
               <option value="chime">Chime</option>
             </select>
-            <button onclick="previewSound('alarmSound')" style="padding:5px 10px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">&#9654; Test</button>
+            <button class="settings-btn" onclick="previewSound('alarmSound')">&#9654; Test</button>
           </div>
           <div style="margin-left:103px;">
             <div class="checkbox-row" style="margin-bottom:8px;">
@@ -1345,7 +1502,7 @@
             </div>
             <div id="customSoundsList" style="margin-bottom:8px;"></div>
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-              <label style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">
+              <label class="settings-btn" style="cursor:pointer;">
                 + Add Custom Sound (.mp3)
                 <input type="file" id="customSoundUpload" accept=".mp3,audio/mpeg" style="display:none;" onchange="addCustomSound(this)">
               </label>
@@ -1362,7 +1519,7 @@
               <option value="gong">Gong</option>
               <option value="chime">Chime</option>
             </select>
-            <button onclick="previewSound('warningSound')" style="padding:5px 10px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">&#9654; Test</button>
+            <button class="settings-btn" onclick="previewSound('warningSound')">&#9654; Test</button>
           </div>
           <div style="margin-left:103px; display:flex; align-items:center; gap:8px;">
             <input type="checkbox" id="warningEnabled" class="custom-cb">
@@ -1397,8 +1554,8 @@
           <div>
             <label style="font-size:0.85rem; color:#aaa;">Library Backup</label>
             <div style="display:flex; gap:8px; margin-top:8px; margin-left:103px;">
-              <button onclick="exportLibrary()" style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Export</button>
-              <label style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">
+              <button class="settings-btn" onclick="exportLibrary()">Export</button>
+              <label class="settings-btn" style="cursor:pointer;">
                 Import
                 <input type="file" id="importLibFile" accept=".json" style="display:none;" onchange="importLibrary(this)">
               </label>
@@ -1494,35 +1651,49 @@
           <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
 
           <div>
-            <label style="font-size:0.85rem; color:#aaa;">Student QR Code</label>
-            <div class="qr-section" style="text-align:left; margin-top:8px;">
-              <div id="qrContainer">Loading QR code...</div>
-            </div>
-          </div>
-
-          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
-
-          <div>
             <label style="font-size:0.85rem; color:#aaa;">Account</label>
             <div style="margin-top:8px; margin-left:103px;">
-              <button onclick="showChangePassword()" style="padding:5px 12px; border:1px solid #444; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Change Password</button>
+              <button class="settings-btn" onclick="showChangePassword()">Change Password</button>
             </div>
           </div>
 
           <!-- Admin section: only visible with ?admin=true and isAdmin account -->
           <div id="adminSection" style="display:none;">
             <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
-            <label style="font-size:0.85rem; color:#e74c3c;">Admin</label>
-            <div style="margin-top:8px; margin-left:103px;">
-              <div style="margin-bottom:12px;">
-                <label style="font-size:0.8rem; color:var(--dim);">Reset instructor password:</label>
-                <div style="display:flex; gap:6px; margin-top:6px; align-items:center; flex-wrap:wrap;">
-                  <input type="email" id="adminResetEmail" placeholder="instructor email" style="padding:6px 10px; border:1px solid #333; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem; width:200px;">
-                  <input type="text" id="adminResetPass" placeholder="new password" style="padding:6px 10px; border:1px solid #333; border-radius:6px; background:var(--bg); color:var(--text); font-size:0.85rem; width:160px;">
-                  <button onclick="adminResetPassword()" style="padding:6px 12px; border:1px solid #666; border-radius:6px; background:transparent; color:var(--dim); font-size:0.78rem; cursor:pointer;">Reset</button>
-                </div>
-                <div id="adminResetResult" style="font-size:0.75rem; margin-top:6px; min-height:1.2em;"></div>
+            <label style="font-size:0.85rem; color:#e74c3c;">Admin — Instructors</label>
+            <div style="margin-top:8px;">
+              <!-- Search + toolbar (mirrors Library tab pattern) -->
+              <div class="lib-toolbar" id="adminSearchBar" style="display:none;">
+                <div class="lib-search-wrap"><svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="21" y1="21" x2="16" y2="16"/></svg><input type="text" class="lib-search" id="adminSearch" placeholder="Search instructors..." oninput="filterAdminGrid()" style="padding-left:25px;"><button class="lib-search-close" onclick="toggleAdminSearch()" title="Close search"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
               </div>
+              <div class="lib-actions" id="adminActions">
+                <button class="lib-action-btn enabled" id="btnAdminNew" onclick="adminShowNewRow()" title="Add new instructor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><circle cx="17" cy="5" r="3" fill="currentColor" stroke="none"/><path d="M15.6 3.6L18.4 6.4M18.4 3.6L15.6 6.4" stroke="#1a1a2e" stroke-width="1.5"/></svg></button>
+                <button class="lib-action-btn" id="btnAdminSave" onclick="if(this.classList.contains('enabled'))adminSaveEditing()" title="Save changes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>
+                <button class="lib-action-btn btn-action-cancel" id="btnAdminCancel" onclick="if(this.classList.contains('enabled'))adminCancelEditing()" title="Cancel changes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                <button class="lib-action-btn btn-action-delete" id="btnAdminDelete" onclick="adminDeleteSelected()" title="Delete selected instructors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                <button class="lib-action-btn enabled" id="btnAdminResetCols" onclick="adminResetColWidths()" title="Reset column widths to defaults"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="3" x2="4" y2="21"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="20" y1="3" x2="20" y2="21"/></svg></button>
+                <button class="lib-action-btn enabled" id="btnAdminSearch" onclick="toggleAdminSearch()" title="Search instructors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="21" y1="21" x2="16" y2="16"/></svg></button>
+                <span id="adminSelCount" style="font-size:0.7rem; color:var(--dim); margin-left:auto;"></span>
+              </div>
+              <!-- New row (hidden until + New is clicked) -->
+              <div id="adminNewRow" style="display:none; margin-bottom:6px;">
+                <div class="lib-row" style="background:rgba(78,204,163,0.06); border-radius:4px;">
+                  <span></span>
+                  <input type="text" id="adminAddName" placeholder="Display Name" class="admin-cell-input" style="border-color:#444; background:rgba(255,255,255,0.06);">
+                  <input type="email" id="adminAddEmail" placeholder="Email" class="admin-cell-input" style="border-color:#444; background:rgba(255,255,255,0.06);">
+                  <label style="font-size:0.75rem; color:var(--dim); display:flex; align-items:center; gap:3px; cursor:pointer; justify-content:center;">
+                    <input type="checkbox" id="adminAddIsAdmin" class="custom-cb">
+                  </label>
+                  <input type="text" id="adminAddPassword" placeholder="Password (min 6)" class="admin-cell-input" style="border-color:#444; background:rgba(255,255,255,0.06);">
+                </div>
+                <div style="display:flex; gap:6px; justify-content:flex-end; padding:4px 0;">
+                  <button onclick="adminAddInstructor()" class="admin-save-btn">Save</button>
+                  <button onclick="adminHideNewRow()" class="admin-cancel-btn">Cancel</button>
+                </div>
+              </div>
+              <!-- Grid -->
+              <div id="adminInstructorGrid" style="width:100%; max-width:100%;"></div>
+              <div id="adminStatus" style="font-size:0.75rem; margin-top:8px; min-height:1.2em;"></div>
             </div>
           </div>
 
@@ -1639,6 +1810,24 @@
 // ── Authentication ──
 let authToken = localStorage.getItem('livetimer-token');
 let socket = null;
+let instructorKey = ''; // set after login, used to scope localStorage keys per instructor
+
+// Instructor-scoped localStorage helpers
+function lsKey(name) { return instructorKey ? name + ':' + instructorKey : name; }
+function lsGet(name) { return localStorage.getItem(lsKey(name)); }
+function lsSet(name, value) { try { localStorage.setItem(lsKey(name), value); } catch(e) {} }
+function lsRemove(name) { localStorage.removeItem(lsKey(name)); }
+
+// Authenticated fetch helper — adds Authorization header to all requests
+function authFetch(url, options = {}) {
+  if (!options.headers) options.headers = {};
+  if (typeof options.headers === 'object' && !(options.headers instanceof Headers)) {
+    if (!options.headers['Authorization'] && authToken) {
+      options.headers['Authorization'] = 'Bearer ' + authToken;
+    }
+  }
+  return fetch(url, options);
+}
 
 const loginOverlay = document.getElementById('loginOverlay');
 const loginForm = document.getElementById('loginForm');
@@ -1663,7 +1852,7 @@ loginForm.addEventListener('submit', async (e) => {
     localStorage.setItem('livetimer-token', data.token);
     startApp();
   } catch (err) {
-    loginError.textContent = err.message;
+    loginError.textContent = 'Login failed. Please check your email and password, or contact your administrator to reset your password.';
   } finally {
     loginBtn.disabled = false;
   }
@@ -1686,12 +1875,71 @@ async function checkAuth() {
 
 function logout() {
   authToken = null;
+  instructorKey = '';
   localStorage.removeItem('livetimer-token');
   if (socket) socket.disconnect();
   loginOverlay.classList.remove('hidden');
+
   // Remove topbar (greeting + logout)
   const topbar = document.querySelector('.login-topbar');
   if (topbar) topbar.remove();
+
+  // Hide admin section
+  document.getElementById('adminSection').style.display = 'none';
+
+  // Clear library and sequences
+  library = [];
+  renderLibrary();
+  sequenceData = [];
+  renderSequenceList();
+  savedOrdersList = [];
+  renderSavedOrdersDropdown();
+
+  // Clear mockup fields
+  document.getElementById('fieldCourseTitle').textContent = '';
+  document.getElementById('fieldLabel').textContent = '';
+  document.getElementById('fieldEndTimeLabel').textContent = 'Class resumes at';
+  document.getElementById('fieldMessage').textContent = '';
+  document.getElementById('fieldName').value = '';
+
+  // Reset clock to 00:15
+  document.getElementById('mockDigitsText').textContent = '00:15';
+  document.getElementById('durH').textContent = '0';
+  document.getElementById('durM').textContent = '15';
+
+  // Reset options to defaults
+  document.getElementById('fieldShowEnd').checked = true;
+  document.getElementById('fieldBgDefault').checked = true;
+  document.getElementById('fieldBgTransparent').checked = false;
+  document.getElementById('fieldBgBlack').checked = false;
+  document.getElementById('fieldClockOnly').checked = false;
+  document.getElementById('optGoToTab').value = 'timer';
+  document.getElementById('optStartTab').value = 'timer';
+
+  // Reset mockup visuals
+  resetMockupIdle();
+  autoSizeAllFields();
+
+  // Reset timer state variables
+  timerIsRunning = false;
+  timerTotal = 0;
+  timerRemaining = 0;
+  timerOriginalTotal = 0;
+  lastTimerData = null;
+  activeSeqState = null;
+
+  // Clear class code and QR
+  document.getElementById('classCodeDisplay').textContent = '----';
+  document.getElementById('qrContainer').innerHTML = '';
+
+  // Clear student count
+  const countEl = document.getElementById('connectedCount');
+  if (countEl) countEl.textContent = '0';
+
+  // Switch to default tab
+  switchTab('library');
+
+  updateButtonStates();
 }
 
 async function startApp() {
@@ -1711,6 +1959,7 @@ async function startApp() {
   try {
     const resp = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + authToken } });
     const me = await resp.json();
+    instructorKey = me.email || '';
     // Show greeting if name exists
     if (me.name) {
       const topbar = document.querySelector('.login-topbar');
@@ -1725,11 +1974,19 @@ async function startApp() {
     const isAdminMode = new URLSearchParams(window.location.search).has('admin');
     if (isAdminMode && me.isAdmin) {
       document.getElementById('adminSection').style.display = '';
+      loadAdminInstructors();
     }
   } catch (e) { /* couldn't fetch — no greeting, no admin */ }
   // Connect socket with auth token
   socket = io({ auth: { token: authToken } });
   initSocket();
+  initSocketLate();
+
+  // Load instructor's data from server
+  try { await fetchLibrary(); } catch(e) { console.error('fetchLibrary:', e); }
+  try { await fetchSavedOrders(); } catch(e) { console.error('fetchSavedOrders:', e); }
+  try { await loadSequences(); renderSequenceList(); } catch(e) { console.error('loadSequences:', e); }
+  try { loadQRCode(); } catch(e) { console.error('loadQRCode:', e); }
 }
 
 // ── Change password ──
@@ -1742,9 +1999,9 @@ async function showChangePassword() {
   const confirmPw = await customPrompt('Confirm new password');
   if (confirmPw !== newPw) { await customAlert('Passwords do not match.'); return; }
   try {
-    const resp = await fetch('/api/change-password', {
+    const resp = await authFetch('/api/change-password', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
     });
     const data = await resp.json();
@@ -1755,29 +2012,348 @@ async function showChangePassword() {
   }
 }
 
-// ── Admin: reset instructor password ──
-async function adminResetPassword() {
-  const email = document.getElementById('adminResetEmail').value.trim();
-  const newPass = document.getElementById('adminResetPass').value;
-  const resultEl = document.getElementById('adminResetResult');
-  if (!email || !newPass) { resultEl.textContent = 'Email and password required.'; resultEl.style.color = 'var(--red)'; return; }
-  if (newPass.length < 6) { resultEl.textContent = 'Password must be at least 6 characters.'; resultEl.style.color = 'var(--red)'; return; }
+// ── Admin: instructor management (grid-based) ──
+const ADMIN_COL_DEFAULTS = [30, 140, 200, 50, 140];
+let adminColWidths = null; // initialized after login when instructorKey is set
+let adminInstructors = [];
+
+function initAdminColWidths() {
+  if (!adminColWidths) {
+    const saved = JSON.parse(lsGet('adminColWidths') || 'null');
+    adminColWidths = (saved && saved.length === ADMIN_COL_DEFAULTS.length) ? saved : [...ADMIN_COL_DEFAULTS];
+  }
+}
+function getAdminGridCols() {
+  initAdminColWidths();
+  return adminColWidths.map(w => w + 'px').join(' ');
+}
+
+async function loadAdminInstructors() {
+  const statusEl = document.getElementById('adminStatus');
   try {
-    const resp = await fetch('/api/admin/reset-password', {
+    const resp = await fetch('/api/admin/instructors', {
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    if (!resp.ok) throw new Error((await resp.json()).error);
+    adminInstructors = await resp.json();
+    renderAdminGrid();
+  } catch (e) {
+    statusEl.textContent = 'Error loading instructors: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+function renderAdminGrid() {
+  const container = document.getElementById('adminInstructorGrid');
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const gridCols = getAdminGridCols();
+  // Header
+  const hdrs = ['', 'Display Name', 'Email (Login ID)', 'Admin', 'Password'];
+  let html = '<div class="lib-grid">';
+  html += `<div class="lib-grid-header" style="grid-template-columns:${gridCols}">`;
+  html += '<div class="lib-hdr-cell" style="padding:4px 2px;"><input type="checkbox" class="lib-select-all" id="adminSelectAll" onchange="adminToggleSelectAll(this)" title="Select all"></div>';
+  for (let i = 1; i < hdrs.length; i++) {
+    const align = i === 3 ? ' style="text-align:center;"' : '';
+    const resize = `<div class="col-resize-handle admin-col-resize" data-col="${i}"></div>`;
+    html += `<div class="lib-hdr-cell"${align}>${hdrs[i]}${resize}</div>`;
+  }
+  html += '</div>';
+
+  // Rows
+  adminInstructors.forEach(i => {
+    html += `<div class="lib-row admin-row" style="grid-template-columns:${gridCols}" data-email="${esc(i.email)}">
+        <input type="checkbox" class="lib-row-cb admin-row-cb" data-email="${esc(i.email)}" onchange="adminUpdateSelection()" style="accent-color:var(--green); cursor:pointer;">
+        <input type="text" value="${esc(i.name || '')}" title="${esc(i.name || '')}" data-field="name" data-orig="${esc(i.name || '')}" class="admin-cell-input" oninput="adminMarkDirty(this);this.title=this.value">
+        <input type="text" value="${esc(i.email)}" title="${esc(i.email)}" data-field="email" data-orig="${esc(i.email)}" class="admin-cell-input" oninput="adminMarkDirty(this);this.title=this.value">
+        <label style="display:flex; align-items:center; justify-content:center; cursor:pointer;" title="${i.isAdmin ? 'Admin' : 'Not admin'}">
+          <input type="checkbox" class="custom-cb" ${i.isAdmin ? 'checked' : ''} onchange="adminToggleAdmin('${esc(i.email)}', this.checked)">
+        </label>
+        <input type="text" placeholder="new password" title="Set new password" data-field="password" class="admin-cell-input admin-pw-input" data-email="${esc(i.email)}" oninput="adminMarkDirty(this)">
+      </div>`;
+  });
+  html += '</div>';
+
+  container.innerHTML = '<div class="lib-grid-wrap">' + html + '</div>';
+
+  // Update new-row grid cols to match
+  const newRowGrid = document.querySelector('#adminNewRow .lib-row');
+  if (newRowGrid) newRowGrid.style.gridTemplateColumns = gridCols;
+  adminUpdateSelection();
+  filterAdminGrid();
+  initAdminColResize();
+  adminClearEditing();
+}
+
+function adminResetColWidths() {
+  adminColWidths = [...ADMIN_COL_DEFAULTS];
+  lsRemove('adminColWidths');
+  renderAdminGrid();
+}
+
+function initAdminColResize() {
+  const handles = document.querySelectorAll('.admin-col-resize');
+  handles.forEach(handle => {
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const colIdx = parseInt(handle.dataset.col);
+      const startX = e.clientX;
+      const startW = adminColWidths[colIdx];
+      handle.classList.add('dragging');
+      function onMove(ev) {
+        const diff = ev.clientX - startX;
+        adminColWidths[colIdx] = Math.max(40, startW + diff);
+        const cols = getAdminGridCols();
+        document.querySelectorAll('.admin-row, #adminInstructorGrid .lib-grid-header, #adminNewRow .lib-row').forEach(el => {
+          el.style.gridTemplateColumns = cols;
+        });
+      }
+      function onUp() {
+        handle.classList.remove('dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        lsSet('adminColWidths', JSON.stringify(adminColWidths));
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+let adminEditingEmail = null;
+
+function adminSetEditing(email) {
+  adminEditingEmail = email;
+  // Disable ALL toolbar buttons except Save and Cancel
+  document.querySelectorAll('#adminActions .lib-action-btn').forEach(btn => {
+    if (btn.id === 'btnAdminSave' || btn.id === 'btnAdminCancel') {
+      btn.classList.add('enabled');
+    } else {
+      btn.classList.remove('enabled');
+    }
+  });
+  document.querySelectorAll('#adminInstructorGrid .admin-row[data-email]').forEach(row => {
+    if (row.dataset.email === email) {
+      row.classList.add('editing');
+      row.classList.remove('locked');
+    } else {
+      row.classList.add('locked');
+      row.classList.remove('editing');
+    }
+  });
+}
+
+function adminClearEditing() {
+  adminEditingEmail = null;
+  // Restore toolbar: disable Save/Cancel, re-enable always-on buttons
+  const alwaysOn = ['btnAdminNew', 'btnAdminSearch', 'btnAdminResetCols'];
+  document.querySelectorAll('#adminActions .lib-action-btn').forEach(btn => {
+    if (btn.id === 'btnAdminSave' || btn.id === 'btnAdminCancel') {
+      btn.classList.remove('enabled');
+    } else if (alwaysOn.includes(btn.id)) {
+      btn.classList.add('enabled');
+    }
+  });
+  adminUpdateSelection();
+  document.querySelectorAll('#adminInstructorGrid .admin-row[data-email]').forEach(row => {
+    row.classList.remove('editing', 'locked');
+  });
+}
+
+function adminSaveEditing() {
+  if (adminEditingEmail) adminSaveRow(adminEditingEmail);
+}
+
+function adminCancelEditing() {
+  if (adminEditingEmail) adminCancelRow(adminEditingEmail);
+}
+
+function adminMarkDirty(input) {
+  const row = input.closest('.admin-row');
+  if (!row) return;
+  const email = row.dataset.email;
+  const nameInput = row.querySelector('[data-field="name"]');
+  const emailInput = row.querySelector('[data-field="email"]');
+  const pwInput = row.querySelector('[data-field="password"]');
+  const dirty = (nameInput.value !== nameInput.dataset.orig) ||
+                (emailInput.value !== emailInput.dataset.orig) ||
+                (pwInput.value.length > 0);
+  if (dirty) {
+    adminSetEditing(email);
+  } else {
+    adminClearEditing();
+  }
+}
+
+function adminCancelRow(email) {
+  const row = document.querySelector(`.admin-row[data-email="${email}"]`);
+  if (!row) return;
+  const nameInput = row.querySelector('[data-field="name"]');
+  const emailInput = row.querySelector('[data-field="email"]');
+  const pwInput = row.querySelector('[data-field="password"]');
+  nameInput.value = nameInput.dataset.orig;
+  emailInput.value = emailInput.dataset.orig;
+  pwInput.value = '';
+  adminClearEditing();
+}
+
+async function adminSaveRow(originalEmail) {
+  const statusEl = document.getElementById('adminStatus');
+  const row = document.querySelector(`.admin-row[data-email="${originalEmail}"]`);
+  const newName = row.querySelector('[data-field="name"]').value.trim();
+  const newEmail = row.querySelector('[data-field="email"]').value.trim();
+  const newPw = row.querySelector('[data-field="password"]').value;
+  if (!newName || !newEmail) { statusEl.textContent = 'Name and email are required.'; statusEl.style.color = 'var(--red)'; return; }
+  try {
+    // Update name/email if changed
+    const nameInput = row.querySelector('[data-field="name"]');
+    const emailInput = row.querySelector('[data-field="email"]');
+    if (newName !== nameInput.dataset.orig || newEmail !== emailInput.dataset.orig) {
+      const resp = await fetch('/api/admin/update-instructor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({ originalEmail, name: newName, email: newEmail }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error);
+    }
+    // Update password if entered
+    if (newPw) {
+      if (newPw.length < 6) { statusEl.textContent = 'Password must be at least 6 characters.'; statusEl.style.color = 'var(--red)'; return; }
+      const targetEmail = newEmail || originalEmail;
+      const resp = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({ email: targetEmail, newPassword: newPw }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error);
+    }
+    statusEl.textContent = 'Saved: ' + (newEmail || originalEmail);
+    statusEl.style.color = 'var(--green)';
+    loadAdminInstructors();
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+async function adminToggleAdmin(email, isAdmin) {
+  const statusEl = document.getElementById('adminStatus');
+  try {
+    const resp = await fetch('/api/admin/toggle-admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-      body: JSON.stringify({ email, newPassword: newPass }),
+      body: JSON.stringify({ email, isAdmin }),
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error);
-    resultEl.textContent = 'Password reset for ' + data.email;
-    resultEl.style.color = 'var(--green)';
-    document.getElementById('adminResetEmail').value = '';
-    document.getElementById('adminResetPass').value = '';
+    statusEl.textContent = email + ' → admin ' + (isAdmin ? 'granted' : 'removed');
+    statusEl.style.color = 'var(--green)';
   } catch (e) {
-    resultEl.textContent = 'Error: ' + e.message;
-    resultEl.style.color = 'var(--red)';
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+    loadAdminInstructors();
   }
+}
+
+function adminShowNewRow() {
+  if (adminEditingEmail) return;
+  const row = document.getElementById('adminNewRow');
+  row.style.display = '';
+  const rowGrid = row.querySelector('.lib-row');
+  if (rowGrid) rowGrid.style.gridTemplateColumns = getAdminGridCols();
+  document.getElementById('adminAddName').value = '';
+  document.getElementById('adminAddEmail').value = '';
+  document.getElementById('adminAddPassword').value = '';
+  document.getElementById('adminAddIsAdmin').checked = false;
+  document.getElementById('adminAddName').focus();
+}
+
+function adminHideNewRow() {
+  document.getElementById('adminNewRow').style.display = 'none';
+}
+
+async function adminAddInstructor() {
+  const statusEl = document.getElementById('adminStatus');
+  const name = document.getElementById('adminAddName').value.trim();
+  const email = document.getElementById('adminAddEmail').value.trim();
+  const password = document.getElementById('adminAddPassword').value;
+  const isAdmin = document.getElementById('adminAddIsAdmin').checked;
+  if (!email || !password) { statusEl.textContent = 'Email and password are required.'; statusEl.style.color = 'var(--red)'; return; }
+  if (password.length < 6) { statusEl.textContent = 'Password must be at least 6 characters.'; statusEl.style.color = 'var(--red)'; return; }
+  try {
+    const resp = await fetch('/api/admin/add-instructor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify({ email, password, name, isAdmin }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error);
+    statusEl.textContent = 'Added: ' + email;
+    statusEl.style.color = 'var(--green)';
+    adminHideNewRow();
+    loadAdminInstructors();
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+async function adminDeleteSelected() {
+  const checked = document.querySelectorAll('.admin-row-cb:checked');
+  if (checked.length === 0) return;
+  const emails = Array.from(checked).map(cb => cb.dataset.email);
+  const confirmed = await customConfirm('Delete ' + emails.length + ' instructor' + (emails.length > 1 ? 's' : '') + '? This cannot be undone.');
+  if (!confirmed) return;
+  const statusEl = document.getElementById('adminStatus');
+  let deleted = 0;
+  for (const email of emails) {
+    try {
+      const resp = await fetch('/api/admin/delete-instructor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({ email }),
+      });
+      const data = await resp.json();
+      if (resp.ok) deleted++;
+      else statusEl.textContent = 'Error deleting ' + email + ': ' + data.error;
+    } catch (e) { /* continue */ }
+  }
+  if (deleted > 0) {
+    statusEl.textContent = 'Deleted ' + deleted + ' instructor' + (deleted > 1 ? 's' : '');
+    statusEl.style.color = 'var(--green)';
+  }
+  loadAdminInstructors();
+}
+
+function adminToggleSelectAll(master) {
+  document.querySelectorAll('.admin-row-cb').forEach(cb => { cb.checked = master.checked; });
+  adminUpdateSelection();
+}
+
+function adminUpdateSelection() {
+  const all = document.querySelectorAll('.admin-row-cb');
+  const checked = document.querySelectorAll('.admin-row-cb:checked');
+  const deleteBtn = document.getElementById('btnAdminDelete');
+  const countEl = document.getElementById('adminSelCount');
+  if (checked.length > 0) {
+    deleteBtn.classList.add('enabled');
+    countEl.textContent = checked.length + ' selected';
+  } else {
+    deleteBtn.classList.remove('enabled');
+    countEl.textContent = '';
+  }
+  const selectAll = document.getElementById('adminSelectAll');
+  if (selectAll) selectAll.checked = all.length > 0 && checked.length === all.length;
+}
+
+function filterAdminGrid() {
+  const q = (document.getElementById('adminSearch').value || '').toLowerCase();
+  document.querySelectorAll('.admin-row[data-email]').forEach(row => {
+    const name = (row.querySelector('[data-field="name"]').value || '').toLowerCase();
+    const emailVal = (row.querySelector('[data-field="email"]').value || '').toLowerCase();
+    row.style.display = (!q || name.includes(q) || emailVal.includes(q)) ? '' : 'none';
+  });
 }
 
 // Check auth on page load
@@ -1839,10 +2415,14 @@ function markDirtyFields() {
   }
   // Clock dirty: compare mockup digits to what students currently see
   // Skip during live countdown — mockup updates separately and will always match
+  // When idle, mockup shows HH:MM format so compare against same format
   if (!timerIsRunning) {
     const mockDigits = document.getElementById('mockDigits');
-    const serverDigits = document.getElementById('timerDigits').textContent;
-    mockDigits.classList.toggle('field-dirty', mockDigits.textContent !== serverDigits);
+    const mockText = document.getElementById('mockDigitsText').textContent;
+    const serverSecs = parseInt(document.getElementById('timerDigits').dataset.secs || '0', 10);
+    const isIdle = timerRemaining <= 0;
+    const serverDisplay = isIdle ? fmtHM(serverSecs) : fmt(serverSecs);
+    mockDigits.classList.toggle('field-dirty', mockText !== serverDisplay);
   } else {
     document.getElementById('mockDigits').classList.remove('field-dirty');
   }
@@ -1924,9 +2504,24 @@ function syncLiveFromServer(s) {
   markDirtyFields();
 }
 
+// Clean up contenteditable so :empty placeholder CSS works
+function cleanEditableIfEmpty(el) {
+  if (!el || !el.classList.contains('mock-editable')) return;
+  const text = el.innerText.replace(/\n/g, '').trim();
+  if (!text) el.innerHTML = '';
+}
+
 // Re-check on every keystroke in any mockup field
 document.addEventListener('input', (e) => {
-  if (e.target.closest('.mock-editable')) markDirtyFields();
+  const el = e.target.closest('.mock-editable');
+  if (!el) return;
+  cleanEditableIfEmpty(el);
+  markDirtyFields();
+});
+
+// Also clean up on blur in case input didn't catch the final deletion
+document.addEventListener('focusout', (e) => {
+  cleanEditableIfEmpty(e.target);
 });
 
 // ── Auto-size fields: shrink font to fit within max-height ──
@@ -2123,11 +2718,15 @@ function saveFieldToLibrary(fieldId) {
   // Wire up buttons
   const applyBtn = document.getElementById('saveLibApply');
   const cancelBtn = document.getElementById('saveLibCancel');
+  const closeBtn = document.getElementById('saveLibClose');
 
   function cleanup() {
     backdrop.classList.remove('open');
     applyBtn.removeEventListener('click', onApply);
     cancelBtn.removeEventListener('click', onCancel);
+    closeBtn.removeEventListener('click', onCancel);
+    backdrop.removeEventListener('click', onBackdropClick);
+    document.removeEventListener('keydown', onKey);
   }
 
   async function onApply() {
@@ -2140,7 +2739,7 @@ function saveFieldToLibrary(fieldId) {
       const t = library.find(x => x.id === id);
       if (!t) continue;
       t[prop] = value;
-      await fetch('/api/library', {
+      await authFetch('/api/library', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify(t)
@@ -2151,9 +2750,14 @@ function saveFieldToLibrary(fieldId) {
   }
 
   function onCancel() { cleanup(); }
+  function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); onCancel(); } }
+  function onBackdropClick(e) { if (e.target === backdrop) onCancel(); }
 
   applyBtn.addEventListener('click', onApply);
   cancelBtn.addEventListener('click', onCancel);
+  closeBtn.addEventListener('click', onCancel);
+  backdrop.addEventListener('click', onBackdropClick);
+  document.addEventListener('keydown', onKey);
 }
 
 function togglePushAll(checkboxId, btn) {
@@ -2176,6 +2780,7 @@ function customPrompt(label) {
     const input = document.getElementById('promptInput');
     const ok = document.getElementById('promptOk');
     const cancel = document.getElementById('promptCancel');
+    const closeBtn = document.getElementById('promptClose');
     document.getElementById('promptLabel').textContent = label;
     input.value = '';
     backdrop.classList.add('open');
@@ -2184,7 +2789,9 @@ function customPrompt(label) {
       backdrop.classList.remove('open');
       ok.removeEventListener('click', onOk);
       cancel.removeEventListener('click', onCancel);
-      input.removeEventListener('keydown', onKey);
+      closeBtn.removeEventListener('click', onCancel);
+      backdrop.removeEventListener('click', onBackdropClick);
+      document.removeEventListener('keydown', onKey);
     }
     function onOk() { cleanup(); resolve(input.value); }
     function onCancel() { cleanup(); resolve(null); }
@@ -2192,9 +2799,12 @@ function customPrompt(label) {
       if (e.key === 'Enter') { e.preventDefault(); onOk(); }
       if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
     }
+    function onBackdropClick(e) { if (e.target === backdrop) onCancel(); }
     ok.addEventListener('click', onOk);
     cancel.addEventListener('click', onCancel);
-    input.addEventListener('keydown', onKey);
+    closeBtn.addEventListener('click', onCancel);
+    backdrop.addEventListener('click', onBackdropClick);
+    document.addEventListener('keydown', onKey);
   });
 }
 
@@ -2205,15 +2815,24 @@ function customConfirm(msg) {
     backdrop.classList.add('open');
     const yes = document.getElementById('confirmYes');
     const no = document.getElementById('confirmNo');
+    const closeBtn = document.getElementById('confirmClose');
     function cleanup() {
       backdrop.classList.remove('open');
       yes.removeEventListener('click', onYes);
       no.removeEventListener('click', onNo);
+      closeBtn.removeEventListener('click', onNo);
+      backdrop.removeEventListener('click', onBackdropClick);
+      document.removeEventListener('keydown', onKey);
     }
     function onYes() { cleanup(); resolve(true); }
     function onNo() { cleanup(); resolve(false); }
+    function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); onNo(); } }
+    function onBackdropClick(e) { if (e.target === backdrop) onNo(); }
     yes.addEventListener('click', onYes);
     no.addEventListener('click', onNo);
+    closeBtn.addEventListener('click', onNo);
+    backdrop.addEventListener('click', onBackdropClick);
+    document.addEventListener('keydown', onKey);
   });
 }
 
@@ -2225,15 +2844,24 @@ function customAlert(msg) {
     document.getElementById('confirmNo').style.display = 'none';
     backdrop.classList.add('open');
     const yes = document.getElementById('confirmYes');
+    const closeBtn = document.getElementById('confirmClose');
     function cleanup() {
       backdrop.classList.remove('open');
       yes.removeEventListener('click', onOk);
+      closeBtn.removeEventListener('click', onOk);
+      backdrop.removeEventListener('click', onBackdropClick);
+      document.removeEventListener('keydown', onKey);
       // Restore confirm dialog defaults
       document.getElementById('confirmYes').textContent = 'Yes';
       document.getElementById('confirmNo').style.display = '';
     }
     function onOk() { cleanup(); resolve(); }
+    function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); onOk(); } }
+    function onBackdropClick(e) { if (e.target === backdrop) onOk(); }
     yes.addEventListener('click', onOk);
+    closeBtn.addEventListener('click', onOk);
+    backdrop.addEventListener('click', onBackdropClick);
+    document.addEventListener('keydown', onKey);
   });
 }
 
@@ -2290,8 +2918,14 @@ function closeDurationPopup() {
 }
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.getElementById('durationPopupBackdrop').classList.contains('open')) {
+    // Don't close duration popup if a higher-z dialog is open on top
+    const higherDialogs = ['confirmBackdrop','promptBackdrop','saveLibBackdrop','fieldPickerBackdrop'];
+    if (higherDialogs.some(id => document.getElementById(id)?.classList.contains('open'))) return;
     closeDurationPopup();
   }
+});
+document.getElementById('durationPopupBackdrop').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('durationPopupBackdrop')) closeDurationPopup();
 });
 
 // ── Draggable duration popup ──
@@ -2363,13 +2997,87 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('mouseup', () => { dragging = false; });
 });
 
+// ── Generic draggable helper for dark glass dialogs ──
+function makeDraggable(boxSelector, backdropSelector) {
+  const box = document.querySelector(boxSelector);
+  const backdrop = document.querySelector(backdropSelector);
+  if (!box || !backdrop) return;
+  let dragging = false, offsetX = 0, offsetY = 0;
+
+  // Center when opened
+  const observer = new MutationObserver(() => {
+    if (backdrop.classList.contains('open') || !backdrop.classList.contains('hidden')) {
+      box.style.left = '';
+      box.style.top = '';
+      box.style.position = 'absolute';
+      const rect = box.getBoundingClientRect();
+      box.style.left = ((window.innerWidth - rect.width) / 2) + 'px';
+      box.style.top = ((window.innerHeight - rect.height) / 2) + 'px';
+    }
+  });
+  observer.observe(backdrop, { attributes: true, attributeFilter: ['class'] });
+
+  box.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button, input, label, a, .confirm-btn')) return;
+    dragging = true;
+    const rect = box.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    box.style.left = (e.clientX - offsetX) + 'px';
+    box.style.top = (e.clientY - offsetY) + 'px';
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  makeDraggable('.confirm-box', '#confirmBackdrop');
+  makeDraggable('.prompt-box', '#promptBackdrop');
+  makeDraggable('#fieldPickerBackdrop .save-lib-box', '#fieldPickerBackdrop');
+  // Login box drag
+  const loginBox = document.querySelector('.login-box');
+  const loginOverlay = document.querySelector('.login-overlay');
+  if (loginBox && loginOverlay) {
+    let dragging = false, offsetX = 0, offsetY = 0;
+    loginBox.style.position = 'absolute';
+    loginBox.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button, input, label, a')) return;
+      dragging = true;
+      const rect = loginBox.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+      e.preventDefault();
+    });
+    // Prevent any mousedown outside inputs from stealing focus/selection.
+    // This covers the overlay background, the login box chrome, labels, etc.
+    // The key: preventDefault() on mousedown prevents the browser's default
+    // focus-shift behavior, so the input keeps focus and selection.
+    document.addEventListener('mousedown', (e) => {
+      if (!loginOverlay.classList.contains('hidden') &&
+          document.activeElement && document.activeElement.matches('.login-box input') &&
+          !e.target.matches('input, button, a')) {
+        e.preventDefault();
+      }
+    }, true);
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      loginBox.style.left = (e.clientX - offsetX) + 'px';
+      loginBox.style.top = (e.clientY - offsetY) + 'px';
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
+  }
+});
+
 function updateMockDigitsFromSpinners() {
   if (timerIsRunning || timerRemaining > 0) return; // don't overwrite live countdown
   const mins = getDurationMinutes();
   const totalSecs = mins * 60;
   const mockD = document.getElementById('mockDigits');
-  mockD.textContent = fmt(totalSecs);
-  mockD.classList.toggle('has-hours', totalSecs >= 3600);
+  document.getElementById('mockDigitsText').textContent = fmtHM(totalSecs);
+  mockD.classList.remove('has-hours');
   // Update computed end time
   updateMockEndTime(mins);
   markDirtyFields();
@@ -2398,7 +3106,7 @@ function updateMockupLive(s) {
   const endTimeEl = document.getElementById('mockEndTimeComputed');
 
   // Update digits
-  digits.textContent = fmt(s.remainingSeconds);
+  document.getElementById('mockDigitsText').textContent = fmt(s.remainingSeconds);
   digits.classList.toggle('has-hours', Math.abs(s.remainingSeconds) >= 3600);
 
   // Update ring
@@ -2457,6 +3165,14 @@ function fmt(secs) {
   return time;
 }
 
+// Format as HH:MM (no seconds) — used for idle/duration display on mockup
+function fmtHM(secs) {
+  const abs = Math.abs(secs);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+
 function initSocket() {
 // ── Identify as instructor on every connect/reconnect ──
 socket.on('connect', () => {
@@ -2470,7 +3186,9 @@ socket.on('timer-update', (s) => {
   timerTotal = s.totalSeconds;
   timerOriginalTotal = s.originalTotal || s.totalSeconds;
   timerRemaining = s.remainingSeconds;
-  document.getElementById('timerDigits').textContent = fmt(s.remainingSeconds);
+  const tdEl = document.getElementById('timerDigits');
+  tdEl.textContent = fmt(s.remainingSeconds);
+  tdEl.dataset.secs = s.remainingSeconds;
 
   // On first update, populate all mockup fields from server so nothing starts dirty
   if (!initialSyncDone) {
@@ -2508,6 +3226,8 @@ socket.on('timer-update', (s) => {
   // Sync live state for dirty-field detection
   syncLiveFromServer(s);
 
+  // (batch toolbar handles dirty state via updateLibSelection)
+
   // Auto-size fields based on content
   autoSizeAllFields();
 
@@ -2536,6 +3256,10 @@ socket.on('class-code', (code) => {
 socket.on('mute-state', (isMuted) => {
   document.getElementById('muteStudents').checked = isMuted;
 });
+socket.on('timer-done', () => { warningFired = false; playAlarm(); });
+socket.on('client-count', (n) => { document.getElementById('connectedCount').textContent = n; });
+
+} // end initSocket
 
 async function generateNewCode() {
   if (!await customConfirm('Disconnect all students? A new class code will be generated and students will need to reconnect.')) return;
@@ -2566,10 +3290,6 @@ document.getElementById('btnPushCourseTitle').addEventListener('mousedown', () =
 document.querySelectorAll('input[name="bgMode"]').forEach(r => r.addEventListener('change', checkDirty));
 document.getElementById('fieldClockOnly').addEventListener('change', checkDirty);
 document.getElementById('optGoToTab').addEventListener('change', () => checkDirty());
-
-// ── Sync mirrored push checkboxes ──
-socket.on('timer-done', () => { warningFired = false; playAlarm(); });
-socket.on('client-count', (n) => { document.getElementById('connectedCount').textContent = n; });
 
 // ── Spinner helpers ──
 const spinLimits = { durH: [0,23], durM: [0,59], tarH: [1,12], tarM: [0,59] };
@@ -3021,7 +3741,7 @@ let libSortCol = null;   // null = manual order, 'name' | 'minutes' | 'label' | 
 let libSortAsc = true;
 
 function saveLibraryLocal() {
-  try { localStorage.setItem('timerLibrary', JSON.stringify(library)); } catch(e) {}
+  lsSet('timerLibrary', JSON.stringify(library));
 }
 
 async function restoreLibraryFromLocal() {
@@ -3034,20 +3754,20 @@ async function restoreLibraryFromLocal() {
     // If the server already has a non-default library, trust it
     if (serverLib.length > 0) return;
     // Server is empty — restore from localStorage if available
-    const saved = localStorage.getItem('timerLibrary');
+    const saved = lsGet('timerLibrary');
     if (!saved) return;
     const local = JSON.parse(saved);
     if (!Array.isArray(local) || local.length === 0) return;
     for (const item of local) {
-      await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
+      await authFetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
     }
     const ids = local.map(t => t.id);
-    await fetch('/api/library/reorder', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ids }) });
+    await authFetch('/api/library/reorder', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ids }) });
   } catch(e) {}
 }
 
 async function fetchLibrary() {
-  const res = await fetch('/api/library');
+  const res = await authFetch('/api/library');
   library = await res.json();
   saveLibraryLocal();
   renderLibrary();
@@ -3065,7 +3785,9 @@ function getSortedLibrary() {
   return sorted;
 }
 
+let _colResizing = false;
 function toggleSort(col) {
+  if (_colResizing) return;   // ignore clicks caused by column resize drag
   if (libSortCol === col) {
     libSortAsc = !libSortAsc;
   } else {
@@ -3081,6 +3803,83 @@ function clearSort() {
   renderLibrary();
 }
 
+// ── Library column definitions and resize ──
+function getLibCols() {
+  return [
+    { key: 'cb',           hdr: '',              sort: null,       defaultW: 28  },
+    { key: 'load',         hdr: '',              sort: null,       defaultW: 44  },
+    { key: 'play',         hdr: '',              sort: null,       defaultW: 44  },
+    { key: 'name',         hdr: 'Name',          sort: 'name',    defaultW: 150 },
+    { key: 'minutes',      hdr: 'Duration',        sort: 'minutes', defaultW: 64, align: 'right' },
+    { key: 'label',        hdr: 'Title',           sort: 'label',   defaultW: 140 },
+    { key: 'endTimeLabel', hdr: 'End Time Label',  sort: null,      defaultW: 120 },
+    { key: 'message',      hdr: 'Message',         sort: 'message', defaultW: 180 },
+    { key: 'showEndTime',  hdr: 'Show End Time',   sort: null,      defaultW: 100, align: 'center' },
+    { key: 'bgMode',       hdr: 'Background Mode', sort: null,      defaultW: 120, align: 'center' },
+    { key: 'clockOnly',    hdr: 'Clock Only',      sort: null,      defaultW: 76, align: 'center' },
+    { key: 'goToTab',      hdr: 'After Loading',   sort: null,      defaultW: 100, align: 'center' }
+  ];
+}
+
+function getLibColWidths() {
+  const cols = getLibCols();
+  const defaults = cols.map(c => c.defaultW);
+  try {
+    const saved = JSON.parse(lsGet('libColWidths'));
+    if (Array.isArray(saved) && saved.length === defaults.length) return saved;
+  } catch(e) {}
+  return defaults;
+}
+
+function saveLibColWidths(widths) {
+  lsSet('libColWidths', JSON.stringify(widths));
+}
+
+function resetColWidths() {
+  lsRemove('libColWidths');
+  renderLibrary();
+}
+
+function initColResize() {
+  const handles = document.querySelectorAll('.col-resize-handle');
+  handles.forEach(handle => {
+    handle.addEventListener('click', (e) => e.stopPropagation());
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      _colResizing = true;
+      const colIdx = parseInt(handle.dataset.col);
+      const widths = getLibColWidths();
+      const startX = e.clientX;
+      const startW = widths[colIdx];
+
+      handle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      function onMove(e2) {
+        const delta = e2.clientX - startX;
+        widths[colIdx] = Math.max(30, startW + delta);
+        const gridCols = widths.map(w => w + 'px').join(' ');
+        document.querySelector('.lib-grid-header').style.gridTemplateColumns = gridCols;
+        document.querySelectorAll('.lib-row').forEach(r => r.style.gridTemplateColumns = gridCols);
+      }
+      function onUp() {
+        handle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        saveLibColWidths(widths);
+        // Clear flag after a tick so the click event from mouseup doesn't trigger sort
+        setTimeout(() => { _colResizing = false; }, 50);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
 function renderLibrary() {
   const el = document.getElementById('libraryList');
   if (library.length === 0) {
@@ -3093,34 +3892,308 @@ function renderLibrary() {
   const arrow = (col) => libSortCol === col ? (libSortAsc ? ' ▲' : ' ▼') : '';
   const sc = (col) => libSortCol === col ? 'sortable sort-active' : 'sortable';
 
-  el.innerHTML = '<div class="lib-grid">' +
-    '<div class="lib-grid-header"><span></span><span></span>' +
-    '<span class="' + sc('name') + '" onclick="toggleSort(\'name\')">Name' + arrow('name') + '</span>' +
-    '<span class="' + sc('minutes') + '" onclick="toggleSort(\'minutes\')" style="text-align:right;padding-right:4px">Dur' + arrow('minutes') + '</span>' +
-    '<span class="' + sc('label') + '" onclick="toggleSort(\'label\')">Title' + arrow('label') + '</span>' +
-    '<span class="' + sc('message') + '" onclick="toggleSort(\'message\')">Message' + arrow('message') + '</span>' +
-    '<span></span><span></span><span></span>' +
+  // Preserve checkbox selection across re-renders
+  const prevSelected = new Set(getSelectedTimerIds());
+
+  // Column definitions: key, header text, sortable, default width
+  const libCols = getLibCols();
+  const cw = getLibColWidths();
+  const gridCols = libCols.map((c, i) => cw[i] + 'px').join(' ');
+
+  // Helper for BG mode display
+  function bgLabel(t) {
+    if (t.transparent) return 'Transp';
+    if (t.blackBg) return 'Black';
+    return '';
+  }
+  const tabLabel = { library: 'Library', options: 'Options', settings: 'Settings' };
+
+  // Build BG mode value from flags
+  function bgVal(t) {
+    if (t.transparent) return 'transparent';
+    if (t.blackBg) return 'black';
+    return 'default';
+  }
+
+  // Build grid HTML
+  let gridHtml = '<div class="lib-grid">' +
+    '<div class="lib-grid-header" style="grid-template-columns:' + gridCols + '">' +
+    '<div class="lib-hdr-cell" style="padding:4px 2px 4px 0;"><input type="checkbox" class="lib-select-all" id="libSelectAll" onchange="toggleSelectAll(this)" title="Select all"></div>' +
+    '<div class="lib-hdr-cell"></div><div class="lib-hdr-cell"></div>' +
+    libCols.slice(3).map((c, ci) => {
+      const idx = ci + 3;
+      const cls = c.sort ? sc(c.sort) : '';
+      const click = c.sort ? ' onclick="toggleSort(\'' + c.sort + '\')"' : '';
+      const txt = c.hdr + (c.sort ? arrow(c.sort) : '');
+      const style = c.align ? ' style="text-align:' + c.align + '"' : '';
+      const resize = '<div class="col-resize-handle" data-col="' + idx + '"></div>';
+      return '<div class="lib-hdr-cell ' + cls + '"' + click + style + '>' + txt + resize + '</div>';
+    }).join('') +
     '<button class="btn-clear-sort ' + (libSortCol ? 'visible' : '') + '" onclick="clearSort()" title="Clear sort">✕ Sort</button>' +
-    '</div>' +
-    sorted.map(t => `
-    <div class="lib-row ${active(t.id) ? 'active' : ''}" draggable="true" data-id="${t.id}">
+    '</div>';
+
+  sorted.forEach(t => {
+    const goTo = t.goToTab || 'library';
+    const bg = bgVal(t);
+    gridHtml += `
+    <div class="lib-row" style="grid-template-columns:${gridCols}" draggable="true" data-id="${t.id}">
+      <input type="checkbox" class="lib-row-cb" data-id="${t.id}" onchange="updateLibSelection()" ${prevSelected.has(t.id) ? 'checked' : ''}>
       <button class="lib-row-btn ${active(t.id) ? 'btn-loaded' : ''}" onclick="event.stopPropagation();loadLibTimer('${t.id}')">${active(t.id) ? 'Loaded' : 'Load'}</button>
       <button class="lib-row-btn lib-row-go" onclick="event.stopPropagation();loadAndStart('${t.id}')" title="Load all, push all, and start">&#9654;&#xFE0E;</button>
-      <span class="lib-row-name" title="${esc(t.name)}">${esc(t.name)}</span>
-      <span class="lib-row-mins">${t.minutes}m</span>
-      <span class="lib-row-title" title="${esc(t.label || '')}">${esc(t.label || '')}</span>
-      <span class="lib-row-msg" title="${esc(t.message || '')}">${esc(t.message || '')}</span>
-      <button class="lib-icon-btn btn-save ${dirty(t.id) ? 'btn-active' : ''}" onclick="event.stopPropagation();saveOverTimer('${t.id}')" title="Save changes">&#10003;</button>
-      <button class="lib-icon-btn btn-dup" onclick="event.stopPropagation();duplicateTimer('${t.id}')" title="Duplicate">&#10697;</button>
-      <button class="lib-icon-btn btn-del" onclick="event.stopPropagation();deleteTimer('${t.id}')" title="Delete">&#10005;</button>
-    </div>
-  `).join('') + '</div>';
+      <input type="text" class="lib-cell-input" data-field="name" data-orig="${esc(t.name)}" value="${esc(t.name)}" title="${esc(t.name)}" oninput="libMarkDirty(this);this.title=this.value" style="font-weight:600;">
+      <input type="number" class="lib-cell-input" data-field="minutes" data-orig="${t.minutes}" value="${t.minutes}" min="0" step="1" oninput="libMarkDirty(this)">
+      <input type="text" class="lib-cell-input" data-field="label" data-orig="${esc(t.label || '')}" value="${esc(t.label || '')}" title="${esc(t.label || '')}" oninput="libMarkDirty(this);this.title=this.value">
+      <input type="text" class="lib-cell-input" data-field="endTimeLabel" data-orig="${esc(t.endTimeLabel || '')}" value="${esc(t.endTimeLabel || '')}" title="${esc(t.endTimeLabel || '')}" oninput="libMarkDirty(this);this.title=this.value">
+      <input type="text" class="lib-cell-input" data-field="message" data-orig="${esc(t.message || '')}" value="${esc(t.message || '')}" title="${esc(t.message || '')}" oninput="libMarkDirty(this);this.title=this.value">
+      <input type="checkbox" class="lib-cell-cb" data-field="showEndTime" data-orig="${t.showEndTime !== false}" ${t.showEndTime !== false ? 'checked' : ''} onchange="libMarkDirty(this)">
+      <select class="lib-cell-select" data-field="bgMode" data-orig="${bg}" onchange="libMarkDirty(this)">
+        <option value="default" ${bg === 'default' ? 'selected' : ''}>Default</option>
+        <option value="transparent" ${bg === 'transparent' ? 'selected' : ''}>Transp</option>
+        <option value="black" ${bg === 'black' ? 'selected' : ''}>Black</option>
+      </select>
+      <input type="checkbox" class="lib-cell-cb" data-field="clockOnly" data-orig="${!!t.clockOnly}" ${t.clockOnly ? 'checked' : ''} onchange="libMarkDirty(this)">
+      <select class="lib-cell-select" data-field="goToTab" data-orig="${goTo}" onchange="libMarkDirty(this)">
+        <option value="library" ${goTo === 'library' ? 'selected' : ''}>Library</option>
+        <option value="options" ${goTo === 'options' ? 'selected' : ''}>Options</option>
+        <option value="settings" ${goTo === 'settings' ? 'selected' : ''}>Settings</option>
+      </select>
+    </div>`;
+  });
+  gridHtml += '</div>';
+
+  el.innerHTML = '<div class="lib-grid-wrap">' + gridHtml + '</div>';
 
   // Wire up drag-and-drop
   initLibDragDrop();
+  // Wire up column resize handles
+  initColResize();
   // Re-apply search filter if active
   filterLibrary();
+  // Sync toolbar button states with checkbox selection
+  updateLibSelection();
+  // Clear any editing state
+  libClearEditing();
 }
+
+// ── Inline grid editing: toolbar Save/Cancel with row locking ──
+let libEditingId = null;  // ID of the row currently being edited (or null)
+
+function libSetEditing(id) {
+  libEditingId = id;
+  // Disable ALL toolbar buttons except Save and Cancel
+  document.querySelectorAll('#libActions .lib-action-btn').forEach(btn => {
+    if (btn.id === 'btnLibSave' || btn.id === 'btnLibCancel') {
+      btn.classList.add('enabled');
+    } else {
+      btn.classList.remove('enabled');
+    }
+  });
+  // Highlight editing row, lock all others
+  document.querySelectorAll('#libraryList .lib-row[data-id]').forEach(row => {
+    if (row.dataset.id === id) {
+      row.classList.add('editing');
+      row.classList.remove('locked');
+    } else {
+      row.classList.add('locked');
+      row.classList.remove('editing');
+    }
+  });
+}
+
+function libClearEditing() {
+  libEditingId = null;
+  // Restore toolbar: disable Save/Cancel, re-enable always-on buttons
+  const alwaysOn = ['btnNewTimer', 'btnLibSearch', 'btnResetCols'];
+  document.querySelectorAll('#libActions .lib-action-btn').forEach(btn => {
+    if (btn.id === 'btnLibSave' || btn.id === 'btnLibCancel') {
+      btn.classList.remove('enabled');
+    } else if (alwaysOn.includes(btn.id)) {
+      btn.classList.add('enabled');
+    }
+  });
+  // Re-enable selection-dependent buttons based on current selection
+  updateLibSelection();
+  // Unlock all rows
+  document.querySelectorAll('#libraryList .lib-row[data-id]').forEach(row => {
+    row.classList.remove('editing', 'locked');
+  });
+}
+
+function libSaveEditing() {
+  if (libEditingId) libSaveRow(libEditingId);
+}
+
+function libCancelEditing() {
+  if (libEditingId) libCancelRow(libEditingId);
+}
+
+// ── Inline grid editing: dirty tracking, save, cancel ──
+function libMarkDirty(input) {
+  const row = input.closest('.lib-row');
+  if (!row) return;
+  const id = row.dataset.id;
+  // Check if any field has changed from its original value
+  let dirty = false;
+  row.querySelectorAll('[data-field]').forEach(el => {
+    const orig = el.dataset.orig;
+    let val;
+    if (el.type === 'checkbox') val = String(el.checked);
+    else val = el.value;
+    if (val !== orig) dirty = true;
+  });
+  if (dirty) {
+    libSetEditing(id);
+  } else {
+    libClearEditing();
+  }
+}
+
+function libCancelRow(id) {
+  const row = document.querySelector(`.lib-row[data-id="${id}"]`);
+  if (!row) return;
+  // If this is a new unsaved row, remove it entirely
+  if (row.dataset.newRow) {
+    row.remove();
+    libClearEditing();
+    return;
+  }
+  row.querySelectorAll('[data-field]').forEach(el => {
+    const orig = el.dataset.orig;
+    if (el.type === 'checkbox') el.checked = (orig === 'true');
+    else if (el.tagName === 'SELECT') el.value = orig;
+    else el.value = orig;
+  });
+  libClearEditing();
+}
+
+async function libSaveRow(id) {
+  const row = document.querySelector(`.lib-row[data-id="${id}"]`);
+  if (!row) return;
+  const get = (field) => {
+    const el = row.querySelector(`[data-field="${field}"]`);
+    if (!el) return undefined;
+    if (el.type === 'checkbox') return el.checked;
+    if (el.tagName === 'SELECT') return el.value;
+    return el.value;
+  };
+  const name = (get('name') || '').trim();
+  const minutes = parseFloat(get('minutes')) || 0;
+  if (!name) { await customAlert('Name is required.'); return; }
+  if (minutes <= 0) { await customAlert('Duration must be greater than 0.'); return; }
+  const bgMode = get('bgMode');
+  const item = {
+    id: row.dataset.newRow ? undefined : id,
+    name,
+    minutes,
+    label: get('label') || '',
+    endTimeLabel: get('endTimeLabel') || '',
+    message: get('message') || '',
+    showEndTime: get('showEndTime'),
+    transparent: bgMode === 'transparent',
+    blackBg: bgMode === 'black',
+    clockOnly: get('clockOnly'),
+    goToTab: get('goToTab') || 'library'
+  };
+  try {
+    const res = await authFetch('/api/library', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(item)
+    });
+    library = await res.json();
+    saveLibraryLocal();
+    renderLibrary();
+  } catch (e) {
+    await customAlert('Save failed: ' + e.message);
+  }
+}
+
+function newBlankRow() {
+  // If another row is being edited, block
+  if (libEditingId) return;
+
+  const el = document.getElementById('libraryList');
+  const libCols = getLibCols();
+  const cw = getLibColWidths();
+  const gridCols = libCols.map((c, i) => cw[i] + 'px').join(' ');
+  const tempId = 'new_' + Date.now().toString(36);
+
+  // If "No saved timers yet" placeholder is showing, build the grid structure
+  if (library.length === 0) {
+    el.innerHTML = '<div class="lib-grid-wrap"><div class="lib-grid"></div></div>';
+  }
+
+  const grid = el.querySelector('.lib-grid');
+
+  const rowHtml = `
+    <div class="lib-row" style="grid-template-columns:${gridCols};" data-id="${tempId}" data-new-row="true">
+      <span></span>
+      <span></span>
+      <span></span>
+      <input type="text" class="lib-cell-input" data-field="name" data-orig="" value="" placeholder="Timer name" oninput="libMarkDirty(this)" style="font-weight:600;border-color:#444;background:rgba(255,255,255,0.06);">
+      <input type="number" class="lib-cell-input" data-field="minutes" data-orig="15" value="15" min="0" step="1" oninput="libMarkDirty(this)" style="border-color:#444;background:rgba(255,255,255,0.06);">
+      <input type="text" class="lib-cell-input" data-field="label" data-orig="" value="" placeholder="Title" oninput="libMarkDirty(this)" style="border-color:#444;background:rgba(255,255,255,0.06);">
+      <input type="text" class="lib-cell-input" data-field="endTimeLabel" data-orig="" value="Class resumes at" placeholder="End time label" oninput="libMarkDirty(this)" style="border-color:#444;background:rgba(255,255,255,0.06);">
+      <input type="text" class="lib-cell-input" data-field="message" data-orig="" value="" placeholder="Message" oninput="libMarkDirty(this)" style="border-color:#444;background:rgba(255,255,255,0.06);">
+      <input type="checkbox" class="lib-cell-cb" data-field="showEndTime" data-orig="true" checked onchange="libMarkDirty(this)">
+      <select class="lib-cell-select" data-field="bgMode" data-orig="default" onchange="libMarkDirty(this)" style="border-color:#444;background:rgba(255,255,255,0.06);">
+        <option value="default" selected>Default</option>
+        <option value="transparent">Transp</option>
+        <option value="black">Black</option>
+      </select>
+      <input type="checkbox" class="lib-cell-cb" data-field="clockOnly" data-orig="false" onchange="libMarkDirty(this)">
+      <select class="lib-cell-select" data-field="goToTab" data-orig="library" onchange="libMarkDirty(this)" style="border-color:#444;background:rgba(255,255,255,0.06);">
+        <option value="library" selected>Library</option>
+        <option value="options">Options</option>
+        <option value="settings">Settings</option>
+      </select>
+    </div>`;
+
+  // Insert at the top of the grid (after the header)
+  const header = grid.querySelector('.lib-grid-header');
+  if (header) header.insertAdjacentHTML('afterend', rowHtml);
+  else grid.insertAdjacentHTML('afterbegin', rowHtml);
+
+  // Set this new row as editing (shows toolbar Save/Cancel, locks other rows)
+  libSetEditing(tempId);
+
+  // Scroll to the new row and focus the name field
+  const newRow = grid.querySelector(`[data-id="${tempId}"]`);
+  newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const nameInput = newRow.querySelector('[data-field="name"]');
+  nameInput.focus();
+}
+
+// ── Escape key: cancel edits in both grids ──
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const el = document.activeElement;
+  if (!el) return;
+
+  // Search fields: Escape closes the search bar
+  if (el.id === 'libSearch') { e.stopPropagation(); toggleLibSearch(); return; }
+  if (el.id === 'adminSearch') { e.stopPropagation(); toggleAdminSearch(); return; }
+
+  // Library grid: cancel current editing (new row removed, existing row reverted)
+  if (libEditingId && el.closest('#libraryList')) {
+    e.stopPropagation();
+    libCancelEditing();
+    return;
+  }
+
+  // Admin grid: new row → hide it; existing row → revert changes
+  const adminNewRowEl = el.closest('#adminNewRow');
+  if (adminNewRowEl) {
+    e.stopPropagation();
+    adminHideNewRow();
+    return;
+  }
+  if (adminEditingEmail && el.closest('#adminInstructorGrid')) {
+    e.stopPropagation();
+    adminCancelEditing();
+    return;
+  }
+});
 
 let draggedId = null;
 function initLibDragDrop() {
@@ -3169,7 +4242,7 @@ function initLibDragDrop() {
 
       // Save new order to server
       const ids = library.map(t => t.id);
-      await fetch('/api/library/reorder', {
+      await authFetch('/api/library/reorder', {
         method: 'PUT',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ ids })
@@ -3305,6 +4378,7 @@ function checkDirty() {
   justLoadedId = null;  // user edited a field, re-enable dirty detection
   if (activeLibId) renderLibrary();
   updateMockDigitsFromSpinners();
+  updateLibSelection();  // refresh toolbar button states (New, Update, etc.)
 }
 
 function setQuickTime(mins) {
@@ -3314,6 +4388,35 @@ function setQuickTime(mins) {
   checkDirty();
   updateButtonStates();
 }
+
+function digitSpin(id, dir) {
+  if (dir > 0) spinUp(id); else spinDown(id);
+  updateMockDigitsFromSpinners();
+  checkDirty();
+  updateButtonStates();
+}
+
+// ── Hold-to-repeat for digit spinner arrows on mockup ──
+let dsTimer = null, dsDelay = null;
+function startDigitSpin(id, dir) {
+  digitSpin(id, dir);
+  dsDelay = setTimeout(() => {
+    dsTimer = setInterval(() => digitSpin(id, dir), 120);
+  }, 400);
+}
+function stopDigitSpin() {
+  clearTimeout(dsDelay); clearInterval(dsTimer);
+  dsDelay = null; dsTimer = null;
+}
+document.querySelectorAll('.ds-btn').forEach(btn => {
+  const id = btn.dataset.dsid;
+  const dir = parseInt(btn.dataset.dsdir, 10);
+  btn.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); if (!btn.classList.contains('disabled')) startDigitSpin(id, dir); });
+  btn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (!btn.classList.contains('disabled')) startDigitSpin(id, dir); });
+});
+document.addEventListener('mouseup', stopDigitSpin);
+document.addEventListener('touchend', stopDigitSpin);
+document.addEventListener('touchcancel', stopDigitSpin);
 
 function addTimerTime() {
   const mins = getDurationMinutes();
@@ -3343,13 +4446,54 @@ async function saveOverTimer(id) {
   t.blackBg = modes.blackBg;
   t.clockOnly = modes.clockOnly;
   t.goToTab = document.getElementById('optGoToTab').value;
-  await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(t) });
+  await authFetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(t) });
   await fetchLibrary();
 }
 
+function getSequencesUsingTimer(timerId) {
+  return sequenceData.filter(seq =>
+    (seq.steps || []).some(step => step.timerId === timerId)
+  );
+}
+
+function getSequencesUsingAny(timerIds) {
+  const idSet = new Set(timerIds);
+  return sequenceData.filter(seq =>
+    (seq.steps || []).some(step => idSet.has(step.timerId))
+  );
+}
+
+async function removeTimerFromSequences(timerId) {
+  const affected = getSequencesUsingTimer(timerId);
+  for (const seq of affected) {
+    seq.steps = seq.steps.filter(step => step.timerId !== timerId);
+    await fetch('/api/sequences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(seq),
+    });
+  }
+  // Reload sequences to stay in sync
+  await loadSequences();
+  renderSequenceList();
+}
+
 async function deleteTimer(id) {
-  if (!await customConfirm('Delete this timer from the library?')) return;
-  await fetch('/api/library/' + id, { method: 'DELETE' });
+  const t = library.find(x => x.id === id);
+  const name = t ? t.name : 'this timer';
+  const seqsUsing = getSequencesUsingTimer(id);
+  if (seqsUsing.length > 0) {
+    const seqNames = seqsUsing.map(s => s.name).join(', ');
+    const ok = await customConfirm(
+      '"' + name + '" is used in: ' + seqNames + '. Deleting it will also remove it from ' +
+      (seqsUsing.length === 1 ? 'that sequence' : 'those sequences') + '. Proceed?'
+    );
+    if (!ok) return;
+    await removeTimerFromSequences(id);
+  } else {
+    if (!await customConfirm('Delete "' + name + '" from the library?')) return;
+  }
+  await authFetch('/api/library/' + id, { method: 'DELETE' });
   if (activeLibId === id) activeLibId = null;
   await fetchLibrary();
 }
@@ -3358,7 +4502,7 @@ async function duplicateTimer(id) {
   const t = library.find(x => x.id === id);
   if (!t) return;
   const dup = { ...t, id: undefined, name: t.name + ' (copy)' };
-  const res = await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(dup) });
+  const res = await authFetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(dup) });
   library = await res.json();
   saveLibraryLocal();
   const newest = library[library.length - 1];
@@ -3381,6 +4525,7 @@ async function duplicateTimer(id) {
 }
 
 async function newTimerToFields() {
+  if (libEditingId) return;
   activeLibId = null;
   let name = document.getElementById('fieldName').value.trim();
   if (!name) {
@@ -3399,12 +4544,204 @@ async function newTimerToFields() {
   const showEndTime = document.getElementById('fieldShowEnd').checked;
   const goToTab = document.getElementById('optGoToTab').value;
   const item = { name, label, minutes, endTimeLabel, message, showEndTime, goToTab };
-  const res = await fetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
+  const res = await authFetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
   library = await res.json();
   saveLibraryLocal();
   const newest = library[library.length - 1];
   activeLibId = newest.id;
   renderLibrary();
+}
+
+// ── Batch operations (toolbar) ──
+
+function getSelectedTimerIds() {
+  return Array.from(document.querySelectorAll('.lib-row-cb:checked')).map(cb => cb.dataset.id);
+}
+
+function updateLibSelection() {
+  const ids = getSelectedTimerIds();
+  const n = ids.length;
+  const btnNew = document.getElementById('btnNewTimer');
+  const btnUpdate = document.getElementById('btnBatchUpdate');
+  const btnDup = document.getElementById('btnBatchDuplicate');
+  const btnDel = document.getElementById('btnBatchDelete');
+  const countEl = document.getElementById('libSelCount');
+
+  // +New and +New from Mockup are always enabled
+  if (btnNew) btnNew.classList.add('enabled');
+  const btnFromMockup = document.getElementById('btnNewFromMockup');
+  if (btnFromMockup) btnFromMockup.classList.toggle('enabled', !!document.getElementById('fieldName').value.trim() && !!getField('fieldLabel') && getDurationMinutes() > 0);
+
+  // Update just requires a selection — the field picker handles the rest
+  if (btnUpdate) btnUpdate.classList.toggle('enabled', n > 0);
+  if (btnDup) btnDup.classList.toggle('enabled', n > 0);
+  if (btnDel) btnDel.classList.toggle('enabled', n > 0);
+  if (countEl) countEl.textContent = n + ' selected';
+
+  // Sync select-all checkbox
+  const selAll = document.getElementById('libSelectAll');
+  const allCbs = document.querySelectorAll('.lib-row-cb');
+  if (selAll && allCbs.length > 0) {
+    selAll.checked = n === allCbs.length;
+    selAll.indeterminate = n > 0 && n < allCbs.length;
+  }
+}
+
+function toggleSelectAll(masterCb) {
+  const checked = masterCb.checked;
+  document.querySelectorAll('.lib-row-cb').forEach(cb => { cb.checked = checked; });
+  updateLibSelection();
+}
+
+async function batchUpdate() {
+  const ids = getSelectedTimerIds();
+  if (ids.length === 0) return;
+
+  // Read current field values for preview
+  const currentLabel = getField('fieldLabel');
+  const currentMins = getDurationMinutes();
+  const currentEndTimeLabel = getField('fieldEndTimeLabel');
+  const currentMessage = getField('fieldMessage');
+  const currentShowEnd = document.getElementById('fieldShowEnd').checked;
+  const currentModes = getDisplayModePayload();
+  const currentGoToTab = document.getElementById('optGoToTab').value;
+
+  // Background mode label
+  const bgPreview = currentModes.transparent ? 'Transparent' : currentModes.blackBg ? 'Black' : 'Default';
+  const clockPreview = currentModes.clockOnly ? 'Yes' : 'No';
+
+  // Tab name mapping
+  const tabNames = { library: 'Library', options: 'Options', settings: 'Settings' };
+
+  // Build field picker with current values shown — two sections
+  const timerFields = [
+    { key: 'minutes',      label: 'Duration',        preview: currentMins ? currentMins + 'm' : '' },
+    { key: 'label',        label: 'Title',           preview: currentLabel },
+    { key: 'endTimeLabel', label: 'End Time Label',  preview: currentEndTimeLabel },
+    { key: 'message',      label: 'Message',         preview: currentMessage }
+  ];
+  const optionFields = [
+    { key: 'showEndTime',  label: 'Show End Time',    preview: currentShowEnd ? 'Yes' : 'No' },
+    { key: 'bgMode',       label: 'Background Mode',  preview: bgPreview },
+    { key: 'clockOnly',    label: 'Clock Only',        preview: clockPreview },
+    { key: 'goToTab',      label: 'After-Loading Tab', preview: tabNames[currentGoToTab] || currentGoToTab }
+  ];
+
+  const empty = '<span style="color:#666;font-style:italic;">(empty)</span>';
+  function fieldRow(f) {
+    return '<label style="display:flex;align-items:baseline;gap:6px;padding:5px 0;font-size:0.85rem;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);">' +
+      '<input type="checkbox" class="batch-field-cb" value="' + f.key + '" style="accent-color:var(--green);flex-shrink:0;margin-top:2px;">' +
+      '<span style="min-width:120px;color:var(--dim);">' + f.label + '</span>' +
+      '<span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (f.preview ? esc(f.preview) : empty) + '</span>' +
+      '</label>';
+  }
+  const divider = '<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--blue);margin:12px 0 6px;font-weight:600;">Options</div>';
+  const pickerHTML = '<div style="margin-top:4px;">' +
+    '<p style="font-size:0.8rem;color:var(--dim);margin-bottom:10px;">Select fields to write to ' + ids.length + ' timer' + (ids.length > 1 ? 's' : '') + ':</p>' +
+    timerFields.map(fieldRow).join('') +
+    divider +
+    optionFields.map(fieldRow).join('') +
+    '</div>';
+
+  const chosen = await showFieldPickerDialog('Update ' + ids.length + ' Timer' + (ids.length > 1 ? 's' : ''), pickerHTML);
+  if (!chosen || chosen.length === 0) return;
+
+  // Apply chosen fields to each selected timer
+  for (const id of ids) {
+    const t = library.find(x => x.id === id);
+    if (!t) continue;
+    if (chosen.includes('minutes'))     t.minutes = currentMins;
+    if (chosen.includes('label'))       t.label = currentLabel;
+    if (chosen.includes('endTimeLabel')) t.endTimeLabel = currentEndTimeLabel;
+    if (chosen.includes('message'))     t.message = currentMessage;
+    if (chosen.includes('showEndTime')) t.showEndTime = currentShowEnd;
+    if (chosen.includes('bgMode')) {
+      t.transparent = currentModes.transparent;
+      t.blackBg = currentModes.blackBg;
+    }
+    if (chosen.includes('clockOnly'))   t.clockOnly = currentModes.clockOnly;
+    if (chosen.includes('goToTab'))     t.goToTab = currentGoToTab;
+    await authFetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(t) });
+  }
+  await fetchLibrary();
+}
+
+function showFieldPickerDialog(title, bodyHTML) {
+  return new Promise(resolve => {
+    const backdrop = document.getElementById('fieldPickerBackdrop');
+    const closeBtn = document.getElementById('fpClose');
+    document.getElementById('fpTitle').textContent = title;
+    document.getElementById('fpBody').innerHTML = bodyHTML;
+    backdrop.classList.add('open');
+
+    function cleanup(result) {
+      backdrop.classList.remove('open');
+      document.getElementById('fpOK').removeEventListener('click', onOK);
+      document.getElementById('fpCancel').removeEventListener('click', onCancel);
+      closeBtn.removeEventListener('click', onCancel);
+      backdrop.removeEventListener('click', onBackdropClick);
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function onOK() {
+      const checked = Array.from(backdrop.querySelectorAll('.batch-field-cb:checked')).map(cb => cb.value);
+      cleanup(checked);
+    }
+    function onCancel() { cleanup(null); }
+    function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); onCancel(); } }
+    function onBackdropClick(e) { if (e.target === backdrop) onCancel(); }
+
+    document.getElementById('fpOK').addEventListener('click', onOK);
+    document.getElementById('fpCancel').addEventListener('click', onCancel);
+    closeBtn.addEventListener('click', onCancel);
+    backdrop.addEventListener('click', onBackdropClick);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
+async function batchDuplicate() {
+  const ids = getSelectedTimerIds();
+  if (ids.length === 0) return;
+  if (!await customConfirm('Duplicate ' + ids.length + ' timer' + (ids.length > 1 ? 's' : '') + '?')) return;
+
+  for (const id of ids) {
+    const t = library.find(x => x.id === id);
+    if (!t) continue;
+    const dup = { ...t, id: undefined, name: t.name + ' (copy)' };
+    const res = await authFetch('/api/library', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(dup) });
+    library = await res.json();
+  }
+  saveLibraryLocal();
+  renderLibrary();
+}
+
+async function batchDelete() {
+  const ids = getSelectedTimerIds();
+  if (ids.length === 0) return;
+
+  // Check for sequence dependencies across all selected timers
+  const seqsUsing = getSequencesUsingAny(ids);
+  if (seqsUsing.length > 0) {
+    const seqNames = seqsUsing.map(s => s.name).join(', ');
+    const ok = await customConfirm(
+      'Some of the selected timers are used in: ' + seqNames +
+      '. Deleting will also remove them from ' +
+      (seqsUsing.length === 1 ? 'that sequence' : 'those sequences') +
+      '. Proceed?'
+    );
+    if (!ok) return;
+    for (const id of ids) {
+      await removeTimerFromSequences(id);
+    }
+  } else {
+    if (!await customConfirm('Delete ' + ids.length + ' timer' + (ids.length > 1 ? 's' : '') + ' from the library? This cannot be undone.')) return;
+  }
+
+  for (const id of ids) {
+    await authFetch('/api/library/' + id, { method: 'DELETE' });
+    if (activeLibId === id) activeLibId = null;
+  }
+  await fetchLibrary();
 }
 
 // ── Library export/import ──
@@ -3425,24 +4762,57 @@ async function importLibrary(input) {
     const imported = JSON.parse(text);
     if (!Array.isArray(imported)) { await customAlert('Invalid library file.'); return; }
     if (!await customConfirm('Replace current library with imported data? (' + imported.length + ' timers)')) return;
-    const res = await fetch('/api/library/import', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(imported) });
+    const res = await authFetch('/api/library/import', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(imported) });
     library = await res.json();
     saveLibraryLocal();
     activeLibId = null;
     renderLibrary();
+    switchTab('library');
   } catch (e) {
     await customAlert('Error reading file: ' + e.message);
   }
   input.value = ''; // reset so same file can be re-imported
 }
 
+// ── Search toggle ──
+function toggleLibSearch() {
+  const bar = document.getElementById('libSearchBar');
+  const input = document.getElementById('libSearch');
+  if (bar.style.display === 'none') {
+    bar.style.display = '';
+    input.focus();
+  } else {
+    bar.style.display = 'none';
+    input.value = '';
+    filterLibrary();
+  }
+}
+
+function toggleAdminSearch() {
+  const bar = document.getElementById('adminSearchBar');
+  const input = document.getElementById('adminSearch');
+  if (bar.style.display === 'none') {
+    bar.style.display = '';
+    input.focus();
+  } else {
+    bar.style.display = 'none';
+    input.value = '';
+    filterAdminGrid();
+  }
+}
+
 // ── Library search ──
 function filterLibrary() {
   const query = (document.getElementById('libSearch').value || '').toLowerCase().trim();
-  const rows = document.querySelectorAll('#libraryList .lib-row');
+  const rows = document.querySelectorAll('#libraryList .lib-row[data-id]');
   rows.forEach(row => {
     if (!query) { row.style.display = ''; return; }
-    const text = row.textContent.toLowerCase();
+    let text = '';
+    row.querySelectorAll('[data-field]').forEach(el => {
+      if (el.type === 'checkbox') return;
+      text += ' ' + (el.value || '');
+    });
+    text = text.toLowerCase();
     row.style.display = text.includes(query) ? '' : 'none';
   });
 }
@@ -3462,7 +4832,7 @@ let savedOrdersList = [];
 
 async function fetchSavedOrders() {
   try {
-    const res = await fetch('/api/orders');
+    const res = await authFetch('/api/orders');
     savedOrdersList = await res.json();
   } catch (e) { savedOrdersList = []; }
   renderSavedOrdersDropdown();
@@ -3503,7 +4873,7 @@ async function applySavedOrder() {
   library = [...ordered, ...remaining];
 
   // Persist the new order
-  await fetch('/api/library/reorder', {
+  await authFetch('/api/library/reorder', {
     method: 'PUT',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ ids: library.map(t => t.id) })
@@ -3530,7 +4900,7 @@ async function saveCurrentOrder() {
 
   const ids = library.map(t => t.id);
   const body = id ? { id, name, ids } : { name, ids };
-  const res = await fetch('/api/orders', {
+  const res = await authFetch('/api/orders', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify(body)
@@ -3554,18 +4924,18 @@ async function deleteCurrentOrder() {
   const order = savedOrdersList.find(o => o.id === orderId);
   if (!order) return;
   if (!await customConfirm(`Delete saved order "${order.name}"?`)) return;
-  const res = await fetch('/api/orders/' + orderId, { method: 'DELETE' });
+  const res = await authFetch('/api/orders/' + orderId, { method: 'DELETE' });
   savedOrdersList = await res.json();
   renderSavedOrdersDropdown();
 }
 
 // ── Keep-alive ping (prevents Render free tier from sleeping) ──
-setInterval(() => { fetch('/api/library').catch(() => {}); }, 5 * 60 * 1000);
+setInterval(() => { authFetch('/api/library').catch(() => {}); }, 5 * 60 * 1000);
 
 // ── QR code ──
 function loadQRCode() {
-  fetch('/qr').then(r => r.json()).then(data => {
-    document.getElementById('qrContainer').innerHTML = `<img src="${data.qr}" alt="QR" width="180">`;
+  authFetch('/qr').then(r => r.json()).then(data => {
+    document.getElementById('qrContainer').innerHTML = `<img src="${data.qr}" alt="QR" width="120" style="border-radius:8px; background:#fff; padding:4px;">`;
   }).catch(() => {
     document.getElementById('qrContainer').textContent = 'QR code unavailable';
   });
@@ -3743,6 +5113,12 @@ function updateButtonStates() {
                           getField('fieldEndTimeLabel') !== 'Class resumes at';
   clearBtn.classList.toggle('enabled', hasLabel || hasMessage || hasDuration || hasName || hasEndTimeLabel);
 
+  // Digit spinners: disabled when timer is running or paused
+  const spinnerActive = !running && !paused;
+  document.querySelectorAll('.ds-btn').forEach(btn => {
+    btn.classList.toggle('disabled', !spinnerActive);
+  });
+
   // Field play buttons: disabled when no duration set and not paused
   const canStart = hasDuration || paused;
   document.querySelectorAll('.mock-ctx-go').forEach(btn => {
@@ -3777,12 +5153,12 @@ document.getElementById('includeMessage').addEventListener('change', updateButto
 })();
 
 // Switch to startup tab if configured
-const startTab = localStorage.getItem('startTab');
+const startTab = lsGet('startTab');
 if (startTab && TAB_NAMES.includes(startTab)) switchTab(startTab);
 
 // Persist startup tab setting
 document.getElementById('optStartTab').addEventListener('change', () => {
-  localStorage.setItem('startTab', document.getElementById('optStartTab').value);
+  lsSet('startTab', document.getElementById('optStartTab').value);
 });
 
 // Load saved startup tab into dropdown
@@ -3790,12 +5166,6 @@ if (startTab) document.getElementById('optStartTab').value = startTab;
 
 // ── Students tab: check-in status board ──
 let studentList = [];
-
-socket.on('student-list', (list) => {
-  studentList = list;
-  renderStudentBoard();
-  updateStudentBadge();
-});
 
 function renderStudentBoard() {
   const summaryEl = document.getElementById('studentsSummary');
@@ -3899,7 +5269,7 @@ let seqBuilderSteps = []; // current builder step list [{timerId, name, minutes}
 
 async function loadSequences() {
   try {
-    const res = await fetch('/api/sequences');
+    const res = await authFetch('/api/sequences');
     sequenceData = await res.json();
   } catch (e) {
     console.error('Failed to load sequences:', e);
@@ -4078,7 +5448,7 @@ async function saveSequence() {
   };
   if (editingSequenceId) seq.id = editingSequenceId;
   try {
-    const res = await fetch('/api/sequences', {
+    const res = await authFetch('/api/sequences', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(seq),
@@ -4095,7 +5465,7 @@ async function deleteSequence(id) {
   const ok = await customConfirm('Delete this sequence?');
   if (!ok) return;
   try {
-    const res = await fetch('/api/sequences/' + id, { method: 'DELETE' });
+    const res = await authFetch('/api/sequences/' + id, { method: 'DELETE' });
     sequenceData = await res.json();
   } catch (e) {
     console.error('Failed to delete sequence:', e);
@@ -4115,23 +5485,8 @@ function stopSequence() {
   socket.emit('stop-sequence');
 }
 
-// Listen for sequence state updates from server
+// Sequence state
 let activeSeqState = null;
-socket.on('sequence-state', (state) => {
-  activeSeqState = state;
-  const badge = document.getElementById('seqProgressBadge');
-  if (!state) {
-    badge.classList.remove('visible');
-    document.getElementById('seqWaitingMsg').style.display = 'none';
-    document.querySelector('.tb-start').classList.remove('seq-waiting-start');
-    return;
-  }
-  badge.classList.add('visible');
-  document.getElementById('seqProgressName').textContent = state.name;
-  document.getElementById('seqProgressCount').textContent =
-    `${state.currentIndex + 1} of ${state.totalSteps}`;
-  updateSeqWaiting();
-});
 
 function updateSeqWaiting() {
   const waitEl = document.getElementById('seqWaitingMsg');
@@ -4180,28 +5535,49 @@ function toggleCheckin(enabled) {
   socket.emit('set-checkin-enabled', enabled);
 }
 
-// Server confirms the toggle state (also sent on connect)
-socket.on('checkin-enabled', (enabled) => {
-  document.getElementById('checkinToggle').checked = !!enabled;
-  document.getElementById('mockCheckinFooter').classList.toggle('visible', !!enabled);
-});
-
 // Refresh relative timestamps every 30 seconds
 setInterval(() => {
   if (studentList.length > 0) renderStudentBoard();
 }, 30000);
 
-// Handle auth errors from server
-socket.on('connect_error', (err) => {
-  if (err.message === 'Authentication required') {
-    logout();
-  }
-});
+function initSocketLate() {
+  socket.on('student-list', (list) => {
+    studentList = list;
+    renderStudentBoard();
+    updateStudentBadge();
+  });
 
-} // end initSocket
+  socket.on('sequence-state', (state) => {
+    activeSeqState = state;
+    const badge = document.getElementById('seqProgressBadge');
+    if (!state) {
+      badge.classList.remove('visible');
+      document.getElementById('seqWaitingMsg').style.display = 'none';
+      document.querySelector('.tb-start').classList.remove('seq-waiting-start');
+      return;
+    }
+    badge.classList.add('visible');
+    document.getElementById('seqProgressName').textContent = state.name;
+    document.getElementById('seqProgressCount').textContent =
+      `${state.currentIndex + 1} of ${state.totalSteps}`;
+    updateSeqWaiting();
+  });
+
+  socket.on('checkin-enabled', (enabled) => {
+    document.getElementById('checkinToggle').checked = !!enabled;
+    document.getElementById('mockCheckinFooter').classList.toggle('visible', !!enabled);
+  });
+
+  socket.on('connect_error', (err) => {
+    if (err.message === 'Authentication required') {
+      logout();
+    }
+  });
+} // end initSocketLate
 </script>
 <div class="prompt-backdrop" id="promptBackdrop">
-  <div class="prompt-box">
+  <div class="prompt-box" style="position:relative;">
+    <button class="dialog-close" id="promptClose">&#10005;</button>
     <div class="prompt-label" id="promptLabel"></div>
     <input type="text" class="prompt-input" id="promptInput" autocomplete="off">
     <div class="prompt-buttons">
@@ -4211,7 +5587,8 @@ socket.on('connect_error', (err) => {
   </div>
 </div>
 <div class="save-lib-backdrop" id="saveLibBackdrop">
-  <div class="save-lib-box">
+  <div class="save-lib-box" style="position:relative;">
+    <button class="dialog-close" id="saveLibClose">&#10005;</button>
     <div class="save-lib-title" id="saveLibTitle">Save field to library items</div>
     <div class="save-lib-value" id="saveLibValue"></div>
     <input type="text" class="lib-search" id="saveLibSearch" placeholder="Filter..." oninput="filterSaveLib()" style="padding-left:10px; margin-bottom:10px; width:100%;">
@@ -4222,8 +5599,20 @@ socket.on('connect_error', (err) => {
     </div>
   </div>
 </div>
+<div class="save-lib-backdrop" id="fieldPickerBackdrop">
+  <div class="save-lib-box" style="max-width:340px; text-align:left; position:relative;">
+    <button class="dialog-close" id="fpClose">&#10005;</button>
+    <div class="save-lib-title" id="fpTitle" style="cursor:default;"></div>
+    <div id="fpBody"></div>
+    <div class="save-lib-buttons" style="margin-top:16px;">
+      <button class="confirm-btn confirm-btn-yes" id="fpOK">Update</button>
+      <button class="confirm-btn confirm-btn-no" id="fpCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="confirm-backdrop" id="confirmBackdrop">
-  <div class="confirm-box">
+  <div class="confirm-box" style="position:relative;">
+    <button class="dialog-close" id="confirmClose">&#10005;</button>
     <div class="confirm-msg" id="confirmMsg"></div>
     <div class="confirm-buttons" id="confirmButtons">
       <button class="confirm-btn confirm-btn-yes" id="confirmYes">Yes</button>

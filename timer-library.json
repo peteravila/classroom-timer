@@ -24,16 +24,6 @@
     "clockOnly": false
   },
   {
-    "id": "1",
-    "name": "Lunch 60",
-    "minutes": 60,
-    "label": "Lunch Break",
-    "message": "Enjoy your lunch! See you back in class soon.",
-    "showEndTime": true,
-    "endTimeLabel": "Class resumes at",
-    "goToTab": "text"
-  },
-  {
     "id": "2",
     "name": "Break 15",
     "minutes": 15,
@@ -63,7 +53,8 @@
     "goToTab": "library",
     "id": "motcu580rle0",
     "transparent": false,
-    "clockOnly": false
+    "clockOnly": false,
+    "blackBg": false
   },
   {
     "id": "4",
@@ -147,7 +138,8 @@
     "goToTab": "library",
     "id": "mp048wl0u4x4",
     "transparent": false,
-    "clockOnly": false
+    "clockOnly": false,
+    "blackBg": false
   },
   {
     "name": "Hot Lab 10",
