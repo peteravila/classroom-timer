@@ -493,7 +493,9 @@ let manualSubmit = false; // true when user clicked Join — suppresses error on
 socket.on('connect', () => {
   if (isPreview) {
     socket.emit('identify', { role: 'preview', code: urlCode ? urlCode.toUpperCase() : null });
-  } else if (isOBS) {
+  } else if (isOBS || isLargeScreen) {
+    // Display viewers (OBS sources and large screens) use identify, not validate-code,
+    // so the server treats them as displays rather than students
     socket.emit('identify', { role: 'display', code: urlCode ? urlCode.toUpperCase() : null });
   } else if (studentValidated) {
     // Already validated — re-validate with the code we used
@@ -502,8 +504,6 @@ socket.on('connect', () => {
   } else if (urlCode && !codeExpired) {
     // First connect with QR code — auto-validate (skip if code was expired by disconnect-all)
     socket.emit('validate-code', urlCode.toUpperCase());
-  } else if (isLargeScreen) {
-    socket.emit('identify', { role: 'display', code: urlCode ? urlCode.toUpperCase() : null });
   }
 });
 
