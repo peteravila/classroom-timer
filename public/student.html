@@ -724,7 +724,8 @@ socket.on('timer-update', (s) => {
   // Color state — use originalTotal for thresholds
   const { cls, paused } = stateClass(s.remainingSeconds, refTotal, s.running);
   document.body.className = cls;
-  document.body.classList.toggle('paused', paused);
+  // TEMP: screenshot mode — don't gray out on pause
+  // document.body.classList.toggle('paused', paused);
   // Display modes — OBS uses URL parameters; all other viewers use server flags
   if (isOBS) {
     document.body.classList.toggle('mode-transparent', urlTransparent);
@@ -735,7 +736,7 @@ socket.on('timer-update', (s) => {
     document.body.classList.toggle('mode-black-bg', !!s.blackBg);
     document.body.classList.toggle('mode-clock-only', !!s.clockOnly);
   }
-  ring.style.stroke = paused ? '#444' : strokeColor(cls);
+  ring.style.stroke = strokeColor(cls); // TEMP: always use color, not gray
 
   // Status badge — only show when not running
   const badge = document.getElementById('statusBadge');

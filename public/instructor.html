@@ -3132,8 +3132,15 @@ function updateMockupLive(s) {
   mockup.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-done', 'state-paused');
   if (s.remainingSeconds <= 0 && s.totalSeconds > 0) {
     mockup.classList.add('state-done');
+  // TEMP: screenshot mode — treat paused same as running (keep color)
   } else if (!s.running && s.remainingSeconds > 0 && s.remainingSeconds < s.totalSeconds) {
-    mockup.classList.add('state-paused');
+    // mockup.classList.add('state-paused');
+    const pct = s.remainingSeconds / refTotal;
+    const yellowThresh = Math.min(0.35, 600 / refTotal);
+    const orangeThresh = Math.min(0.15, 180 / refTotal);
+    if (pct <= orangeThresh) mockup.classList.add('state-orange');
+    else if (pct <= yellowThresh) mockup.classList.add('state-yellow');
+    else mockup.classList.add('state-green');
   } else if (s.running && s.remainingSeconds > 0) {
     const pct = s.remainingSeconds / refTotal;
     // Hybrid thresholds matching student.html
