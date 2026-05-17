@@ -136,7 +136,6 @@ function createSession(instructorId) {
     classCode: null,
     muted: false,
     tickInterval: null,
-    connectedStudents: 0,
     students: new Map(),
     studentCounter: 0,
     checkinEnabled: false,
@@ -361,6 +360,15 @@ function formatEndTime(epochMs) {
   const ampm = h >= 12 ? 'PM' : 'AM';
   h = h % 12 || 12;
   return `${h}:${m} ${ampm}`;
+}
+
+function emitStudentCount(s) {
+  // Count unique students with an active socket connection
+  let count = 0;
+  for (const st of s.students.values()) {
+    if (st.socketId) count++;
+  }
+  io.to('instructor:' + s.instructorId).emit('client-count', count);
 }
 
 function broadcast(s) {
@@ -900,7 +908,7 @@ io.on('connection', (socket) => {
       socket.emit('class-code', session.classCode);
       socket.emit('mute-state', session.muted);
       socket.emit('checkin-enabled', session.checkinEnabled);
-      io.to('instructor:' + instructorId).emit('client-count', session.connectedStudents);
+      emitStudentCount(session);
       broadcastStudentList(session);
       broadcastSequenceState(session);
     } else if (r === 'preview' || r === 'display' || (typeof r === 'object' && (r.role === 'preview' || r.role === 'display'))) {
@@ -941,11 +949,10 @@ io.on('connection', (socket) => {
       instructorId = ownerInstructorId;
       session = getSession(instructorId);
       socket.join('students:' + instructorId);
-      session.connectedStudents++;
       socket.emit('code-accepted');
       socket.emit('timer-update', session.timerState);
       socket.emit('checkin-enabled', session.checkinEnabled);
-      io.to('instructor:' + instructorId).emit('client-count', session.connectedStudents);
+      emitStudentCount(session);
     } else {
       socket.emit('code-rejected');
     }
@@ -987,11 +994,15 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     if (role === 'student' && validated && session) {
-      session.connectedStudents--;
-      io.to('instructor:' + instructorId).emit('client-count', session.connectedStudents);
+      // Only clear socketId if it still belongs to THIS socket
+      // (a re-scan may have already replaced it with a newer socket)
       if (studentPersistentId && session.students.has(studentPersistentId)) {
-        session.students.get(studentPersistentId).socketId = null;
+        const student = session.students.get(studentPersistentId);
+        if (student.socketId === socket.id) {
+          student.socketId = null;
+        }
       }
+      emitStudentCount(session);
     }
   });
 
@@ -1009,11 +1020,10 @@ io.on('connection', (socket) => {
     io.to('students:' + instructorId).emit('code-expired');
     const studentSockets = await io.in('students:' + instructorId).fetchSockets();
     for (const s of studentSockets) s.disconnect(true);
-    session.connectedStudents = 0;
     session.students.clear();
     session.studentCounter = 0;
     io.to('instructor:' + instructorId).emit('class-code', session.classCode);
-    io.to('instructor:' + instructorId).emit('client-count', session.connectedStudents);
+    emitStudentCount(session);
     broadcastStudentList(session);
   });
 
