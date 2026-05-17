@@ -5513,7 +5513,7 @@ loadSequences();
 
 // ── OBS URL copy ──
 function copyOBSUrl(extraParams) {
-  const base = window.location.origin + '/?obs=true';
+  const base = window.location.origin + '/?obs=true&token=' + encodeURIComponent(authToken);
   const url = base + extraParams;
   navigator.clipboard.writeText(url).then(() => {
     // Find the button that was clicked (by matching the onclick param)
@@ -5528,7 +5528,7 @@ function copyOBSUrl(extraParams) {
 }
 
 function copyQROnlyUrl() {
-  const url = window.location.origin + '/qr-only';
+  const url = window.location.origin + '/qr-only?token=' + encodeURIComponent(authToken);
   navigator.clipboard.writeText(url).then(() => {
     const btn = document.querySelector('button[onclick="copyQROnlyUrl()"]');
     if (btn) {
