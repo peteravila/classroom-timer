@@ -7,6 +7,7 @@ const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const { MongoClient, ObjectId } = require('mongodb');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -81,6 +82,27 @@ function verifyToken(token) {
   } catch (e) {
     return null;
   }
+}
+
+function generateApiKey() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// Ensure an instructor has an API key; generate one if missing
+async function ensureApiKey(instructorDoc) {
+  if (instructorDoc.apiKey) return instructorDoc.apiKey;
+  const key = generateApiKey();
+  await db.collection('instructors').updateOne(
+    { _id: instructorDoc._id },
+    { $set: { apiKey: key } }
+  );
+  return key;
+}
+
+// Look up instructor by API key
+async function findByApiKey(key) {
+  if (!key) return null;
+  return db.collection('instructors').findOne({ apiKey: key });
 }
 
 // ── Auth middleware for REST endpoints ───────────────────────
@@ -648,6 +670,7 @@ app.post('/api/login', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   try {
     const instructor = await authenticateInstructor(email, password);
+    await ensureApiKey(instructor);
     const token = generateToken(instructor);
     res.json({ token, name: instructor.name, email: instructor.email });
   } catch (e) {
@@ -661,6 +684,23 @@ app.get('/api/me', (req, res) => {
   const payload = verifyToken(auth.slice(7));
   if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
   res.json({ name: payload.name, email: payload.email, isAdmin: !!payload.isAdmin });
+});
+
+// API key for display viewers (OBS, large screens)
+app.get('/api/api-key', requireAuth, async (req, res) => {
+  const instructor = await db.collection('instructors').findOne({ _id: new ObjectId(req.instructor.id) });
+  if (!instructor) return res.status(404).json({ error: 'Instructor not found' });
+  const key = await ensureApiKey(instructor);
+  res.json({ apiKey: key });
+});
+
+app.post('/api/api-key/regenerate', requireAuth, async (req, res) => {
+  const key = generateApiKey();
+  await db.collection('instructors').updateOne(
+    { _id: new ObjectId(req.instructor.id) },
+    { $set: { apiKey: key } }
+  );
+  res.json({ apiKey: key });
 });
 
 app.post('/api/change-password', requireAuth, async (req, res) => {
@@ -856,9 +896,10 @@ app.get('/qr-only', (req, res) => {
 </div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  // Get auth token from URL params for instructor-scoped QR
+  // Get auth credentials from URL params for instructor-scoped QR
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token');
+  const apiKey = params.get('key');
 
   function loadQR() {
     const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
@@ -872,7 +913,8 @@ app.get('/qr-only', (req, res) => {
   loadQR();
 
   // Auto-update when class code changes
-  const socket = io({ auth: token ? { token } : {} });
+  const authObj = apiKey ? { apiKey } : token ? { token } : {};
+  const socket = io({ auth: authObj });
   socket.on('connect', () => { socket.emit('identify', 'preview'); });
   socket.on('class-code', () => { loadQR(); });
 </script>
@@ -912,16 +954,30 @@ io.on('connection', (socket) => {
       broadcastStudentList(session);
       broadcastSequenceState(session);
     } else if (r === 'preview' || r === 'display' || (typeof r === 'object' && (r.role === 'preview' || r.role === 'display'))) {
-      // Preview/display: try auth token first, then class code
+      // Preview/display: try API key first, then auth token, then class code
       const identifyRole = typeof r === 'object' ? r.role : r;
       const identifyCode = typeof r === 'object' ? r.code : null;
+      const apiKey = socket.handshake.auth && socket.handshake.auth.apiKey;
       const token = socket.handshake.auth && socket.handshake.auth.token;
       const payload = token ? verifyToken(token) : null;
       let joinRoom = null;
-      if (payload) {
+      if (apiKey) {
+        // API key lookup (async — wrapped in IIFE)
+        findByApiKey(apiKey).then(instructor => {
+          if (instructor) {
+            instructorId = instructor._id.toString();
+            session = getSession(instructorId);
+            role = identifyRole;
+            validated = true;
+            socket.join('instructor:' + instructorId);
+            socket.emit('timer-update', session.timerState);
+          }
+        });
+        return; // exit early — async path handles the rest
+      } else if (payload) {
         instructorId = payload.id;
         session = getSession(instructorId);
-        joinRoom = 'instructor:' + instructorId; // privileged viewer (qr-only page, etc.)
+        joinRoom = 'instructor:' + instructorId;
       } else if (identifyCode) {
         // Route via class code (e.g. large-screen display with ?code=XXXX)
         const ownerInstructorId = codeToInstructor.get(identifyCode.toUpperCase());

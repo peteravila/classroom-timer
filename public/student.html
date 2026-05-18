@@ -341,7 +341,11 @@
 <script>
 const params = new URLSearchParams(window.location.search);
 const urlToken = params.get('token');
-const socket = io(urlToken ? { auth: { token: urlToken } } : {});
+const urlApiKey = params.get('key');
+const socketAuth = urlApiKey ? { auth: { apiKey: urlApiKey } }
+                 : urlToken ? { auth: { token: urlToken } }
+                 : {};
+const socket = io(socketAuth);
 const CIRCUMFERENCE = 2 * Math.PI * 80; // 502.65
 const isPreview = params.has('preview');
 const isOBS = params.has('obs');

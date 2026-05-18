@@ -1472,7 +1472,7 @@
             <label style="font-size:0.85rem; color:#aaa;">Class Code</label>
             <div style="display:flex; align-items:flex-start; gap:16px; margin-top:8px;">
               <div style="margin-left:103px; flex:1; min-width:0;">
-                <button class="settings-btn" onclick="generateNewCode()">Disconnect All Students</button>
+                <button class="settings-btn" onclick="generateNewCode()">Disconnect All Phones</button>
                 <div style="font-size:0.75rem; color:var(--dim); margin-top:4px;">Generates a new code and disconnects all current students.</div>
                 <div style="margin-top:8px;">
                   <span style="font-size:0.8rem; color:#888;">Current code:</span>
@@ -1809,6 +1809,7 @@
 <script>
 // ── Authentication ──
 let authToken = localStorage.getItem('livetimer-token');
+let apiKey = ''; // permanent API key for OBS/display URLs
 let socket = null;
 let instructorKey = ''; // set after login, used to scope localStorage keys per instructor
 
@@ -1977,6 +1978,12 @@ async function startApp() {
       loadAdminInstructors();
     }
   } catch (e) { /* couldn't fetch — no greeting, no admin */ }
+  // Fetch permanent API key for OBS/display URLs
+  try {
+    const keyResp = await apiFetch('/api/api-key');
+    const keyData = await keyResp.json();
+    apiKey = keyData.apiKey || '';
+  } catch (e) { /* no API key — OBS URLs will fall back to token */ }
   // Connect socket with auth token
   socket = io({ auth: { token: authToken } });
   initSocket();
@@ -3269,7 +3276,7 @@ socket.on('client-count', (n) => { document.getElementById('connectedCount').tex
 } // end initSocket
 
 async function generateNewCode() {
-  if (!await customConfirm('Disconnect all students? A new class code will be generated and students will need to reconnect.')) return;
+  if (!await customConfirm('Disconnect all phones? A new class code will be generated and students will need to reconnect.')) return;
   socket.emit('generate-code');
 }
 
@@ -5513,7 +5520,8 @@ loadSequences();
 
 // ── OBS URL copy ──
 function copyOBSUrl(extraParams) {
-  const base = window.location.origin + '/?obs=true&token=' + encodeURIComponent(authToken);
+  const credential = apiKey ? 'key=' + encodeURIComponent(apiKey) : 'token=' + encodeURIComponent(authToken);
+  const base = window.location.origin + '/?obs=true&' + credential;
   const url = base + extraParams;
   navigator.clipboard.writeText(url).then(() => {
     // Find the button that was clicked (by matching the onclick param)
@@ -5528,7 +5536,8 @@ function copyOBSUrl(extraParams) {
 }
 
 function copyQROnlyUrl() {
-  const url = window.location.origin + '/qr-only?token=' + encodeURIComponent(authToken);
+  const credential = apiKey ? 'key=' + encodeURIComponent(apiKey) : 'token=' + encodeURIComponent(authToken);
+  const url = window.location.origin + '/qr-only?' + credential;
   navigator.clipboard.writeText(url).then(() => {
     const btn = document.querySelector('button[onclick="copyQROnlyUrl()"]');
     if (btn) {
