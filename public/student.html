@@ -194,7 +194,6 @@
 
   /* When footer is visible, pad the bottom so flex centering accounts for footer height */
   body.checkin-active { padding-bottom: var(--footer-h, 120px); }
-  body.checkin-active .message { max-height: min(10vh, 5rem); }
 
   .checkin-footer-name {
     font-size: 0.85rem; font-weight: 600; color: #aaa;
@@ -674,6 +673,18 @@ function autoSizeField(el) {
   if (!el.textContent) return;
   // Get the CSS-defined font size as our maximum
   const maxPx = parseFloat(getComputedStyle(el).fontSize);
+  // For the message element, compute available height when footer is active
+  if (el.id === 'message') {
+    if (document.body.classList.contains('checkin-active')) {
+      const footer = document.getElementById('checkinFooter');
+      const footerH = footer ? footer.offsetHeight : 0;
+      const rect = el.getBoundingClientRect();
+      const cap = window.innerHeight - rect.top - footerH - 8;
+      el.style.maxHeight = (cap > 0 ? cap : 40) + 'px';
+    } else {
+      el.style.maxHeight = '';
+    }
+  }
   let scale = 1.0;
   let sizePx = maxPx;
   el.style.fontSize = sizePx + 'px';
