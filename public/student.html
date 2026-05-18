@@ -42,7 +42,7 @@
 
   .label {
     font-size: min(4.4rem, 9vh); font-weight: 700; text-align: center;
-    min-height: 1.2em; margin-bottom: 10px; opacity: 0.95;
+    min-height: 1.2em; margin-bottom: 4px; opacity: 0.95;
     white-space: pre-line; max-width: min(460px, 90vw);
     max-height: min(22vh, 12rem); overflow: hidden;
   }
@@ -50,7 +50,7 @@
   .digits {
     font-size: min(28vw, 15vh, 8rem); font-weight: 800;
     font-variant-numeric: tabular-nums; letter-spacing: 3px;
-    line-height: 1; margin: 10px 0;
+    line-height: 1; margin: 4px 0;
     transition: color 0.5s, font-size 0.3s;
   }
   .digits.has-hours {
@@ -93,7 +93,7 @@
   .message {
     font-size: min(3.2rem, 6.4vh); color: #bbb; text-align: center;
     max-width: min(460px, 90vw); width: min(460px, 90vw);
-    line-height: 1.5; margin-top: 12px;
+    line-height: 1.5; margin-top: 8px;
     white-space: pre-line;
     flex: 1; display: flex; align-items: flex-start; justify-content: center;
     overflow: hidden;
@@ -108,14 +108,14 @@
   .course-title {
     font-size: clamp(2.4rem, min(9vw, 9vh), 6.4rem); font-weight: 700;
     text-align: center; color: rgba(255,255,255,0.85);
-    max-width: min(460px, 90vw); line-height: 1.2; margin-bottom: 12px;
+    max-width: min(460px, 90vw); line-height: 1.2; margin-bottom: 6px;
     min-height: 0; white-space: pre-line;
     max-height: min(18vh, 10rem); overflow: hidden;
   }
   .course-title:empty { display: none; }
 
   /* Progress ring — scales with viewport height on large screens */
-  .progress-ring { margin-bottom: 6px; width: min(180px, 25vh); height: min(180px, 25vh); }
+  .progress-ring { margin-bottom: 2px; width: min(180px, 25vh); height: min(180px, 25vh); }
   .progress-bg { stroke: rgba(255,255,255,0.08); }
   .progress-fg { transition: stroke-dashoffset 0.3s linear, stroke 0.5s; stroke-linecap: round; }
 
@@ -193,8 +193,8 @@
   }
   .checkin-footer.visible { display: flex; }
 
-  /* When footer is visible, give timer content bottom padding so nothing is hidden behind it */
-  body.checkin-active { padding-bottom: 120px; }
+  /* When footer is visible, pad the bottom so flex centering accounts for footer height */
+  body.checkin-active { padding-bottom: var(--footer-h, 120px); }
 
   .checkin-footer-name {
     font-size: 0.85rem; font-weight: 600; color: #aaa;
@@ -285,6 +285,7 @@
     .timer-content {
       display: flex !important; flex-direction: column; align-items: center;
     }
+    .message { flex: 0; }
   }
 </style>
 </head>
@@ -392,9 +393,15 @@ function showCheckinFooter(show) {
   if (show && !isDisplayViewer) {
     footer.classList.add('visible');
     document.body.classList.add('checkin-active');
+    // Measure actual footer height and set CSS variable so centering adjusts
+    requestAnimationFrame(() => {
+      const h = footer.offsetHeight;
+      document.body.style.setProperty('--footer-h', h + 'px');
+    });
   } else {
     footer.classList.remove('visible');
     document.body.classList.remove('checkin-active');
+    document.body.style.removeProperty('--footer-h');
   }
 }
 
