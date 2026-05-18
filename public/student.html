@@ -65,7 +65,7 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
   .end-time {
-    font-size: min(1.6rem, 3vh); margin-top: 4px; min-height: 1.4em;
+    font-size: min(1.6rem, 3vh); margin-top: 0; min-height: 1.4em;
   }
   .state-green .end-time  { color: var(--green); }
   .state-yellow .end-time { color: var(--yellow); }
@@ -92,9 +92,11 @@
 
   .message {
     font-size: min(3.2rem, 6.4vh); color: #bbb; text-align: center;
-    max-width: min(460px, 90vw); line-height: 1.5; margin-top: 20px;
-    min-height: 1.5em; white-space: pre-line;
-    max-height: min(22vh, 12rem); overflow: hidden;
+    max-width: min(460px, 90vw); width: min(460px, 90vw);
+    line-height: 1.5; margin-top: 12px;
+    white-space: pre-line;
+    flex: 1; display: flex; align-items: flex-start; justify-content: center;
+    overflow: hidden;
   }
 
   .status-badge {
@@ -698,7 +700,7 @@ socket.on('timer-update', (s) => {
 
   // End time — use server-pushed label instead of hardcoded text
   const etEl = document.getElementById('endTime');
-  if (s.showEndTime && s.endTime && s.running) {
+  if (s.showEndTime && s.endTime && (s.running || s.screenshotMode)) {
     const d = new Date(s.endTime);
     let h = d.getHours();
     const m = String(d.getMinutes()).padStart(2, '0');
@@ -706,6 +708,9 @@ socket.on('timer-update', (s) => {
     h = h % 12 || 12;
     const prefix = s.endTimeLabel || 'Class resumes at';
     etEl.textContent = prefix + ' ' + h + ':' + m + ' ' + ampm;
+  } else if (s.showEndTime && !s.running && s.remainingSeconds > 0 && s.remainingSeconds < s.totalSeconds) {
+    const prefix = s.endTimeLabel || 'Class resumes at';
+    etEl.textContent = prefix + ' (paused)';
   } else {
     etEl.textContent = '';
   }
@@ -729,8 +734,8 @@ socket.on('timer-update', (s) => {
   // Color state — use originalTotal for thresholds
   const { cls, paused } = stateClass(s.remainingSeconds, refTotal, s.running);
   document.body.className = cls;
-  // TEMP: screenshot mode — don't gray out on pause
-  // document.body.classList.toggle('paused', paused);
+  // Screenshot mode: don't gray out on pause
+  if (!s.screenshotMode) document.body.classList.toggle('paused', paused);
   // Display modes — OBS uses URL parameters; all other viewers use server flags
   if (isOBS) {
     document.body.classList.toggle('mode-transparent', urlTransparent);
@@ -741,7 +746,7 @@ socket.on('timer-update', (s) => {
     document.body.classList.toggle('mode-black-bg', !!s.blackBg);
     document.body.classList.toggle('mode-clock-only', !!s.clockOnly);
   }
-  ring.style.stroke = strokeColor(cls); // TEMP: always use color, not gray
+  ring.style.stroke = (paused && !s.screenshotMode) ? '#444' : strokeColor(cls);
 
   // Status badge — only show when not running
   const badge = document.getElementById('statusBadge');

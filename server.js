@@ -163,6 +163,7 @@ function createSession(instructorId) {
     checkinEnabled: false,
     activeSequence: null,
     sequenceAdvanceTimeout: null,
+    screenshotMode: false,
   };
 }
 
@@ -397,11 +398,12 @@ function broadcast(s) {
   if (s.timerState.endTime) {
     s.timerState.endTimeFormatted = formatEndTime(s.timerState.endTime);
   }
+  const payload = { ...s.timerState, screenshotMode: s.screenshotMode };
   if (s.muted) {
-    io.to('instructor:' + s.instructorId).emit('timer-update', s.timerState);
+    io.to('instructor:' + s.instructorId).emit('timer-update', payload);
   } else {
-    io.to('instructor:' + s.instructorId).emit('timer-update', s.timerState);
-    io.to('students:' + s.instructorId).emit('timer-update', s.timerState);
+    io.to('instructor:' + s.instructorId).emit('timer-update', payload);
+    io.to('students:' + s.instructorId).emit('timer-update', payload);
   }
 }
 
@@ -950,6 +952,7 @@ io.on('connection', (socket) => {
       socket.emit('class-code', session.classCode);
       socket.emit('mute-state', session.muted);
       socket.emit('checkin-enabled', session.checkinEnabled);
+      socket.emit('screenshot-mode', session.screenshotMode || false);
       emitStudentCount(session);
       broadcastStudentList(session);
       broadcastSequenceState(session);
@@ -1102,6 +1105,13 @@ io.on('connection', (socket) => {
     if (!session.muted) {
       io.to('students:' + instructorId).emit('timer-update', session.timerState);
     }
+  });
+
+  socket.on('set-screenshot-mode', (on) => {
+    if (role !== 'instructor' || !session) return;
+    session.screenshotMode = !!on;
+    io.to('instructor:' + instructorId).emit('screenshot-mode', session.screenshotMode);
+    broadcast(session);
   });
 
   socket.on('set-timer', ({ minutes, label, message, showEndTime, transparent, blackBg, clockOnly }) => {

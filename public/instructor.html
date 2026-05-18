@@ -1705,6 +1705,13 @@
               <div id="adminInstructorGrid" style="width:100%; max-width:100%;"></div>
               <div id="adminStatus" style="font-size:0.75rem; margin-top:8px; min-height:1.2em;"></div>
             </div>
+
+            <hr style="border:none; border-top:1px solid rgba(255,255,255,0.15); margin:20px 0;">
+            <label style="font-size:0.85rem; color:#e74c3c;">Admin — Screenshot Mode</label>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+              <label class="switch"><input type="checkbox" id="screenshotMode" onchange="toggleScreenshotMode()"><span class="slider"></span></label>
+              <span style="font-size:0.8rem; color:var(--dim);">Paused timers look like they're running (for taking screenshots)</span>
+            </div>
           </div>
 
         </div>
@@ -1820,6 +1827,7 @@
 // ── Authentication ──
 let authToken = localStorage.getItem('livetimer-token');
 let apiKey = ''; // permanent API key for OBS/display URLs
+let screenshotMode = false; // when true, paused timers look like they're running
 let socket = null;
 let instructorKey = ''; // set after login, used to scope localStorage keys per instructor
 
@@ -3139,8 +3147,10 @@ function updateMockupLive(s) {
   }
 
   // Update end time display
-  if (s.showEndTime && s.endTimeFormatted) {
+  if (s.showEndTime && s.endTimeFormatted && (s.running || screenshotMode)) {
     endTimeEl.textContent = s.endTimeFormatted;
+  } else if (s.showEndTime && !s.running && s.remainingSeconds > 0 && s.remainingSeconds < s.totalSeconds) {
+    endTimeEl.textContent = '(paused)';
   } else {
     endTimeEl.textContent = '';
   }
@@ -3149,15 +3159,18 @@ function updateMockupLive(s) {
   mockup.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-done', 'state-paused');
   if (s.remainingSeconds <= 0 && s.totalSeconds > 0) {
     mockup.classList.add('state-done');
-  // TEMP: screenshot mode — treat paused same as running (keep color)
   } else if (!s.running && s.remainingSeconds > 0 && s.remainingSeconds < s.totalSeconds) {
-    // mockup.classList.add('state-paused');
-    const pct = s.remainingSeconds / refTotal;
-    const yellowThresh = Math.min(0.35, 600 / refTotal);
-    const orangeThresh = Math.min(0.15, 180 / refTotal);
-    if (pct <= orangeThresh) mockup.classList.add('state-orange');
-    else if (pct <= yellowThresh) mockup.classList.add('state-yellow');
-    else mockup.classList.add('state-green');
+    if (screenshotMode) {
+      // Screenshot mode: keep color as if running
+      const pct = s.remainingSeconds / refTotal;
+      const yellowThresh = Math.min(0.35, 600 / refTotal);
+      const orangeThresh = Math.min(0.15, 180 / refTotal);
+      if (pct <= orangeThresh) mockup.classList.add('state-orange');
+      else if (pct <= yellowThresh) mockup.classList.add('state-yellow');
+      else mockup.classList.add('state-green');
+    } else {
+      mockup.classList.add('state-paused');
+    }
   } else if (s.running && s.remainingSeconds > 0) {
     const pct = s.remainingSeconds / refTotal;
     // Hybrid thresholds matching student.html
@@ -3293,6 +3306,12 @@ async function generateNewCode() {
 document.getElementById('muteStudents').addEventListener('change', () => {
   socket.emit('set-mute', document.getElementById('muteStudents').checked);
 });
+
+// ── Screenshot mode ──
+function toggleScreenshotMode() {
+  const on = document.getElementById('screenshotMode').checked;
+  socket.emit('set-screenshot-mode', on);
+}
 
 // ── Input event listeners for dirty detection ──
 document.getElementById('fieldName').addEventListener('input', () => checkDirty());
@@ -5112,10 +5131,9 @@ function updateButtonStates() {
   const hasDuration = getDurationMinutes() > 0;
   startBtn.classList.toggle('enabled', (paused) || hasDuration);
 
-  // Pause: enabled when running
-  // TEMP: screenshot mode — keep pause looking enabled when paused too
+  // Pause: enabled when running (or when paused in screenshot mode)
   const pauseBtn = document.querySelector('.tb-pause');
-  pauseBtn.classList.toggle('enabled', running || paused);
+  pauseBtn.classList.toggle('enabled', running || (screenshotMode && paused));
 
   // Stop: enabled only when running or paused or done
   const stopBtn = document.querySelector('.tb-stop');
@@ -5580,6 +5598,12 @@ setInterval(() => {
 }, 30000);
 
 function initSocketLate() {
+  socket.on('screenshot-mode', (on) => {
+    screenshotMode = on;
+    const cb = document.getElementById('screenshotMode');
+    if (cb) cb.checked = on;
+  });
+
   socket.on('student-list', (list) => {
     studentList = list;
     renderStudentBoard();
