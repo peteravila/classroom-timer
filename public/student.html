@@ -732,7 +732,13 @@ socket.on('timer-update', (s) => {
 
   // Color state — use originalTotal for thresholds
   const { cls, paused } = stateClass(s.remainingSeconds, refTotal, s.running);
+  // Preserve non-state classes (checkin-active, mode-* etc.) when switching color state
+  const keep = [];
+  document.body.classList.forEach(c => {
+    if (!c.startsWith('state-') && c !== 'paused') keep.push(c);
+  });
   document.body.className = cls;
+  keep.forEach(c => document.body.classList.add(c));
   // Screenshot mode: don't gray out on pause
   if (!s.screenshotMode) document.body.classList.toggle('paused', paused);
   // Display modes — OBS uses URL parameters; all other viewers use server flags
