@@ -93,9 +93,9 @@
   .message {
     font-size: min(3.2rem, 6.4vh); color: #bbb; text-align: center;
     max-width: min(460px, 90vw); width: min(460px, 90vw);
-    line-height: 1.5; margin-top: 8px;
+    line-height: 1.25; margin-top: 8px;
     white-space: pre-line;
-    flex: 1; overflow: hidden;
+    flex: 1; max-height: min(18vh, 10rem); overflow: hidden;
   }
 
   .status-badge {
@@ -396,11 +396,13 @@ function showCheckinFooter(show) {
     requestAnimationFrame(() => {
       const h = footer.offsetHeight;
       document.body.style.setProperty('--footer-h', h + 'px');
+      autoSizeAllFields();
     });
   } else {
     footer.classList.remove('visible');
     document.body.classList.remove('checkin-active');
     document.body.style.removeProperty('--footer-h');
+    autoSizeAllFields();
   }
 }
 
@@ -662,7 +664,7 @@ function strokeColor(cls) {
 // ── Auto-size fields: shrink font to fit within max-height ──
 // Uses the CSS-defined font-size as the max, scales down by percentage
 const autoSizeFields = ['courseTitle', 'label', 'message'];
-const autoSizeMinScale = 0.55; // won't shrink below 55% of CSS default
+const autoSizeMinScale = 0.4; // won't shrink below 40% of CSS default
 const autoSizeStep = 0.05;     // shrink 5% at a time
 
 function autoSizeField(el) {
