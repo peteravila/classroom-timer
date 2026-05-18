@@ -280,7 +280,6 @@
   @media (min-width: 800px) {
     .code-gate { display: none !important; }
     .checkin-footer { display: none !important; }
-    body.checkin-active { padding-bottom: 24px; }
     .timer-content {
       display: flex !important; flex-direction: column; align-items: center;
     }
@@ -391,19 +390,11 @@ function showCheckinFooter(show) {
   if (show && !isDisplayViewer) {
     footer.classList.add('visible');
     document.body.classList.add('checkin-active');
-    // Measure actual footer height and set CSS variable so centering adjusts
-    requestAnimationFrame(() => {
-      const h = footer.offsetHeight;
-      document.body.style.setProperty('--footer-h', h + 'px');
-      // Second frame so max-height change has reflowed before auto-sizing
-      requestAnimationFrame(() => autoSizeAllFields());
-    });
   } else {
     footer.classList.remove('visible');
     document.body.classList.remove('checkin-active');
-    document.body.style.removeProperty('--footer-h');
-    autoSizeAllFields();
   }
+  autoSizeAllFields();
 }
 
 function setCheckinState(state) {
@@ -673,18 +664,6 @@ function autoSizeField(el) {
   if (!el.textContent) return;
   // Get the CSS-defined font size as our maximum
   const maxPx = parseFloat(getComputedStyle(el).fontSize);
-  // For the message element, compute available height when footer is active
-  if (el.id === 'message') {
-    if (document.body.classList.contains('checkin-active')) {
-      const footer = document.getElementById('checkinFooter');
-      const footerH = footer ? footer.offsetHeight : 0;
-      const rect = el.getBoundingClientRect();
-      const cap = window.innerHeight - rect.top - footerH - 8;
-      el.style.maxHeight = (cap > 0 ? cap : 40) + 'px';
-    } else {
-      el.style.maxHeight = '';
-    }
-  }
   let scale = 1.0;
   let sizePx = maxPx;
   el.style.fontSize = sizePx + 'px';
